@@ -521,6 +521,12 @@
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
       }
+      html[data-mobile="1"] .mapArrow {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        transition: none;
+      }
       @media (max-width: 520px) {
         .mapArrow {
           width: 46px;
@@ -562,6 +568,15 @@
         -webkit-backdrop-filter: none;
         box-shadow: none;
         transition: none;
+      }
+      html[data-mobile="1"] .stage {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+        transition: none;
+      }
+      html[data-mobile="1"] .stage::after {
+        display: none;
       }
       html[data-theme="cream"] .stage {
         border-color: rgba(0, 0, 0, 0.16);
@@ -2178,8 +2193,15 @@
 
         const w = Math.max(1, window.innerWidth || 1);
         const h = Math.max(1, window.innerHeight || 1);
+        const isMobile = document.documentElement.dataset.mobile === "1";
         const m = document.documentElement.dataset.reduceMotion === "1";
-        const count = m ? clamp(Math.round((w * h) / 42000), 20, 60) : clamp(Math.round((w * h) / 21000), 40, 120);
+        const count = isMobile
+          ? m
+            ? clamp(Math.round((w * h) / 52000), 12, 34)
+            : clamp(Math.round((w * h) / 42000), 18, 48)
+          : m
+          ? clamp(Math.round((w * h) / 42000), 20, 60)
+          : clamp(Math.round((w * h) / 21000), 40, 120);
 
         const locks = ["🔒", "🔐"];
         const words = [t("patternWord")];
@@ -2242,59 +2264,86 @@
         return wave + drift;
       }
 
+      function mapBuildStep() {
+        const token = app.mapBuildToken;
+        if (!token) return;
+        if (token !== app.mapBuildToken) return;
+        if (!el.pathInner) return;
+
+        const mobile = document.documentElement.dataset.mobile === "1";
+        const batchSize = mobile ? 18 : 80;
+        const target = clamp(Math.floor(app.mapBuildTarget || 0), 1, TOTAL_LEVELS);
+        let i = clamp(Math.floor(app.mapBuildIndex || 1), 1, TOTAL_LEVELS);
+        if (i > target) {
+          app.mapBuildInProgress = false;
+          return;
+        }
+
+        app.mapBuildInProgress = true;
+        const frag = document.createDocumentFragment();
+        const end = Math.min(target, i + batchSize - 1);
+
+        for (; i <= end; i++) {
+          const level = i;
+          if (i !== 1) {
+            const conn = document.createElement("div");
+            conn.className = "connector";
+            frag.appendChild(conn);
+          }
+          const pos = document.createElement("div");
+          pos.className = "stagePos";
+          pos.style.transform = `translateY(${stageOffset(level)}px)`;
+
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "stage";
+          b.id = `stageBtn-${level}`;
+          b.dataset.level = String(level);
+          const unlocked = level <= app.state.unlocked;
+          const completed = app.state.completed.includes(level);
+          const boss = isBossLevel(level);
+          if (!unlocked) b.classList.add("locked");
+          if (completed) b.classList.add("completed");
+          if (boss) b.classList.add("boss");
+          b.setAttribute("aria-label", t("stageAria", { i: level }));
+          const stars = getStarsForLevel(level);
+          const starText = stars ? "★".repeat(stars) : "";
+          b.innerHTML = `<div class="n">${level}</div>${stars ? `<div class="s">${starText}</div>` : ""}`;
+          b.addEventListener("click", () => {
+            if (Date.now() - lastDragAt < 260) return;
+            if (!unlocked) return;
+            openStage({ kind: "level", id: level });
+          });
+          pos.appendChild(b);
+          frag.appendChild(pos);
+        }
+
+        el.pathInner.appendChild(frag);
+        app.mapBuildIndex = end + 1;
+        app.mapBuiltUpTo = end;
+        if (app.mapBuildIndex <= app.mapBuildTarget) requestAnimationFrame(mapBuildStep);
+        else app.mapBuildInProgress = false;
+      }
+
+      function ensureMapBuiltTo(level) {
+        const mobile = document.documentElement.dataset.mobile === "1";
+        const extra = mobile ? 50 : 0;
+        const want = clamp(Math.floor(level + extra), 1, TOTAL_LEVELS);
+        app.mapBuildTarget = Math.max(app.mapBuildTarget || 0, want);
+        if (!app.mapBuildToken) app.mapBuildToken = 1;
+        if (!app.mapBuildInProgress) requestAnimationFrame(mapBuildStep);
+      }
+
       function renderMap() {
         renderProgress();
         el.pathInner.innerHTML = "";
         const mobile = document.documentElement.dataset.mobile === "1";
-        const batchSize = mobile ? 40 : TOTAL_LEVELS;
-        const token = (app.mapBuildToken = (app.mapBuildToken || 0) + 1);
-        let i = 1;
-
-        function step() {
-          if (token !== app.mapBuildToken) return;
-          const frag = document.createDocumentFragment();
-          const end = Math.min(TOTAL_LEVELS, i + batchSize - 1);
-
-          for (; i <= end; i++) {
-            const level = i;
-            if (i !== 1) {
-              const conn = document.createElement("div");
-              conn.className = "connector";
-              frag.appendChild(conn);
-            }
-            const pos = document.createElement("div");
-            pos.className = "stagePos";
-            pos.style.transform = `translateY(${stageOffset(level)}px)`;
-
-            const b = document.createElement("button");
-            b.type = "button";
-            b.className = "stage";
-            b.id = `stageBtn-${level}`;
-            b.dataset.level = String(level);
-            const unlocked = level <= app.state.unlocked;
-            const completed = app.state.completed.includes(level);
-            const boss = isBossLevel(level);
-            if (!unlocked) b.classList.add("locked");
-            if (completed) b.classList.add("completed");
-            if (boss) b.classList.add("boss");
-            b.setAttribute("aria-label", t("stageAria", { i: level }));
-            const stars = getStarsForLevel(level);
-            const starText = stars ? "★".repeat(stars) : "";
-            b.innerHTML = `<div class="n">${level}</div>${stars ? `<div class="s">${starText}</div>` : ""}`;
-            b.addEventListener("click", () => {
-              if (Date.now() - lastDragAt < 260) return;
-              if (!unlocked) return;
-              openStage({ kind: "level", id: level });
-            });
-            pos.appendChild(b);
-            frag.appendChild(pos);
-          }
-
-          el.pathInner.appendChild(frag);
-          if (i <= TOTAL_LEVELS) requestAnimationFrame(step);
-        }
-
-        requestAnimationFrame(step);
+        app.mapBuildToken = (app.mapBuildToken || 0) + 1;
+        app.mapBuildIndex = 1;
+        app.mapBuiltUpTo = 0;
+        app.mapBuildInProgress = false;
+        app.mapBuildTarget = mobile ? Math.min(TOTAL_LEVELS, 160) : TOTAL_LEVELS;
+        requestAnimationFrame(mapBuildStep);
       }
 
       function normalizeInput(input) {
@@ -3409,6 +3458,7 @@
       function goToStageNumber(n, behaviorOverride) {
         const num = clamp(Math.floor(n || 0), 1, TOTAL_LEVELS);
         const behavior = behaviorOverride || "smooth";
+        ensureMapBuiltTo(num);
         let tries = 0;
         function tryScroll() {
           const btn = document.getElementById(`stageBtn-${num}`);
@@ -3424,7 +3474,8 @@
             return;
           }
           tries += 1;
-          if (tries > 80) return;
+          ensureMapBuiltTo(num);
+          if (tries > 220) return;
           requestAnimationFrame(tryScroll);
         }
         tryScroll();
