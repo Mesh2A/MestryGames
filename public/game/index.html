@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1020" />
     <title>فتح الاقفال</title>
     <style>
@@ -186,6 +186,15 @@
         background: var(--btn-primary-grad-hover);
         border-color: var(--btn-primary-border-hover);
         box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(34, 211, 238, 0.18) inset;
+      }
+      .btn.danger {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.75), rgba(190, 24, 93, 0.25));
+        border-color: rgba(239, 68, 68, 0.75);
+        color: rgba(255, 255, 255, 0.98);
+      }
+      .btn.danger:hover {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.86), rgba(190, 24, 93, 0.3));
+        border-color: rgba(239, 68, 68, 0.9);
       }
       .btn.ghost {
         background: transparent;
@@ -1094,6 +1103,7 @@
                   <button id="startBtn" class="btn primary" type="button">شغل مخك</button>
                   <button id="dailyBtn" class="btn" type="button">تحدي يومي</button>
                   <button id="howBtn" class="btn" type="button">طريقة اللعبه</button>
+                  <button id="logoutBtn" class="btn danger" type="button" style="display:none">تسجيل خروج</button>
                 </div>
               </div>
             </div>
@@ -1565,6 +1575,7 @@
         startBtn: document.getElementById("startBtn"),
         dailyBtn: document.getElementById("dailyBtn"),
         howBtn: document.getElementById("howBtn"),
+        logoutBtn: document.getElementById("logoutBtn"),
         progressK: document.getElementById("progressK"),
         helpK: document.getElementById("helpK"),
         helpText: document.getElementById("helpText"),
@@ -1703,15 +1714,14 @@
         const ua = navigator.userAgent || "";
         const mobile = /iPhone|iPad|iPod|Android/i.test(ua) || Math.min(window.innerWidth || 0, window.innerHeight || 0) < 820;
         document.documentElement.dataset.mobile = mobile ? "1" : "0";
-        if (mobile && !app.state.reduceMotion) {
-          app.state.reduceMotion = true;
-          saveState(app.state);
-        }
       })();
 
       let lastFocusedEl = null;
       let modalMode = "howto";
       let lastDragAt = 0;
+      document.addEventListener("gesturestart", (e) => e.preventDefault());
+      document.addEventListener("gesturechange", (e) => e.preventDefault());
+      document.addEventListener("gestureend", (e) => e.preventDefault());
 
       const I18N = {
         ar: {
@@ -1724,6 +1734,7 @@
           homeDesc: "كم قفل تقدر تفتح ؟",
           startBtn: "ابدأ",
           howBtn: "طريقة اللعبه",
+          logoutBtn: "تسجيل خروج",
           progressK: "التقدم",
           helpK: "مساعدة",
           helpText: "استخدم الأسهم أو البحث للانتقال للمراحل",
@@ -1872,6 +1883,7 @@
           homeDesc: "How many locks can you open?",
           startBtn: "Start",
           howBtn: "How to play",
+          logoutBtn: "Logout",
           progressK: "Progress",
           helpK: "Help",
           helpText: "Use arrows or search to navigate levels",
@@ -2044,6 +2056,7 @@
         if (el.startBtn) el.startBtn.textContent = t("startBtn");
         if (el.dailyBtn) el.dailyBtn.textContent = t("dailyBtn");
         if (el.howBtn) el.howBtn.textContent = t("howBtn");
+        if (el.logoutBtn) el.logoutBtn.textContent = t("logoutBtn");
         if (el.progressK) el.progressK.textContent = t("progressK");
         if (el.helpK) el.helpK.textContent = t("helpK");
         if (el.helpText) el.helpText.textContent = t("helpText");
@@ -3338,6 +3351,35 @@
         }
       }
 
+      async function signOutFromGame() {
+        try {
+          const r = await fetch("/api/auth/csrf");
+          const data = await r.json().catch(() => ({}));
+          const csrfToken = data && typeof data.csrfToken === "string" ? data.csrfToken : "";
+          if (!csrfToken) {
+            window.location.href = "/";
+            return;
+          }
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "/api/auth/signout";
+          const csrf = document.createElement("input");
+          csrf.type = "hidden";
+          csrf.name = "csrfToken";
+          csrf.value = csrfToken;
+          const cb = document.createElement("input");
+          cb.type = "hidden";
+          cb.name = "callbackUrl";
+          cb.value = "/";
+          form.appendChild(csrf);
+          form.appendChild(cb);
+          document.body.appendChild(form);
+          form.submit();
+        } catch {
+          window.location.href = "/";
+        }
+      }
+
       function openDaily() {
         updateDailyUI();
         if (!canStartDaily()) {
@@ -3365,7 +3407,13 @@
         function tryScroll() {
           const btn = document.getElementById(`stageBtn-${num}`);
           if (btn) {
-            btn.scrollIntoView({ behavior, inline: "center", block: "nearest" });
+            if (el.path && num <= 2) {
+              el.path.scrollTo({ left: 0, behavior });
+            } else if (el.path && num >= TOTAL_LEVELS - 1) {
+              el.path.scrollTo({ left: el.path.scrollWidth, behavior });
+            } else {
+              btn.scrollIntoView({ behavior, inline: "center", block: "nearest" });
+            }
             focusMapPath();
             return;
           }
@@ -3669,6 +3717,10 @@
       el.dailyBtn.addEventListener("click", () => openDaily());
       el.dailyBtn2.addEventListener("click", () => openDaily());
       el.howBtn.addEventListener("click", () => openHowTo());
+      if (el.logoutBtn) {
+        el.logoutBtn.style.display = "";
+        el.logoutBtn.addEventListener("click", () => signOutFromGame());
+      }
       el.backToMapBtn.addEventListener("click", () => goMap());
       el.mapBtn2.addEventListener("click", () => goMap());
       el.checkBtn.addEventListener("click", () => check());
