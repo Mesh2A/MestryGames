@@ -7,17 +7,24 @@ export default async function PlayPage() {
   if (!session) redirect("/");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0b1020" }}>
+    <div
+      style={{
+        height: "100dvh",
+        minHeight: "100vh",
+        background: "#0b1020",
+        overflow: "hidden",
+      }}
+    >
       <iframe
         title="game"
         src="/game/index.html"
         style={{
           width: "100%",
-          height: "100vh",
+          height: "100%",
           border: 0,
           display: "block",
         }}
-        allow="clipboard-write"
+        allow="clipboard-write; fullscreen"
       />
     </div>
   );

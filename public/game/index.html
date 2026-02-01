@@ -2,9 +2,9 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1020" />
-    <title>لعبة القفل</title>
+    <title>فتح الاقفال</title>
     <style>
       :root {
         --bg-0: #04111f;
@@ -67,6 +67,13 @@
       html[data-lock-shape="square"] {
         --slot-radius: 10px;
       }
+      html[data-reduce-motion="1"] {
+        --sea-opacity: 0.6;
+        --panel-bg: rgba(255, 255, 255, 0.04);
+        --btn-bg: rgba(255, 255, 255, 0.08);
+        --btn-hover-bg: rgba(255, 255, 255, 0.1);
+        --pattern-color: rgba(255, 255, 255, 0.06);
+      }
       * {
         box-sizing: border-box;
       }
@@ -105,6 +112,7 @@
         letter-spacing: 0.2px;
       }
       header .sub {
+        display: none;
         font-size: 12px;
         color: var(--muted);
       }
@@ -154,6 +162,12 @@
         transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
         user-select: none;
       }
+      html[data-reduce-motion="1"] .btn {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        transition: none;
+      }
       .btn:hover {
         transform: translateY(-2px) scale(1.01);
         background: var(--btn-hover-bg);
@@ -189,6 +203,9 @@
         z-index: 1;
         opacity: 0.75;
       }
+      html[data-reduce-motion="1"] .bgPattern {
+        opacity: 0.35;
+      }
       .bgPattern .bgItem {
         position: absolute;
         left: 0;
@@ -205,6 +222,11 @@
       .bgPattern .bgItem.word {
         letter-spacing: 1.2px;
       }
+      html[data-mobile="1"] .bgPattern .bgItem {
+        mix-blend-mode: normal;
+        text-shadow: none;
+        filter: none;
+      }
       .screen {
         position: absolute;
         inset: 0;
@@ -216,6 +238,10 @@
         pointer-events: none;
         transition: opacity 260ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
         will-change: opacity, transform;
+      }
+      html[data-reduce-motion="1"] .screen {
+        transition: none;
+        will-change: auto;
       }
       .screen.active {
         opacity: 1;
@@ -276,6 +302,11 @@
         -webkit-backdrop-filter: blur(12px);
         box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
         overflow: hidden;
+      }
+      html[data-reduce-motion="1"] .panel {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
       }
       .panel .inner {
         padding: 28px;
@@ -477,6 +508,12 @@
         user-select: none;
         flex: 0 0 auto;
       }
+      html[data-reduce-motion="1"] .stage {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        transition: none;
+      }
       html[data-theme="cream"] .stage {
         border-color: rgba(0, 0, 0, 0.16);
         background: radial-gradient(90px 70px at 30% 25%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.55) 55%, rgba(255, 255, 255, 0.35) 100%);
@@ -650,6 +687,10 @@
         background: rgba(245, 158, 11, 0.15);
         border-color: rgba(245, 158, 11, 0.58);
       }
+      html[data-mobile="1"] .slot.warn {
+        background: rgba(245, 158, 11, 0.32);
+        border-color: rgba(245, 158, 11, 0.85);
+      }
       .hint {
         position: absolute;
         top: -10px;
@@ -669,6 +710,9 @@
       }
       .hint.show {
         animation: hintPop 1300ms ease forwards;
+      }
+      html[data-reduce-motion="1"] .hint.show {
+        animation: none;
       }
       @keyframes hintPop {
         0% {
@@ -754,6 +798,10 @@
       .dot.warn {
         background: rgba(245, 158, 11, 0.72);
         border-color: rgba(245, 158, 11, 0.9);
+      }
+      html[data-mobile="1"] .dot.warn {
+        background: rgba(245, 158, 11, 0.95);
+        border-color: rgba(245, 158, 11, 1);
       }
       .coach {
         margin-top: 12px;
@@ -1600,7 +1648,17 @@
         hints: [],
         history: [],
         session: { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false },
+        mapCenter: null,
       };
+      (function () {
+        const ua = navigator.userAgent || "";
+        const mobile = /iPhone|iPad|iPod|Android/i.test(ua) || Math.min(window.innerWidth || 0, window.innerHeight || 0) < 820;
+        document.documentElement.dataset.mobile = mobile ? "1" : "0";
+        if (mobile && !app.state.reduceMotion) {
+          app.state.reduceMotion = true;
+          saveState(app.state);
+        }
+      })();
 
       let lastFocusedEl = null;
       let modalMode = "howto";
@@ -1608,14 +1666,14 @@
 
       const I18N = {
         ar: {
-          docTitle: "لعبة القفل",
-          brandTitle: "لعبة القفل",
-          brandSub: "مراحل على خريطة فوق بحر لامع",
+          docTitle: "فتح الاقفال",
+          brandTitle: "فتح الاقفال",
+          brandSub: "",
           settingsBtn: "اعدادات",
           homeHeaderBtn: "الرئيسية",
-          homeTitle: "لعبة القفل",
+          homeTitle: "فتح الاقفال",
           homeDesc: "مراحل كثيرة على خريطة ممتدة… افتح القفل في كل مرحلة.",
-          startBtn: "شغل مخك",
+          startBtn: "ابدأ",
           howBtn: "طريقة اللعبه",
           progressK: "التقدم",
           helpK: "مساعدة",
@@ -1706,7 +1764,7 @@
           shopSub: "اشتري تلميحات ومزايا بالعملات",
           shopDesc: "زوّد عملاتك واشتري ميزات تساعدك تفتح القفل أسرع.",
           shopHint1K: "تلميح واحد",
-          buyHintTokenBtn: "شراء تلميح (4)",
+          buyHintTokenBtn: "شراء تلميح (4🪙)",
           shopHint10K: "حزمة تلميحات",
           shopHint10Sub: "10 تلميحات (توفير)",
           buyHintPack10Btn: "شراء (39🪙)",
@@ -1756,14 +1814,14 @@
           shareText: ({ title, attempts, stars }) => `${title} | محاولات: ${attempts} | نجوم: ${stars}`,
         },
         en: {
-          docTitle: "Lock Game",
-          brandTitle: "Lock Game",
-          brandSub: "Levels on a shiny sea map",
+          docTitle: "Unlock Locks",
+          brandTitle: "Unlock Locks",
+          brandSub: "",
           settingsBtn: "Settings",
           homeHeaderBtn: "Home",
-          homeTitle: "Lock Game",
+          homeTitle: "Unlock Locks",
           homeDesc: "Many levels on a long map… unlock each lock.",
-          startBtn: "Think!",
+          startBtn: "Start",
           howBtn: "How to play",
           progressK: "Progress",
           helpK: "Help",
@@ -1854,7 +1912,7 @@
           shopSub: "Buy hints and features with coins",
           shopDesc: "Top up coins and buy features to unlock faster.",
           shopHint1K: "Single hint",
-          buyHintTokenBtn: "Buy hint (4)",
+          buyHintTokenBtn: "Buy hint (4🪙)",
           shopHint10K: "Hint bundle",
           shopHint10Sub: "10 hints (save)",
           buyHintPack10Btn: "Buy (39🪙)",
@@ -2052,7 +2110,8 @@
 
         const w = Math.max(1, window.innerWidth || 1);
         const h = Math.max(1, window.innerHeight || 1);
-        const count = clamp(Math.round((w * h) / 21000), 40, 120);
+        const m = document.documentElement.dataset.reduceMotion === "1";
+        const count = m ? clamp(Math.round((w * h) / 42000), 20, 60) : clamp(Math.round((w * h) / 21000), 40, 120);
 
         const locks = ["🔒", "🔐"];
         const words = [t("patternWord")];
@@ -2118,8 +2177,15 @@
       function renderMap() {
         renderProgress();
         el.pathInner.innerHTML = "";
-        for (let i = 1; i <= TOTAL_LEVELS; i++) {
-          if (i !== 1) {
+        const mobile = document.documentElement.dataset.mobile === "1";
+        if (mobile && !Number.isFinite(app.mapCenter)) app.mapCenter = app.stage && app.stage.kind === "level" ? app.stage.id : app.state.unlocked;
+        const center = clamp(Math.floor(app.mapCenter || app.state.unlocked || 1), 1, TOTAL_LEVELS);
+        const span = mobile ? 220 : TOTAL_LEVELS;
+        let start = mobile ? clamp(center - Math.floor(span / 2), 1, TOTAL_LEVELS) : 1;
+        let end = mobile ? clamp(start + span - 1, 1, TOTAL_LEVELS) : TOTAL_LEVELS;
+        start = mobile ? clamp(end - span + 1, 1, TOTAL_LEVELS) : 1;
+        for (let i = start; i <= end; i++) {
+          if (i !== start) {
             const conn = document.createElement("div");
             conn.className = "connector";
             el.pathInner.appendChild(conn);
@@ -2219,7 +2285,7 @@
         el.winBox.classList.remove("show");
         if (el.history) el.history.innerHTML = "";
         if (el.coach) el.coach.style.display = "none";
-        if (app.inputs[0]) app.inputs[0].focus();
+        if (document.documentElement.dataset.mobile !== "1" && app.inputs[0]) app.inputs[0].focus();
       }
 
       function formatHMS(ms) {
@@ -3028,9 +3094,14 @@
       }
 
       function goMap() {
+        const mobile = document.documentElement.dataset.mobile === "1";
+        if (mobile) app.mapCenter = app.stage && app.stage.kind === "level" ? app.stage.id : app.state.unlocked;
         renderMap();
         show(el.map);
-        requestAnimationFrame(() => focusMapPath());
+        requestAnimationFrame(() => {
+          if (mobile) goToStageNumber(app.mapCenter || app.state.unlocked || 1);
+          focusMapPath();
+        });
       }
 
       function goHome() {
@@ -3229,7 +3300,13 @@
 
       function goToStageNumber(n) {
         const num = clamp(Math.floor(n || 0), 1, TOTAL_LEVELS);
-        const btn = document.getElementById(`stageBtn-${num}`);
+        const mobile = document.documentElement.dataset.mobile === "1";
+        if (mobile) app.mapCenter = num;
+        let btn = document.getElementById(`stageBtn-${num}`);
+        if (!btn && mobile) {
+          renderMap();
+          btn = document.getElementById(`stageBtn-${num}`);
+        }
         if (!btn) return;
         btn.scrollIntoView({ behavior: app.state.reduceMotion ? "auto" : "smooth", inline: "center", block: "nearest" });
         focusMapPath();

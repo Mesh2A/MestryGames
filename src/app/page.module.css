@@ -11,7 +11,7 @@
 }
 
 .main {
-  width: min(440px, 100%);
+  width: min(360px, 100%);
 }
 
 .card {
@@ -19,12 +19,10 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(10px);
-  padding: 18px;
-  width: min(380px, 92vw);
-  aspect-ratio: 1 / 1;
+  padding: 16px;
+  width: min(330px, 92vw);
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 14px;
+  gap: 12px;
 }
 
 .brand {
