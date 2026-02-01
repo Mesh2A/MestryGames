@@ -1,0 +1,3642 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1020" />
+    <title>لعبة القفل</title>
+    <style>
+      :root {
+        --bg-0: #04111f;
+        --sea-0: #063c5a;
+        --sea-1: #0a6d88;
+        --sea-2: #26b6c6;
+        --glass: rgba(255, 255, 255, 0.12);
+        --glass-2: rgba(255, 255, 255, 0.2);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.7);
+        --ok: #22c55e;
+        --bad: #ef4444;
+        --warn: #f59e0b;
+        --shadow: rgba(0, 0, 0, 0.45);
+        --bg-grad-a: radial-gradient(1200px 700px at 60% 0%, rgba(38, 182, 198, 0.22), transparent 60%);
+        --bg-grad-b: radial-gradient(900px 600px at 10% 10%, rgba(34, 197, 94, 0.08), transparent 55%);
+        --bg-grad-c: linear-gradient(180deg, #020814, var(--bg-0) 40%, #021827);
+        --btn-border: rgba(255, 255, 255, 0.22);
+        --btn-bg: rgba(255, 255, 255, 0.11);
+        --btn-hover-bg: rgba(255, 255, 255, 0.16);
+        --btn-hover-border: rgba(255, 255, 255, 0.32);
+        --btn-primary-grad: linear-gradient(135deg, rgba(34, 211, 238, 0.62), rgba(99, 102, 241, 0.22));
+        --btn-primary-grad-hover: linear-gradient(135deg, rgba(34, 211, 238, 0.75), rgba(99, 102, 241, 0.28));
+        --btn-primary-border: rgba(34, 211, 238, 0.75);
+        --btn-primary-border-hover: rgba(34, 211, 238, 0.85);
+        --panel-border: rgba(255, 255, 255, 0.16);
+        --panel-bg: rgba(255, 255, 255, 0.07);
+        --modal-bg: rgba(2, 8, 20, 0.72);
+        --pattern-color: rgba(255, 255, 255, 0.09);
+        --sea-opacity: 0.95;
+        --slot-radius: 18px;
+      }
+      html[data-theme="cream"] {
+        --bg-0: #f1e8d8;
+        --glass: rgba(0, 0, 0, 0.06);
+        --glass-2: rgba(0, 0, 0, 0.1);
+        --text: rgba(18, 22, 26, 0.92);
+        --muted: rgba(18, 22, 26, 0.62);
+        --shadow: rgba(0, 0, 0, 0.22);
+        --bg-grad-a: radial-gradient(1200px 700px at 60% 0%, rgba(38, 182, 198, 0.1), transparent 60%);
+        --bg-grad-b: radial-gradient(900px 600px at 10% 10%, rgba(99, 102, 241, 0.06), transparent 55%);
+        --bg-grad-c: linear-gradient(180deg, #fff8ed, var(--bg-0) 55%, #ecdfc9);
+        --btn-border: rgba(0, 0, 0, 0.14);
+        --btn-bg: rgba(255, 255, 255, 0.62);
+        --btn-hover-bg: rgba(255, 255, 255, 0.78);
+        --btn-hover-border: rgba(0, 0, 0, 0.18);
+        --btn-primary-grad: linear-gradient(135deg, rgba(34, 211, 238, 0.72), rgba(99, 102, 241, 0.32));
+        --btn-primary-grad-hover: linear-gradient(135deg, rgba(34, 211, 238, 0.84), rgba(99, 102, 241, 0.42));
+        --btn-primary-border: rgba(34, 211, 238, 0.85);
+        --btn-primary-border-hover: rgba(34, 211, 238, 0.95);
+        --panel-border: rgba(0, 0, 0, 0.12);
+        --panel-bg: rgba(255, 255, 255, 0.52);
+        --modal-bg: rgba(255, 255, 255, 0.74);
+        --pattern-color: rgba(0, 0, 0, 0.12);
+        --sea-opacity: 0.55;
+      }
+      html[data-lock-shape="circle"] {
+        --slot-radius: 999px;
+      }
+      html[data-lock-shape="square"] {
+        --slot-radius: 10px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Arabic",
+          "Noto Sans", "Helvetica Neue", sans-serif;
+        color: var(--text);
+        background: var(--bg-grad-a), var(--bg-grad-b), var(--bg-grad-c);
+        overflow: hidden;
+      }
+      .app {
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+      header {
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      header .brand {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.2px;
+      }
+      header .sub {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      header .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .badgeMini {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      button.badgeMini {
+        cursor: pointer;
+        font: inherit;
+      }
+      button.badgeMini:hover {
+        filter: brightness(1.06);
+      }
+      button.badgeMini:active {
+        transform: translateY(1px);
+      }
+      #homeHeaderBtn {
+        display: none;
+      }
+      body[data-screen="map"] #homeHeaderBtn {
+        display: inline-flex;
+      }
+      .btn {
+        border: 1px solid var(--btn-border);
+        background: var(--btn-bg);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+        transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+        user-select: none;
+      }
+      .btn:hover {
+        transform: translateY(-2px) scale(1.01);
+        background: var(--btn-hover-bg);
+        border-color: var(--btn-hover-border);
+        box-shadow: 0 16px 46px rgba(0, 0, 0, 0.24);
+      }
+      .btn:active {
+        transform: translateY(0) scale(0.995);
+      }
+      .btn.primary {
+        background: var(--btn-primary-grad);
+        border-color: var(--btn-primary-border);
+        box-shadow: 0 16px 52px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(34, 211, 238, 0.12) inset;
+      }
+      .btn.primary:hover {
+        background: var(--btn-primary-grad-hover);
+        border-color: var(--btn-primary-border-hover);
+        box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(34, 211, 238, 0.18) inset;
+      }
+      .btn.ghost {
+        background: transparent;
+      }
+      main {
+        position: relative;
+        height: 100%;
+        overflow: hidden;
+      }
+      .bgPattern {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 1;
+        opacity: 0.75;
+      }
+      .bgPattern .bgItem {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: translate(-50%, -50%);
+        color: var(--pattern-color);
+        font-weight: 800;
+        white-space: nowrap;
+        user-select: none;
+        mix-blend-mode: soft-light;
+        text-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+        filter: blur(0.2px);
+      }
+      .bgPattern .bgItem.word {
+        letter-spacing: 1.2px;
+      }
+      .screen {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        padding: 20px;
+        z-index: 2;
+        opacity: 0;
+        transform: translateY(12px) scale(0.992);
+        pointer-events: none;
+        transition: opacity 260ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        will-change: opacity, transform;
+      }
+      .screen.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+        z-index: 3;
+      }
+      .home {
+        place-items: center;
+      }
+      .homeStack {
+        display: grid;
+        place-items: center;
+        gap: 14px;
+        width: 100%;
+      }
+      .panel.homeCard {
+        width: min(280px, 84vw);
+        aspect-ratio: 1 / 1;
+        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+      }
+      html[data-daily-locked="1"] .panel.homeCard {
+        min-height: 360px;
+      }
+      .homeCard .inner {
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 12px;
+      }
+      .homeCard.panel .inner {
+        padding: 22px 18px;
+      }
+      .homeCard .title {
+        font-size: clamp(16px, 2.4vw, 22px);
+      }
+      .homeCard .desc {
+        margin: 0;
+      }
+      .homeButtons {
+        display: grid;
+        gap: 10px;
+        align-content: end;
+      }
+      .homeButtons .btn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+        white-space: normal;
+        line-height: 1.35;
+      }
+      .panel {
+        width: min(860px, 100%);
+        border-radius: 22px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+      }
+      .panel .inner {
+        padding: 28px;
+      }
+      .title {
+        margin: 0 0 8px 0;
+        font-size: clamp(22px, 3vw, 34px);
+        letter-spacing: 0.2px;
+      }
+      .desc {
+        margin: 0 0 20px 0;
+        color: var(--muted);
+        line-height: 1.9;
+        font-size: 14px;
+      }
+      .home .cta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .homeFooter {
+        display: grid;
+        place-items: center;
+      }
+      .c-ok {
+        color: var(--ok);
+        font-weight: 700;
+      }
+      .c-bad {
+        color: var(--bad);
+        font-weight: 700;
+      }
+      .c-warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+      .sea {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: var(--sea-opacity);
+        z-index: 0;
+      }
+      .sea::before {
+        content: "";
+        position: absolute;
+        inset: -40px;
+        background: radial-gradient(1200px 500px at 50% 85%, rgba(38, 182, 198, 0.45), transparent 65%),
+          linear-gradient(180deg, rgba(6, 60, 90, 0.15) 0%, rgba(10, 109, 136, 0.24) 35%, rgba(38, 182, 198, 0.16) 100%);
+        filter: blur(0px);
+      }
+      .sea::after {
+        content: "";
+        position: absolute;
+        inset: -120px;
+        background: repeating-linear-gradient(
+            110deg,
+            rgba(255, 255, 255, 0.08) 0px,
+            rgba(255, 255, 255, 0.08) 2px,
+            rgba(255, 255, 255, 0) 18px,
+            rgba(255, 255, 255, 0) 40px
+          ),
+          radial-gradient(900px 500px at 20% 85%, rgba(255, 255, 255, 0.12), transparent 60%);
+        mix-blend-mode: overlay;
+        opacity: 0.28;
+        transform: rotate(-8deg);
+        animation: shimmer 6.5s ease-in-out infinite;
+      }
+      @keyframes shimmer {
+        0% {
+          translate: -2% 0;
+          opacity: 0.22;
+        }
+        50% {
+          translate: 2% -1%;
+          opacity: 0.34;
+        }
+        100% {
+          translate: -2% 0;
+          opacity: 0.22;
+        }
+      }
+      .map {
+        grid-template-rows: auto 1fr;
+        gap: 14px;
+        padding-bottom: 26px;
+      }
+      .mapHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .mapHeader .leftMeta {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        flex-wrap: wrap;
+      }
+      .mapTools {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+      .miniInput {
+        height: 38px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: var(--text);
+        outline: none;
+        width: 120px;
+      }
+      .miniInput::placeholder {
+        color: var(--muted);
+      }
+      .mapHeader .meta:last-child {
+        text-align: left;
+      }
+      html[dir="ltr"] .mapHeader .meta:last-child {
+        text-align: right;
+      }
+      .mapHeader .meta {
+        display: grid;
+        gap: 4px;
+      }
+      .mapHeader .meta .k {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .mapHeader .meta .v {
+        font-size: 14px;
+      }
+      .mapWrap {
+        position: relative;
+        height: 100%;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+      }
+      html[data-theme="cream"] .mapWrap {
+        border-color: rgba(0, 0, 0, 0.12);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.025), rgba(0, 0, 0, 0.01));
+      }
+      .mapWrap .sea {
+        opacity: 0.8;
+      }
+      .path {
+        position: absolute;
+        inset: 0;
+        overflow: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 26px 22px;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        cursor: grab;
+        outline: none;
+        direction: ltr;
+      }
+      .path.dragging {
+        cursor: grabbing;
+      }
+      .path::-webkit-scrollbar {
+        display: none;
+      }
+      .pathInner {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding-inline: 20px;
+        width: max-content;
+        min-width: 100%;
+      }
+      .stagePos {
+        position: relative;
+        flex: 0 0 auto;
+      }
+      .stage {
+        width: 76px;
+        height: 76px;
+        border-radius: 18px;
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: radial-gradient(90px 70px at 30% 25%, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.08) 55%, rgba(255, 255, 255, 0.03) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        cursor: pointer;
+        transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+        display: grid;
+        place-items: center;
+        user-select: none;
+        flex: 0 0 auto;
+      }
+      html[data-theme="cream"] .stage {
+        border-color: rgba(0, 0, 0, 0.16);
+        background: radial-gradient(90px 70px at 30% 25%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.55) 55%, rgba(255, 255, 255, 0.35) 100%);
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      }
+      .stage::after {
+        content: "";
+        position: absolute;
+        inset: 10px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+        opacity: 0.35;
+        pointer-events: none;
+      }
+      html[data-theme="cream"] .stage::after {
+        background: linear-gradient(145deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0));
+        opacity: 0.35;
+      }
+      .stage .n {
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: 0.6px;
+        text-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+      }
+      .stage .s {
+        position: absolute;
+        bottom: 6px;
+        inset-inline: 0;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 1.4px;
+        color: rgba(245, 158, 11, 0.92);
+        text-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+        pointer-events: none;
+      }
+      html[data-theme="cream"] .stage .n {
+        text-shadow: 0 10px 22px rgba(255, 255, 255, 0.6);
+      }
+      html[data-theme="cream"] .stage .s {
+        color: rgba(217, 119, 6, 0.95);
+        text-shadow: 0 10px 22px rgba(255, 255, 255, 0.55);
+      }
+      .stage.boss {
+        border-color: rgba(99, 102, 241, 0.8);
+        box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28), 0 0 0 2px rgba(99, 102, 241, 0.14) inset;
+      }
+      html[data-theme="cream"] .stage.boss {
+        border-color: rgba(99, 102, 241, 0.9);
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16), 0 0 0 2px rgba(99, 102, 241, 0.18) inset;
+      }
+      .stage.locked {
+        opacity: 0.32;
+        filter: grayscale(0.55);
+        cursor: not-allowed;
+      }
+      html[data-theme="cream"] .stage.locked {
+        opacity: 0.42;
+        filter: grayscale(0.25);
+      }
+      .stage.completed {
+        border-color: rgba(34, 197, 94, 0.65);
+        box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28), 0 0 0 2px rgba(34, 197, 94, 0.12) inset;
+      }
+      html[data-theme="cream"] .stage.completed {
+        border-color: rgba(16, 185, 129, 0.85);
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16), 0 0 0 2px rgba(16, 185, 129, 0.14) inset;
+      }
+      .stage:hover:not(.locked) {
+        transform: translateY(-3px);
+      }
+      .connector {
+        width: 26px;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        flex: 0 0 auto;
+      }
+      html[data-theme="cream"] .connector {
+        background: rgba(0, 0, 0, 0.16);
+      }
+      .level {
+        place-items: center;
+      }
+      .level .panel {
+        width: min(740px, 100%);
+      }
+      .levelTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+      }
+      .levelTop .leftBadges,
+      .levelTop .rightBadges {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .lock {
+        margin-top: 10px;
+        display: grid;
+        gap: 14px;
+      }
+      .slots {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        align-items: start;
+      }
+      html[data-lock-shape="circle"] .slots,
+      html[data-lock-shape="square"] .slots {
+        grid-template-columns: repeat(3, 74px);
+        justify-content: center;
+      }
+      .slotWrap {
+        position: relative;
+        display: grid;
+        gap: 10px;
+        justify-items: stretch;
+      }
+      .slot {
+        width: 100%;
+        height: 74px;
+        border-radius: var(--slot-radius);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.07);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: grid;
+        place-items: center;
+        transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+      }
+      .slot input {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text);
+        text-align: center;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        caret-color: rgba(255, 255, 255, 0.85);
+      }
+      .slot.ok {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.55);
+      }
+      .slot.bad {
+        background: rgba(239, 68, 68, 0.14);
+        border-color: rgba(239, 68, 68, 0.55);
+      }
+      .slot.warn {
+        background: rgba(245, 158, 11, 0.15);
+        border-color: rgba(245, 158, 11, 0.58);
+      }
+      .hint {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translate(-50%, -100%);
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(2, 8, 20, 0.72);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 12px;
+        opacity: 0;
+        pointer-events: none;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .hint.show {
+        animation: hintPop 1300ms ease forwards;
+      }
+      @keyframes hintPop {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -90%);
+        }
+        14% {
+          opacity: 1;
+          transform: translate(-50%, -104%);
+        }
+        75% {
+          opacity: 1;
+          transform: translate(-50%, -110%);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -122%);
+        }
+      }
+      .levelActions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+      .levelActions .left,
+      .levelActions .right {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .msg {
+        min-height: 22px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .history {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      .historyItem {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      html[data-theme="cream"] .historyItem {
+        background: rgba(0, 0, 0, 0.03);
+      }
+      .historyGuess {
+        font-weight: 900;
+        letter-spacing: 1px;
+      }
+      .historyDots {
+        display: flex;
+        gap: 6px;
+        flex: 0 0 auto;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.07);
+      }
+      .dot.ok {
+        background: rgba(34, 197, 94, 0.75);
+        border-color: rgba(34, 197, 94, 0.85);
+      }
+      .dot.bad {
+        background: rgba(239, 68, 68, 0.68);
+        border-color: rgba(239, 68, 68, 0.85);
+      }
+      .dot.warn {
+        background: rgba(245, 158, 11, 0.72);
+        border-color: rgba(245, 158, 11, 0.9);
+      }
+      .coach {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        line-height: 1.8;
+        font-size: 13px;
+      }
+      html[data-theme="cream"] .coach {
+        background: rgba(0, 0, 0, 0.03);
+      }
+      .shopRow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      html[data-theme="cream"] .shopRow {
+        background: rgba(0, 0, 0, 0.03);
+      }
+      .shopRow .t {
+        font-weight: 800;
+      }
+      .shopRow.sectionTitle {
+        justify-content: center;
+      }
+      .shopRow.sectionTitle .t {
+        width: 100%;
+        text-align: center;
+        font-size: 16px;
+      }
+      .shopList {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .statsGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .statCard {
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      html[data-theme="cream"] .statCard {
+        background: rgba(0, 0, 0, 0.03);
+      }
+      .statCard .k {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .statCard .v {
+        font-size: 16px;
+        font-weight: 900;
+        margin-top: 6px;
+      }
+      html[data-reduce-motion="1"] * {
+        transition-duration: 1ms !important;
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+      .win {
+        display: none;
+        margin-top: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(34, 197, 94, 0.45);
+        background: rgba(34, 197, 94, 0.12);
+        padding: 14px 14px;
+        color: rgba(255, 255, 255, 0.92);
+      }
+      .win.show {
+        display: grid;
+        gap: 10px;
+      }
+      .modalBackdrop {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 20;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 220ms ease, visibility 0ms linear 220ms;
+      }
+      .modalBackdrop.show {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition: opacity 220ms ease;
+      }
+      .modal {
+        width: min(760px, 100%);
+        border-radius: 22px;
+        border: 1px solid var(--panel-border);
+        background: var(--modal-bg);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+        transform-origin: var(--modal-origin, 50% 12%);
+        max-height: 86vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        will-change: transform, opacity;
+        transition: transform 280ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 220ms ease;
+      }
+      @media (max-width: 520px) {
+        .modal {
+          width: 100%;
+          max-height: 92vh;
+          border-radius: 18px;
+        }
+        .modalBody {
+          padding: 14px;
+        }
+        .btn {
+          min-height: 44px;
+        }
+      }
+      .modalBackdrop.show .modal {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      .modalBackdrop[data-mode="settings"] .modal,
+      .modalBackdrop[data-mode="shop"] .modal {
+        transform: translateY(-16px) scale(0.975);
+      }
+      .modalHead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--panel-border);
+      }
+      .modalHead .h {
+        font-weight: 800;
+        letter-spacing: 0.2px;
+      }
+      .modalBody {
+        padding: 18px;
+        color: var(--text);
+        line-height: 1.95;
+        font-size: 14px;
+        overflow: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
+      .modalList {
+        margin: 10px 0 0 0;
+        padding: 0 18px 0 0;
+        display: grid;
+        gap: 10px;
+      }
+      .modalList li {
+        list-style: none;
+        padding: 12px 12px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.06);
+      }
+      html[data-theme="cream"] .modalList li {
+        background: rgba(0, 0, 0, 0.03);
+      }
+      .win .t {
+        font-weight: 700;
+      }
+      .tiny {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .kbd {
+        display: none;
+      }
+      @media (max-width: 520px) {
+        header .sub {
+          display: none;
+        }
+        .slots {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (max-width: 900px) {
+        header {
+          padding: 14px 16px;
+        }
+        .screen {
+          padding: 16px;
+        }
+        .panel .inner {
+          padding: 22px;
+        }
+        .stage {
+          width: 70px;
+          height: 70px;
+        }
+        .pathInner {
+          min-width: max(100%, 980px);
+        }
+      }
+    </style>
+  </head>
+  <body data-screen="home">
+    <div class="app">
+      <header>
+        <div class="brand">
+          <h1 id="brandTitle">لعبة القفل</h1>
+          <div id="brandSub" class="sub">مراحل على خريطة فوق بحر لامع</div>
+        </div>
+        <div class="actions">
+          <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
+          <button id="settingsBtn" class="btn ghost" type="button">اعدادات</button>
+          <button id="homeHeaderBtn" class="btn ghost" type="button">الرئيسية</button>
+        </div>
+      </header>
+      <main>
+        <div class="sea" aria-hidden="true"></div>
+        <div id="bgPattern" class="bgPattern" aria-hidden="true"></div>
+
+        <section id="homeScreen" class="screen home active">
+          <div class="homeStack">
+            <div class="panel homeCard">
+              <div class="inner">
+                <h2 id="homeTitle" class="title">لعبة القفل</h2>
+                <p id="homeDesc" class="desc">مراحل كثيرة على خريطة ممتدة… افتح القفل في كل مرحلة.</p>
+                <div class="homeButtons">
+                  <button id="startBtn" class="btn primary" type="button">شغل مخك</button>
+                  <button id="dailyBtn" class="btn" type="button">تحدي يومي</button>
+                  <button id="howBtn" class="btn" type="button">طريقة اللعبه</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="mapScreen" class="screen map">
+          <div class="mapHeader">
+            <div class="leftMeta">
+              <div class="meta">
+                <div id="progressK" class="k">التقدم</div>
+                <div class="v"><span id="progressText"></span></div>
+              </div>
+              <div class="mapTools">
+                <input id="stageSearch" class="miniInput" inputmode="numeric" autocomplete="off" placeholder="رقم المرحلة" />
+                <button id="goStageBtn" class="btn" type="button">اذهب</button>
+                <button id="dailyBtn2" class="btn" type="button">تحدي يومي</button>
+              </div>
+            </div>
+            <div class="meta">
+              <div id="helpK" class="k">مساعدة</div>
+              <div id="helpText" class="v tiny">اسحب يمين/يسار للتنقل في الخريطة</div>
+            </div>
+          </div>
+          <div class="mapWrap">
+            <div class="sea" aria-hidden="true"></div>
+            <div id="path" class="path" tabindex="0">
+              <div id="pathInner" class="pathInner"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="levelScreen" class="screen level">
+          <div class="panel">
+            <div class="inner">
+              <div class="levelTop">
+                <div class="leftBadges">
+                  <div class="badge"><span id="levelLabel">المرحلة</span> <span id="levelNum"></span></div>
+                  <div class="badge"><span id="attemptsLabel">المحاولات:</span> <span id="attemptsNum">0</span></div>
+                </div>
+                <div class="rightBadges">
+                  <div id="modeBadge" class="badge"></div>
+                  <div id="timerBadge" class="badge" style="display:none"></div>
+                </div>
+              </div>
+
+              <div class="lock">
+                <div class="slots" id="slots"></div>
+
+                <div class="levelActions">
+                  <div class="left">
+                    <button id="checkBtn" class="btn primary" type="button">تحقق</button>
+                    <button id="hintBtn" class="btn" type="button">تلميح (1)</button>
+                    <button id="levelFeatReveal1Btn" class="btn" type="button">كشف مكان رقم (0)</button>
+                    <button id="levelFeatReveal2Btn" class="btn" type="button">تلميح رقمين (0)</button>
+                    <button id="clearBtn" class="btn" type="button">مسح</button>
+                    <button id="retryBtn" class="btn" type="button">إعادة المحاولة</button>
+                  </div>
+                  <div class="right">
+                    <button id="backToMapBtn" class="btn ghost" type="button">رجوع للخريطة</button>
+                  </div>
+                </div>
+                <div id="msg" class="msg"></div>
+                <div id="history" class="history"></div>
+                <div id="coach" class="coach" style="display:none"></div>
+
+                <div id="winBox" class="win">
+                  <div id="winTitle" class="t">ممتاز! انفتح القفل.</div>
+                  <div id="winSub" class="tiny">تم فتح المرحلة التالية تلقائياً.</div>
+                  <div style="display:flex; gap:10px; flex-wrap:wrap">
+                    <button id="nextBtn" class="btn primary" type="button">التالي</button>
+                    <button id="mapBtn2" class="btn" type="button">الخريطة</button>
+                    <button id="shareBtn" class="btn" type="button">مشاركة</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div id="modalBackdrop" class="modalBackdrop" aria-hidden="true">
+          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modalHead">
+              <div id="modalTitle" class="h">طريقة اللعبه</div>
+              <button id="closeModalBtn" class="btn ghost" type="button">إغلاق</button>
+            </div>
+            <div class="modalBody">
+              <div id="howToContent">
+                <div id="howLine1">لكل مرحلة قفل، ولكل قفل يجب عليك أنك تتوقع رقمه.</div>
+                <ul class="modalList">
+                  <li><span id="howOk" class="c-ok">إذا الرقم صح</span> <span id="howOk2">بيطلع لونه أخضر.</span></li>
+                  <li><span id="howBad" class="c-bad">وإذا الرقم خطا</span> <span id="howBad2">بيطلع لونه أحمر.</span></li>
+                  <li><span id="howWarn" class="c-warn">وإذا رقم صح مكانه خطا</span> <span id="howWarn2">بيكون لونه أصفر.</span></li>
+                </ul>
+                <div id="howHintNote" style="margin-top:12px" class="tiny">في كل مرحلة عندك تلميح واحد فقط.</div>
+              </div>
+              <div id="settingsContent" style="display:none">
+                <div id="settingsDesc" class="tiny">غيّر لون الشاشة لراحة العين.</div>
+                <div class="shopList">
+                  <div class="shopRow">
+                    <div>
+                      <div id="settingsCoinsK" class="t">العملات</div>
+                      <div class="tiny"><span id="settingsCoinsV">0</span></div>
+                    </div>
+                    <div>
+                      <div id="settingsHintsK" class="t">تلميحات</div>
+                      <div class="tiny"><span id="hintTokensV">0</span></div>
+                    </div>
+                  </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsThemeK">لون الشاشة</div>
+                    <button id="themeBtn" class="btn primary" type="button">لون الشاشة: طبيعي</button>
+                  </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsLangK">اللغة</div>
+                    <button id="langBtn" class="btn" type="button">English</button>
+                  </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsMotionK">الحركة</div>
+                    <button id="motionBtn" class="btn" type="button">تقليل الحركة: لا</button>
+                  </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsShapeK">شكل القفل</div>
+                    <button id="shapeBtn" class="btn" type="button">مستدير</button>
+                  </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsModeK">وضع اللعب</div>
+                    <button id="modeBtn" class="btn" type="button">عادي</button>
+                  </div>
+                  <div class="statsGrid">
+                    <div class="statCard">
+                      <div id="statSolvedK" class="k">المكتملة</div>
+                      <div id="statSolvedV" class="v">0</div>
+                    </div>
+                    <div class="statCard">
+                      <div id="statAvgK" class="k">متوسط المحاولات</div>
+                      <div id="statAvgV" class="v">0</div>
+                    </div>
+                    <div class="statCard">
+                      <div id="statStreakK" class="k">سلسلة بدون تلميح</div>
+                      <div id="statStreakV" class="v">0</div>
+                    </div>
+                    <div class="statCard">
+                      <div id="statBestK" class="k">أفضل سلسلة</div>
+                      <div id="statBestV" class="v">0</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div id="dailyRewardTitle" class="t">مكافأة اليوم</div>
+                    <div class="shopRow" style="margin-top:10px">
+                      <div>
+                        <div id="dailyRewardSub" class="tiny">سلسلتك: 0 يوم</div>
+                        <div id="dailyRewardStatus" class="tiny" style="margin-top:4px">جاهز</div>
+                      </div>
+                      <button id="claimDailyRewardBtn" class="btn primary" type="button">استلام</button>
+                    </div>
+                  </div>
+                  <div style="margin-top:12px">
+                    <div id="missionsTitle" class="t">مهام اليوم</div>
+                    <div id="missionsList" class="shopList"></div>
+                  </div>
+                  <div>
+                    <div id="achTitle" class="t">الإنجازات</div>
+                    <div id="achList" class="shopList"></div>
+                  </div>
+                </div>
+              </div>
+              <div id="shopContent" style="display:none">
+                <div id="shopDesc" class="tiny">اشتر عملات (Apple Pay) أو اشتر ميزات بالعملات.</div>
+                <div class="shopList">
+                  <div class="shopRow">
+                    <div>
+                      <div id="coinPacksTitle" class="t">باقات العملات</div>
+                      <div id="coinPacksSub" class="tiny">السعر بالريال السعودي</div>
+                    </div>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="pack099K" class="t">0.99 ر.س</div>
+                      <div class="tiny"><span id="pack099Sub">+12 🪙</span></div>
+                    </div>
+                    <button id="buyPack099Btn" class="btn primary" type="button">Apple Pay</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="pack299K" class="t">2.99 ر.س</div>
+                      <div class="tiny"><span id="pack299Sub">+45 🪙</span></div>
+                    </div>
+                    <button id="buyPack299Btn" class="btn primary" type="button">Apple Pay</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="pack499K" class="t">4.99 ر.س</div>
+                      <div class="tiny"><span id="pack499Sub">+80 🪙</span></div>
+                    </div>
+                    <button id="buyPack499Btn" class="btn primary" type="button">Apple Pay</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="pack999K" class="t">9.99 ر.س</div>
+                      <div class="tiny"><span id="pack999Sub">+170 🪙</span></div>
+                    </div>
+                    <button id="buyPack999Btn" class="btn primary" type="button">Apple Pay</button>
+                  </div>
+                </div>
+                <div class="shopList" style="margin-top:14px">
+                  <div class="shopRow sectionTitle">
+                    <div>
+                      <div id="featuresTitle" class="t">الميزات</div>
+                    </div>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="shopHint1K" class="t">تلميح واحد</div>
+                      <div class="tiny"><span id="shopHint1Owned">0</span></div>
+                    </div>
+                    <button id="buyHintTokenBtn" class="btn" type="button">شراء (4🪙)</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="shopHint10K" class="t">حزمة تلميحات</div>
+                      <div id="shopHint10Sub" class="tiny">10 تلميحات (توفير)</div>
+                    </div>
+                    <button id="buyHintPack10Btn" class="btn" type="button">شراء (39🪙)</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="shopHint25K" class="t">حزمة كبيرة</div>
+                      <div id="shopHint25Sub" class="tiny">25 تلميح (توفير أكبر)</div>
+                    </div>
+                    <button id="buyHintPack25Btn" class="btn" type="button">شراء (89🪙)</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="featReveal1K" class="t">كشف مكان رقم</div>
+                      <div class="tiny"><span id="featReveal1Owned">0</span></div>
+                    </div>
+                    <button id="buyUseReveal1Btn" class="btn" type="button">شراء (12🪙)</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="featReveal2K" class="t">مسألة رياضه</div>
+                      <div class="tiny"><span id="featReveal2Owned">0</span></div>
+                    </div>
+                    <button id="buyUseReveal2Btn" class="btn" type="button">شراء (20🪙)</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="shopCircleK" class="t">شكل دائري</div>
+                      <div id="shopCircleSub" class="tiny">افتح شكل القفل الدائري</div>
+                    </div>
+                    <button id="buyCircleBtn" class="btn" type="button">فتح (60)</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="shopSquareK" class="t">شكل مربع</div>
+                      <div id="shopSquareSub" class="tiny">افتح شكل القفل المربع</div>
+                    </div>
+                    <button id="buySquareBtn" class="btn" type="button">فتح (60)</button>
+                  </div>
+                </div>
+              </div>
+              <div id="mathContent" style="display:none">
+                <div id="mathEq" class="t" style="text-align:center">0 + 0 = ؟</div>
+                <div id="mathNote" class="tiny" style="margin-top:10px; text-align:center">إذا غلطت تروح عليك المسألة.</div>
+                <div style="display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:14px">
+                  <input id="mathAnswer" class="miniInput" inputmode="numeric" autocomplete="off" placeholder="الجواب" />
+                  <button id="mathYesBtn" class="btn primary" type="button">نعم</button>
+                  <button id="mathCancelBtn" class="btn" type="button">إلغاء</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "lockgame_v1";
+      const TOTAL_LEVELS = 1000;
+
+      function clamp(n, a, b) {
+        return Math.min(b, Math.max(a, n));
+      }
+
+      function codeLengthForLevel(level) {
+        return clamp(3 + Math.floor((level - 1) / 200), 3, 6);
+      }
+
+      function defaultState() {
+        return {
+          unlocked: 1,
+          completed: [],
+          hintsUsed: [],
+          theme: "dark",
+          lang: "ar",
+          coins: 0,
+          hintTokens: 0,
+          items: { reveal1: 0, reveal2: 0 },
+          processedSessions: [],
+          stars: {},
+          daily: { completed: [], hintsUsed: [], stars: {} },
+          dailyChallenge: { id: 1, availableAt: 0, lastCompletedAt: 0 },
+          freeHints: {},
+          dailyFreeHints: {},
+          stats: { wins: 0, attempts: 0, streakNoHint: 0, bestNoHint: 0 },
+          achievements: [],
+          reduceMotion: false,
+          lockShape: "round",
+          mode: "normal",
+          paidHintType: "reveal",
+          unlocks: { circle: false, square: false },
+          seenCoach: [],
+        };
+      }
+
+      function normalizeState(raw) {
+        const base = defaultState();
+        const s = raw && typeof raw === "object" ? raw : {};
+
+        base.unlocked = typeof s.unlocked === "number" ? clamp(s.unlocked, 1, TOTAL_LEVELS) : 1;
+        base.completed = Array.isArray(s.completed) ? s.completed.filter((n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_LEVELS) : [];
+        base.hintsUsed = Array.isArray(s.hintsUsed) ? s.hintsUsed.filter((n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_LEVELS) : [];
+        base.theme = s.theme === "cream" ? "cream" : "dark";
+        base.lang = s.lang === "en" ? "en" : "ar";
+
+        base.coins = typeof s.coins === "number" && Number.isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : 0;
+        base.hintTokens = typeof s.hintTokens === "number" && Number.isFinite(s.hintTokens) ? Math.max(0, Math.floor(s.hintTokens)) : 0;
+        base.items = s.items && typeof s.items === "object" ? s.items : base.items;
+        base.items.reveal1 = typeof base.items.reveal1 === "number" && Number.isFinite(base.items.reveal1) ? Math.max(0, Math.floor(base.items.reveal1)) : 0;
+        base.items.reveal2 = typeof base.items.reveal2 === "number" && Number.isFinite(base.items.reveal2) ? Math.max(0, Math.floor(base.items.reveal2)) : 0;
+        if (typeof base.items.math === "number" && Number.isFinite(base.items.math)) base.items.reveal2 += Math.max(0, Math.floor(base.items.math));
+        delete base.items.math;
+        base.processedSessions = Array.isArray(s.processedSessions) ? s.processedSessions.filter((x) => typeof x === "string").slice(-50) : [];
+        base.stars = s.stars && typeof s.stars === "object" ? s.stars : {};
+
+        base.daily = s.daily && typeof s.daily === "object" ? s.daily : base.daily;
+        if (!Array.isArray(base.daily.completed)) base.daily.completed = [];
+        if (!Array.isArray(base.daily.hintsUsed)) base.daily.hintsUsed = [];
+        if (!base.daily.stars || typeof base.daily.stars !== "object") base.daily.stars = {};
+
+        base.dailyChallenge = s.dailyChallenge && typeof s.dailyChallenge === "object" ? s.dailyChallenge : base.dailyChallenge;
+        base.dailyChallenge.id =
+          typeof base.dailyChallenge.id === "number" && Number.isFinite(base.dailyChallenge.id) ? Math.max(1, Math.floor(base.dailyChallenge.id)) : 1;
+        base.dailyChallenge.availableAt =
+          typeof base.dailyChallenge.availableAt === "number" && Number.isFinite(base.dailyChallenge.availableAt)
+            ? Math.max(0, Math.floor(base.dailyChallenge.availableAt))
+            : 0;
+        base.dailyChallenge.lastCompletedAt =
+          typeof base.dailyChallenge.lastCompletedAt === "number" && Number.isFinite(base.dailyChallenge.lastCompletedAt)
+            ? Math.max(0, Math.floor(base.dailyChallenge.lastCompletedAt))
+            : 0;
+
+        base.stats = s.stats && typeof s.stats === "object" ? s.stats : base.stats;
+        base.stats.wins = typeof base.stats.wins === "number" ? Math.max(0, Math.floor(base.stats.wins)) : 0;
+        base.stats.attempts = typeof base.stats.attempts === "number" ? Math.max(0, Math.floor(base.stats.attempts)) : 0;
+        base.stats.streakNoHint = typeof base.stats.streakNoHint === "number" ? Math.max(0, Math.floor(base.stats.streakNoHint)) : 0;
+        base.stats.bestNoHint = typeof base.stats.bestNoHint === "number" ? Math.max(0, Math.floor(base.stats.bestNoHint)) : 0;
+
+        base.achievements = Array.isArray(s.achievements) ? s.achievements.filter((x) => typeof x === "string") : [];
+
+        base.reduceMotion = !!s.reduceMotion;
+        base.lockShape = s.lockShape === "circle" || s.lockShape === "square" ? s.lockShape : "round";
+        base.mode = s.mode === "timed" || s.mode === "limited" ? s.mode : "normal";
+        base.paidHintType = s.paidHintType === "count" || s.paidHintType === "eliminate" ? s.paidHintType : "reveal";
+
+        base.unlocks = s.unlocks && typeof s.unlocks === "object" ? s.unlocks : base.unlocks;
+        base.unlocks.circle = !!base.unlocks.circle;
+        base.unlocks.square = !!base.unlocks.square;
+
+        base.freeHints = s.freeHints && typeof s.freeHints === "object" ? s.freeHints : {};
+        base.dailyFreeHints = s.dailyFreeHints && typeof s.dailyFreeHints === "object" ? s.dailyFreeHints : {};
+
+        base.seenCoach = Array.isArray(s.seenCoach) ? s.seenCoach.filter((x) => typeof x === "string") : [];
+
+        base.completed.sort((a, b) => a - b);
+        base.hintsUsed.sort((a, b) => a - b);
+        base.daily.completed.sort();
+        base.daily.hintsUsed.sort();
+
+        if (!Object.keys(base.freeHints).length && base.hintsUsed.length) {
+          for (const n of base.hintsUsed) base.freeHints[`level:${n}`] = 1;
+        }
+        if (!Object.keys(base.dailyFreeHints).length && base.daily.hintsUsed.length) {
+          for (const id of base.daily.hintsUsed) base.dailyFreeHints[`daily:${id}`] = 1;
+        }
+
+        return base;
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return defaultState();
+          return normalizeState(JSON.parse(raw));
+        } catch {
+          return defaultState();
+        }
+      }
+
+      function saveState(state) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function generateAnswer(level) {
+        const len = codeLengthForLevel(level);
+        if (level === 1 && len === 3) return "432";
+        let seed = level * 1103515245 + 12345;
+        const digits = [];
+        const used = new Set();
+        while (digits.length < len) {
+          seed = (seed * 1664525 + 1013904223) >>> 0;
+          const d = seed % 10;
+          if (used.has(d)) continue;
+          used.add(d);
+          digits.push(String(d));
+        }
+        return digits.join("");
+      }
+
+      function evaluateGuess(guess, answer) {
+        const g = guess.split("");
+        const a = answer.split("");
+        const len = answer.length;
+        const result = Array(len).fill("bad");
+        const remaining = {};
+
+        for (let i = 0; i < len; i++) {
+          if (g[i] === a[i]) {
+            result[i] = "ok";
+          } else {
+            remaining[a[i]] = (remaining[a[i]] || 0) + 1;
+          }
+        }
+
+        for (let i = 0; i < len; i++) {
+          if (result[i] === "ok") continue;
+          const d = g[i];
+          if (remaining[d] > 0) {
+            result[i] = "warn";
+            remaining[d] -= 1;
+          }
+        }
+
+        return result;
+      }
+
+      function isDigitsN(s, n) {
+        return new RegExp(`^[0-9]{${n}}$`).test(s);
+      }
+
+      const el = {
+        coinsBadge: document.getElementById("coinsBadge"),
+        coinsText: document.getElementById("coinsText"),
+        settingsBtn: document.getElementById("settingsBtn"),
+        homeHeaderBtn: document.getElementById("homeHeaderBtn"),
+        brandTitle: document.getElementById("brandTitle"),
+        brandSub: document.getElementById("brandSub"),
+        home: document.getElementById("homeScreen"),
+        map: document.getElementById("mapScreen"),
+        level: document.getElementById("levelScreen"),
+        bgPattern: document.getElementById("bgPattern"),
+        path: document.getElementById("path"),
+        modal: document.querySelector(".modal"),
+        homeTitle: document.getElementById("homeTitle"),
+        homeDesc: document.getElementById("homeDesc"),
+        startBtn: document.getElementById("startBtn"),
+        dailyBtn: document.getElementById("dailyBtn"),
+        howBtn: document.getElementById("howBtn"),
+        progressK: document.getElementById("progressK"),
+        helpK: document.getElementById("helpK"),
+        helpText: document.getElementById("helpText"),
+        stageSearch: document.getElementById("stageSearch"),
+        goStageBtn: document.getElementById("goStageBtn"),
+        dailyBtn2: document.getElementById("dailyBtn2"),
+        modalBackdrop: document.getElementById("modalBackdrop"),
+        modalTitle: document.getElementById("modalTitle"),
+        closeModalBtn: document.getElementById("closeModalBtn"),
+        howToContent: document.getElementById("howToContent"),
+        howLine1: document.getElementById("howLine1"),
+        howOk: document.getElementById("howOk"),
+        howOk2: document.getElementById("howOk2"),
+        howBad: document.getElementById("howBad"),
+        howBad2: document.getElementById("howBad2"),
+        howWarn: document.getElementById("howWarn"),
+        howWarn2: document.getElementById("howWarn2"),
+        howHintNote: document.getElementById("howHintNote"),
+        settingsContent: document.getElementById("settingsContent"),
+        settingsDesc: document.getElementById("settingsDesc"),
+        settingsCoinsK: document.getElementById("settingsCoinsK"),
+        settingsCoinsV: document.getElementById("settingsCoinsV"),
+        settingsHintsK: document.getElementById("settingsHintsK"),
+        hintTokensV: document.getElementById("hintTokensV"),
+        settingsThemeK: document.getElementById("settingsThemeK"),
+        themeBtn: document.getElementById("themeBtn"),
+        settingsLangK: document.getElementById("settingsLangK"),
+        langBtn: document.getElementById("langBtn"),
+        settingsMotionK: document.getElementById("settingsMotionK"),
+        motionBtn: document.getElementById("motionBtn"),
+        settingsShapeK: document.getElementById("settingsShapeK"),
+        shapeBtn: document.getElementById("shapeBtn"),
+        settingsModeK: document.getElementById("settingsModeK"),
+        modeBtn: document.getElementById("modeBtn"),
+        shopContent: document.getElementById("shopContent"),
+        mathContent: document.getElementById("mathContent"),
+        mathEq: document.getElementById("mathEq"),
+        mathNote: document.getElementById("mathNote"),
+        mathAnswer: document.getElementById("mathAnswer"),
+        mathYesBtn: document.getElementById("mathYesBtn"),
+        mathCancelBtn: document.getElementById("mathCancelBtn"),
+        shopDesc: document.getElementById("shopDesc"),
+        coinPacksTitle: document.getElementById("coinPacksTitle"),
+        coinPacksSub: document.getElementById("coinPacksSub"),
+        pack099K: document.getElementById("pack099K"),
+        pack099Sub: document.getElementById("pack099Sub"),
+        buyPack099Btn: document.getElementById("buyPack099Btn"),
+        pack299K: document.getElementById("pack299K"),
+        pack299Sub: document.getElementById("pack299Sub"),
+        buyPack299Btn: document.getElementById("buyPack299Btn"),
+        pack499K: document.getElementById("pack499K"),
+        pack499Sub: document.getElementById("pack499Sub"),
+        buyPack499Btn: document.getElementById("buyPack499Btn"),
+        pack999K: document.getElementById("pack999K"),
+        pack999Sub: document.getElementById("pack999Sub"),
+        buyPack999Btn: document.getElementById("buyPack999Btn"),
+        featuresTitle: document.getElementById("featuresTitle"),
+        featuresSub: document.getElementById("featuresSub"),
+        featReveal1K: document.getElementById("featReveal1K"),
+        featReveal1Owned: document.getElementById("featReveal1Owned"),
+        buyUseReveal1Btn: document.getElementById("buyUseReveal1Btn"),
+        featReveal2K: document.getElementById("featReveal2K"),
+        featReveal2Owned: document.getElementById("featReveal2Owned"),
+        buyUseReveal2Btn: document.getElementById("buyUseReveal2Btn"),
+        shopHint1K: document.getElementById("shopHint1K"),
+        shopHint1Owned: document.getElementById("shopHint1Owned"),
+        buyHintTokenBtn: document.getElementById("buyHintTokenBtn"),
+        shopHint10K: document.getElementById("shopHint10K"),
+        shopHint10Sub: document.getElementById("shopHint10Sub"),
+        buyHintPack10Btn: document.getElementById("buyHintPack10Btn"),
+        shopHint25K: document.getElementById("shopHint25K"),
+        shopHint25Sub: document.getElementById("shopHint25Sub"),
+        buyHintPack25Btn: document.getElementById("buyHintPack25Btn"),
+        shopCircleK: document.getElementById("shopCircleK"),
+        shopCircleSub: document.getElementById("shopCircleSub"),
+        buyCircleBtn: document.getElementById("buyCircleBtn"),
+        shopSquareK: document.getElementById("shopSquareK"),
+        shopSquareSub: document.getElementById("shopSquareSub"),
+        buySquareBtn: document.getElementById("buySquareBtn"),
+        statSolvedK: document.getElementById("statSolvedK"),
+        statSolvedV: document.getElementById("statSolvedV"),
+        statAvgK: document.getElementById("statAvgK"),
+        statAvgV: document.getElementById("statAvgV"),
+        statStreakK: document.getElementById("statStreakK"),
+        statStreakV: document.getElementById("statStreakV"),
+        statBestK: document.getElementById("statBestK"),
+        statBestV: document.getElementById("statBestV"),
+        dailyRewardTitle: document.getElementById("dailyRewardTitle"),
+        dailyRewardSub: document.getElementById("dailyRewardSub"),
+        dailyRewardStatus: document.getElementById("dailyRewardStatus"),
+        claimDailyRewardBtn: document.getElementById("claimDailyRewardBtn"),
+        missionsTitle: document.getElementById("missionsTitle"),
+        missionsList: document.getElementById("missionsList"),
+        achTitle: document.getElementById("achTitle"),
+        achList: document.getElementById("achList"),
+        progressText: document.getElementById("progressText"),
+        pathInner: document.getElementById("pathInner"),
+        levelLabel: document.getElementById("levelLabel"),
+        levelNum: document.getElementById("levelNum"),
+        attemptsLabel: document.getElementById("attemptsLabel"),
+        attemptsNum: document.getElementById("attemptsNum"),
+        modeBadge: document.getElementById("modeBadge"),
+        timerBadge: document.getElementById("timerBadge"),
+        msg: document.getElementById("msg"),
+        checkBtn: document.getElementById("checkBtn"),
+        hintBtn: document.getElementById("hintBtn"),
+        levelFeatReveal1Btn: document.getElementById("levelFeatReveal1Btn"),
+        levelFeatReveal2Btn: document.getElementById("levelFeatReveal2Btn"),
+        clearBtn: document.getElementById("clearBtn"),
+        retryBtn: document.getElementById("retryBtn"),
+        backToMapBtn: document.getElementById("backToMapBtn"),
+        history: document.getElementById("history"),
+        coach: document.getElementById("coach"),
+        winBox: document.getElementById("winBox"),
+        winTitle: document.getElementById("winTitle"),
+        winSub: document.getElementById("winSub"),
+        nextBtn: document.getElementById("nextBtn"),
+        mapBtn2: document.getElementById("mapBtn2"),
+        shareBtn: document.getElementById("shareBtn"),
+        slots: document.getElementById("slots"),
+      };
+
+      const app = {
+        state: loadState(),
+        stage: { kind: "level", id: 1 },
+        attempts: 0,
+        inputs: [],
+        hints: [],
+        history: [],
+        session: { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false },
+      };
+
+      let lastFocusedEl = null;
+      let modalMode = "howto";
+      let lastDragAt = 0;
+
+      const I18N = {
+        ar: {
+          docTitle: "لعبة القفل",
+          brandTitle: "لعبة القفل",
+          brandSub: "مراحل على خريطة فوق بحر لامع",
+          settingsBtn: "اعدادات",
+          homeHeaderBtn: "الرئيسية",
+          homeTitle: "لعبة القفل",
+          homeDesc: "مراحل كثيرة على خريطة ممتدة… افتح القفل في كل مرحلة.",
+          startBtn: "شغل مخك",
+          howBtn: "طريقة اللعبه",
+          progressK: "التقدم",
+          helpK: "مساعدة",
+          helpText: "اسحب يمين/يسار للتنقل في الخريطة",
+          levelLabel: "المرحلة",
+          attemptsLabel: "المحاولات:",
+          checkBtn: "تحقق",
+          clearBtn: "مسح",
+          backToMapBtn: "رجوع للخريطة",
+          winTitle: "ممتاز! انفتح القفل.",
+          winSub: "تم فتح المرحلة التالية تلقائياً.",
+          nextBtn: "التالي",
+          nextEnded: "انتهت المراحل",
+          mapBtn2: "الخريطة",
+          closeModalBtn: "إغلاق",
+          howTitle: "طريقة اللعبه",
+          settingsTitle: "الإعدادات",
+          howLine1: "لكل مرحلة قفل، ولكل قفل يجب عليك أنك تتوقع رقمه.",
+          howOk: "إذا الرقم صح",
+          howOk2: "بيطلع لونه أخضر.",
+          howBad: "وإذا الرقم خطا",
+          howBad2: "بيطلع لونه أحمر.",
+          howWarn: "وإذا رقم صح مكانه خطا",
+          howWarn2: "بيكون لونه أصفر.",
+          howHintNote: "في كل مرحلة عندك تلميح واحد فقط.",
+          settingsDesc: "غيّر لون الشاشة لراحة العين.",
+          themeBtn: ({ theme }) => (theme === "cream" ? "لون الشاشة: كريمي" : "لون الشاشة: طبيعي"),
+          langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
+          progressText: ({ completed, unlocked, total }) => `${completed} مكتملة — مفتوح حتى ${unlocked} / ${total}`,
+          stageAria: ({ i }) => `المرحلة ${i}`,
+          hintBtn: ({ left }) => `تلميح (${left})`,
+          enterDigits: ({ len }) => `اكتب ${len} أرقام أولاً.`,
+          hintUsed: "استخدمت تلميح هذه المرحلة.",
+          hintMsg: ({ digit }) => `تلميح: رقم موجود في القفل هو ${digit}`,
+          mathTitle: "مسألة رياضه",
+          mathNote: "إذا غلطت تروح عليك المسألة.",
+          mathEnterDigit: "اكتب رقم من 0 إلى 9.",
+          mathPlaceholder: "الجواب",
+          mathYesBtn: "نعم",
+          mathCancelBtn: "إلغاء",
+          mathWrongUsed: "خطأ. راحت عليك المسألة.",
+          mathCorrect: ({ digit }) => `صح ✅ رقم داخل القفل هو ${digit}`,
+          hintBubble: "رقم صحيح، مكانه خطأ",
+          patternWord: "فك القفل",
+          dailyBtn: "تحدي يومي",
+          dailyLocked: ({ hms }) => `تحدي يومي (بعد ${hms})`,
+          dailyLockedPay: ({ hms }) => `تحدي يومي: ${hms} | فتح (3🪙)`,
+          dailyPayConfirm: "فتح التحدي الآن بـ 3 عملات؟",
+          goStageBtn: "اذهب",
+          stageSearchPlaceholder: "رقم المرحلة",
+          retryBtn: "إعادة المحاولة",
+          shareBtn: "مشاركة",
+          copied: "تم النسخ.",
+          notEnoughCoins: "عملاتك غير كافية.",
+          noHintTokens: "ما عندك تلميحات. افتح المشتريات من علامة العملات.",
+          bought: "تم الشراء.",
+          timeUp: "انتهى الوقت. أعد المحاولة.",
+          attemptsOver: "انتهت المحاولات. أعد المحاولة.",
+          hintFailed: "ما ضبط التلميح. جرب مرة ثانية.",
+          makeGuessFirst: "سو محاولة أولاً.",
+          digitsPresent: ({ count }) => `عدد الأرقام الموجودة: ${count}`,
+          digitNotInLock: ({ digit }) => `الرقم ${digit} غير موجود في القفل.`,
+          modeNormal: "عادي",
+          modeTimed: "وقت",
+          modeLimited: "محاولات",
+          modeDaily: "يومي",
+          modeBadge: ({ mode }) => (mode === "timed" ? "وقت" : mode === "limited" ? "محاولات" : mode === "daily" ? "يومي" : "عادي"),
+          timerBadge: ({ s }) => `⏱️ ${s}s`,
+          settingsCoinsK: "العملات",
+          settingsHintsK: "تلميحات",
+          settingsThemeK: "لون الشاشة",
+          settingsLangK: "اللغة",
+          settingsMotionK: "الحركة",
+          motionBtn: ({ on }) => (on ? "تقليل الحركة: نعم" : "تقليل الحركة: لا"),
+          settingsShapeK: "شكل القفل",
+          shapeRound: "مستدير",
+          shapeCircle: "دائري",
+          shapeSquare: "مربع",
+          locked: "مقفلة",
+          settingsModeK: "وضع اللعب",
+          modeBtn: ({ mode }) => (mode === "timed" ? "وقت" : mode === "limited" ? "محاولات" : "عادي"),
+          settingsHintTypeK: "نوع تلميح مدفوع",
+          paidHintReveal: "كشف مكان رقم",
+          paidHintEliminate: "استبعاد رقم",
+          paidHintCount: "عدد أرقام صحيحة",
+          paidHintBtn: ({ type }) => (type === "eliminate" ? "استبعاد رقم" : type === "count" ? "عدد أرقام صحيحة" : "كشف مكان رقم"),
+          shopTitle: "المتجر",
+          shopSub: "اشتري تلميحات ومزايا بالعملات",
+          shopDesc: "زوّد عملاتك واشتري ميزات تساعدك تفتح القفل أسرع.",
+          shopHint1K: "تلميح واحد",
+          buyHintTokenBtn: "شراء تلميح (4)",
+          shopHint10K: "حزمة تلميحات",
+          shopHint10Sub: "10 تلميحات (توفير)",
+          buyHintPack10Btn: "شراء (39🪙)",
+          shopHint25K: "حزمة كبيرة",
+          shopHint25Sub: "25 تلميح (توفير أكبر)",
+          buyHintPack25Btn: "شراء (89🪙)",
+          shopCircleK: "شكل دائري",
+          shopCircleSub: "افتح شكل القفل الدائري",
+          buyCircleBtn: ({ owned }) => (owned ? "تم" : "فتح (60)"),
+          shopSquareK: "شكل مربع",
+          shopSquareSub: "افتح شكل القفل المربع",
+          buySquareBtn: ({ owned }) => (owned ? "تم" : "فتح (60)"),
+          shopModalTitle: "المشتريات",
+          coinPacksTitle: "باقات العملات",
+          coinPacksSub: "السعر بالريال السعودي",
+          featuresTitle: "الميزات",
+          featReveal1K: "كشف مكان رقم",
+          featReveal2K: "مسألة رياضه",
+          inLevelFeatureBtn: ({ name, n }) => `${name} (${n})`,
+          ownedN: ({ n }) => `متوفر: ${n}`,
+          buyWithCoins: ({ cost }) => `شراء (${cost}🪙)`,
+          useOwned: ({ n }) => `استخدام (${n})`,
+          applePayBtn: "Apple Pay",
+          paymentNotReady: "الدفع غير مفعل حالياً.",
+          paymentRedirecting: "جاري فتح الدفع…",
+          paymentFailed: "فشل الدفع أو لم يكتمل.",
+          paymentApplied: ({ coins }) => `تمت إضافة ${coins} عملة.`,
+          statSolvedK: "المكتملة",
+          statAvgK: "متوسط المحاولات",
+          statStreakK: "سلسلة بدون تلميح",
+          statBestK: "أفضل سلسلة",
+          dailyRewardTitle: "مكافأة اليوم",
+          dailyRewardSub: ({ n }) => `سلسلتك: ${n} يوم`,
+          dailyRewardReady: ({ coins }) => `جاهز — +${coins}🪙`,
+          dailyRewardClaimed: "تم الاستلام اليوم.",
+          dailyRewardBtn: "استلام",
+          missionsTitle: "مهام اليوم",
+          missionSolvedTitle: "حل مراحل",
+          missionSolvedDesc: ({ a, b }) => `${a} / ${b}`,
+          missionNoHintTitle: "بدون تلميحات",
+          missionNoHintDesc: ({ a, b }) => `${a} / ${b}`,
+          missionBossTitle: "مستوى بوس",
+          missionBossDesc: ({ a, b }) => `${a} / ${b}`,
+          missionClaim: ({ coins }) => `استلام +${coins}🪙`,
+          missionClaimed: "تم",
+          achTitle: "الإنجازات",
+          shareText: ({ title, attempts, stars }) => `${title} | محاولات: ${attempts} | نجوم: ${stars}`,
+        },
+        en: {
+          docTitle: "Lock Game",
+          brandTitle: "Lock Game",
+          brandSub: "Levels on a shiny sea map",
+          settingsBtn: "Settings",
+          homeHeaderBtn: "Home",
+          homeTitle: "Lock Game",
+          homeDesc: "Many levels on a long map… unlock each lock.",
+          startBtn: "Think!",
+          howBtn: "How to play",
+          progressK: "Progress",
+          helpK: "Help",
+          helpText: "Drag left/right to navigate the map",
+          levelLabel: "Level",
+          attemptsLabel: "Attempts:",
+          checkBtn: "Check",
+          clearBtn: "Clear",
+          backToMapBtn: "Back to map",
+          winTitle: "Great! Unlocked.",
+          winSub: "Next level unlocked automatically.",
+          nextBtn: "Next",
+          nextEnded: "No more levels",
+          mapBtn2: "Map",
+          closeModalBtn: "Close",
+          howTitle: "How to play",
+          settingsTitle: "Settings",
+          howLine1: "Each level has a lock. Guess its code.",
+          howOk: "If correct",
+          howOk2: "it turns green.",
+          howBad: "If wrong",
+          howBad2: "it turns red.",
+          howWarn: "If right digit, wrong spot",
+          howWarn2: "it turns yellow.",
+          howHintNote: "You only get one hint per level.",
+          settingsDesc: "Choose a screen color for comfort.",
+          themeBtn: ({ theme }) => (theme === "cream" ? "Screen: Cream" : "Screen: Normal"),
+          langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
+          progressText: ({ completed, unlocked, total }) => `${completed} completed — unlocked up to ${unlocked} / ${total}`,
+          stageAria: ({ i }) => `Level ${i}`,
+          hintBtn: ({ left }) => `Hint (${left})`,
+          enterDigits: ({ len }) => `Enter ${len} digits first.`,
+          hintUsed: "You already used this level's hint.",
+          hintMsg: ({ digit }) => `Hint: A digit in the lock is ${digit}`,
+          mathTitle: "Math puzzle",
+          mathNote: "Wrong answer consumes the puzzle.",
+          mathEnterDigit: "Enter a digit (0-9).",
+          mathPlaceholder: "Answer",
+          mathYesBtn: "Yes",
+          mathCancelBtn: "Cancel",
+          mathWrongUsed: "Wrong. Puzzle consumed.",
+          mathCorrect: ({ digit }) => `Correct ✅ A digit in the lock is ${digit}`,
+          hintBubble: "Right digit, wrong spot",
+          patternWord: "UNLOCK",
+          dailyBtn: "Daily",
+          dailyLocked: ({ hms }) => `Daily (in ${hms})`,
+          dailyLockedPay: ({ hms }) => `Daily: ${hms} | Unlock (3🪙)`,
+          dailyPayConfirm: "Unlock daily now for 3 coins?",
+          goStageBtn: "Go",
+          stageSearchPlaceholder: "Stage #",
+          retryBtn: "Retry",
+          shareBtn: "Share",
+          copied: "Copied.",
+          notEnoughCoins: "Not enough coins.",
+          noHintTokens: "No hints available. Open the shop from the coin badge.",
+          bought: "Purchased.",
+          timeUp: "Time is up. Retry.",
+          attemptsOver: "No attempts left. Retry.",
+          hintFailed: "Hint failed. Try again.",
+          makeGuessFirst: "Make a guess first.",
+          digitsPresent: ({ count }) => `Digits present: ${count}`,
+          digitNotInLock: ({ digit }) => `Digit ${digit} is not in the lock.`,
+          modeNormal: "Normal",
+          modeTimed: "Timed",
+          modeLimited: "Limited",
+          modeDaily: "Daily",
+          modeBadge: ({ mode }) => (mode === "timed" ? "Timed" : mode === "limited" ? "Limited" : mode === "daily" ? "Daily" : "Normal"),
+          timerBadge: ({ s }) => `⏱️ ${s}s`,
+          settingsCoinsK: "Coins",
+          settingsHintsK: "Hints",
+          settingsThemeK: "Screen",
+          settingsLangK: "Language",
+          settingsMotionK: "Motion",
+          motionBtn: ({ on }) => (on ? "Reduce motion: Yes" : "Reduce motion: No"),
+          settingsShapeK: "Lock shape",
+          shapeRound: "Rounded",
+          shapeCircle: "Circle",
+          shapeSquare: "Square",
+          locked: "Locked",
+          settingsModeK: "Mode",
+          modeBtn: ({ mode }) => (mode === "timed" ? "Timed" : mode === "limited" ? "Limited" : "Normal"),
+          settingsHintTypeK: "Paid hint type",
+          paidHintReveal: "Reveal position",
+          paidHintEliminate: "Eliminate digit",
+          paidHintCount: "Correct digits count",
+          paidHintBtn: ({ type }) => (type === "eliminate" ? "Eliminate digit" : type === "count" ? "Correct digits count" : "Reveal position"),
+          shopTitle: "Shop",
+          shopSub: "Buy hints and features with coins",
+          shopDesc: "Top up coins and buy features to unlock faster.",
+          shopHint1K: "Single hint",
+          buyHintTokenBtn: "Buy hint (4)",
+          shopHint10K: "Hint bundle",
+          shopHint10Sub: "10 hints (save)",
+          buyHintPack10Btn: "Buy (39🪙)",
+          shopHint25K: "Big bundle",
+          shopHint25Sub: "25 hints (save more)",
+          buyHintPack25Btn: "Buy (89🪙)",
+          shopCircleK: "Circle shape",
+          shopCircleSub: "Unlock circle lock shape",
+          buyCircleBtn: ({ owned }) => (owned ? "Owned" : "Unlock (60)"),
+          shopSquareK: "Square shape",
+          shopSquareSub: "Unlock square lock shape",
+          buySquareBtn: ({ owned }) => (owned ? "Owned" : "Unlock (60)"),
+          shopModalTitle: "Shop",
+          shopDesc: "Top up coins and buy features to unlock faster.",
+          coinPacksTitle: "Coin packs",
+          coinPacksSub: "Prices in SAR",
+          featuresTitle: "Features",
+          featReveal1K: "Reveal position",
+          featReveal2K: "Math puzzle",
+          inLevelFeatureBtn: ({ name, n }) => `${name} (${n})`,
+          ownedN: ({ n }) => `Owned: ${n}`,
+          buyWithCoins: ({ cost }) => `Buy (${cost}🪙)`,
+          useOwned: ({ n }) => `Use (${n})`,
+          applePayBtn: "Apple Pay",
+          paymentNotReady: "Payments are not configured yet.",
+          paymentRedirecting: "Opening payment…",
+          paymentFailed: "Payment failed or not completed.",
+          paymentApplied: ({ coins }) => `Added ${coins} coins.`,
+          statSolvedK: "Solved",
+          statAvgK: "Avg attempts",
+          statStreakK: "No-hint streak",
+          statBestK: "Best streak",
+          dailyRewardTitle: "Daily reward",
+          dailyRewardSub: ({ n }) => `Streak: ${n} days`,
+          dailyRewardReady: ({ coins }) => `Ready — +${coins}🪙`,
+          dailyRewardClaimed: "Already claimed today.",
+          dailyRewardBtn: "Claim",
+          missionsTitle: "Daily missions",
+          missionSolvedTitle: "Solve levels",
+          missionSolvedDesc: ({ a, b }) => `${a} / ${b}`,
+          missionNoHintTitle: "No hints",
+          missionNoHintDesc: ({ a, b }) => `${a} / ${b}`,
+          missionBossTitle: "Boss level",
+          missionBossDesc: ({ a, b }) => `${a} / ${b}`,
+          missionClaim: ({ coins }) => `Claim +${coins}🪙`,
+          missionClaimed: "Claimed",
+          achTitle: "Achievements",
+          shareText: ({ title, attempts, stars }) => `${title} | Attempts: ${attempts} | Stars: ${stars}`,
+        },
+      };
+
+      function normalizeLang(lang) {
+        return lang === "en" ? "en" : "ar";
+      }
+
+      function currentLang() {
+        return normalizeLang(app.state.lang);
+      }
+
+      function t(key, vars = {}) {
+        const dict = I18N[currentLang()];
+        const v = dict[key];
+        return typeof v === "function" ? v(vars) : v;
+      }
+
+      function applyLanguage(lang) {
+        const next = normalizeLang(lang);
+        app.state.lang = next;
+        saveState(app.state);
+        document.documentElement.lang = next;
+        document.documentElement.dir = next === "en" ? "ltr" : "rtl";
+
+        document.title = t("docTitle");
+        if (el.brandTitle) el.brandTitle.textContent = t("brandTitle");
+        if (el.brandSub) el.brandSub.textContent = t("brandSub");
+        if (el.settingsBtn) el.settingsBtn.textContent = t("settingsBtn");
+        if (el.homeHeaderBtn) el.homeHeaderBtn.textContent = t("homeHeaderBtn");
+        if (el.homeTitle) el.homeTitle.textContent = t("homeTitle");
+        if (el.homeDesc) el.homeDesc.textContent = t("homeDesc");
+        if (el.startBtn) el.startBtn.textContent = t("startBtn");
+        if (el.dailyBtn) el.dailyBtn.textContent = t("dailyBtn");
+        if (el.howBtn) el.howBtn.textContent = t("howBtn");
+        if (el.progressK) el.progressK.textContent = t("progressK");
+        if (el.helpK) el.helpK.textContent = t("helpK");
+        if (el.helpText) el.helpText.textContent = t("helpText");
+        if (el.goStageBtn) el.goStageBtn.textContent = t("goStageBtn");
+        if (el.stageSearch) el.stageSearch.placeholder = t("stageSearchPlaceholder");
+        if (el.dailyBtn2) el.dailyBtn2.textContent = t("dailyBtn");
+        if (el.levelLabel) el.levelLabel.textContent = t("levelLabel");
+        if (el.attemptsLabel) el.attemptsLabel.textContent = t("attemptsLabel");
+        if (el.checkBtn) el.checkBtn.textContent = t("checkBtn");
+        if (el.clearBtn) el.clearBtn.textContent = t("clearBtn");
+        if (el.retryBtn) el.retryBtn.textContent = t("retryBtn");
+        if (el.backToMapBtn) el.backToMapBtn.textContent = t("backToMapBtn");
+        if (el.winTitle) el.winTitle.textContent = t("winTitle");
+        if (el.winSub) el.winSub.textContent = t("winSub");
+        if (el.nextBtn) el.nextBtn.textContent = t("nextBtn");
+        if (el.mapBtn2) el.mapBtn2.textContent = t("mapBtn2");
+        if (el.shareBtn) el.shareBtn.textContent = t("shareBtn");
+        if (el.closeModalBtn) el.closeModalBtn.textContent = t("closeModalBtn");
+        if (el.howLine1) el.howLine1.textContent = t("howLine1");
+        if (el.howOk) el.howOk.textContent = t("howOk");
+        if (el.howOk2) el.howOk2.textContent = t("howOk2");
+        if (el.howBad) el.howBad.textContent = t("howBad");
+        if (el.howBad2) el.howBad2.textContent = t("howBad2");
+        if (el.howWarn) el.howWarn.textContent = t("howWarn");
+        if (el.howWarn2) el.howWarn2.textContent = t("howWarn2");
+        if (el.howHintNote) el.howHintNote.textContent = t("howHintNote");
+        if (el.settingsDesc) el.settingsDesc.textContent = t("settingsDesc");
+        if (el.settingsCoinsK) el.settingsCoinsK.textContent = t("settingsCoinsK");
+        if (el.settingsHintsK) el.settingsHintsK.textContent = t("settingsHintsK");
+        if (el.settingsThemeK) el.settingsThemeK.textContent = t("settingsThemeK");
+        if (el.settingsLangK) el.settingsLangK.textContent = t("settingsLangK");
+        if (el.settingsMotionK) el.settingsMotionK.textContent = t("settingsMotionK");
+        if (el.settingsShapeK) el.settingsShapeK.textContent = t("settingsShapeK");
+        if (el.settingsModeK) el.settingsModeK.textContent = t("settingsModeK");
+        if (el.shopDesc) el.shopDesc.textContent = t("shopDesc");
+        if (el.coinPacksTitle) el.coinPacksTitle.textContent = t("coinPacksTitle");
+        if (el.coinPacksSub) el.coinPacksSub.textContent = t("coinPacksSub");
+        if (el.featuresTitle) el.featuresTitle.textContent = t("featuresTitle");
+        if (el.featuresSub) el.featuresSub.textContent = t("featuresSub");
+        if (el.featReveal1K) el.featReveal1K.textContent = t("featReveal1K");
+        if (el.featReveal2K) el.featReveal2K.textContent = t("featReveal2K");
+        if (el.shopCircleK) el.shopCircleK.textContent = t("shopCircleK");
+        if (el.shopCircleSub) el.shopCircleSub.textContent = t("shopCircleSub");
+        if (el.shopSquareK) el.shopSquareK.textContent = t("shopSquareK");
+        if (el.shopSquareSub) el.shopSquareSub.textContent = t("shopSquareSub");
+        if (el.statSolvedK) el.statSolvedK.textContent = t("statSolvedK");
+        if (el.statAvgK) el.statAvgK.textContent = t("statAvgK");
+        if (el.statStreakK) el.statStreakK.textContent = t("statStreakK");
+        if (el.statBestK) el.statBestK.textContent = t("statBestK");
+        if (el.achTitle) el.achTitle.textContent = t("achTitle");
+        updateThemeBtn();
+        if (el.langBtn) el.langBtn.textContent = t("langBtn", { lang: next });
+        updateSettingsUI();
+        updateShopUI();
+
+        renderMap();
+        buildBgPattern();
+        if (el.level.classList.contains("active")) {
+          const left = Math.max(0, freeHintLimit() - freeHintUsedCount());
+          el.hintBtn.textContent = t("hintBtn", { left });
+        }
+        if (el.winBox.classList.contains("show") && app.stage.kind === "level" && app.stage.id >= TOTAL_LEVELS) {
+          el.nextBtn.disabled = true;
+          el.nextBtn.textContent = t("nextEnded");
+        }
+      }
+
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme === "cream" ? "cream" : "dark";
+      }
+
+      function currentTheme() {
+        return document.documentElement.dataset.theme === "cream" ? "cream" : "dark";
+      }
+
+      function updateThemeBtn() {
+        if (!el.themeBtn) return;
+        el.themeBtn.textContent = t("themeBtn", { theme: currentTheme() });
+      }
+
+      function focusMapPath() {
+        if (!el.path) return;
+        try {
+          el.path.focus({ preventScroll: true });
+        } catch {
+          el.path.focus();
+        }
+      }
+
+      function randFloat(a, b) {
+        return a + Math.random() * (b - a);
+      }
+
+      function randInt(a, b) {
+        return Math.floor(randFloat(a, b + 1));
+      }
+
+      function pick(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function randomDigits(minLen, maxLen) {
+        const len = randInt(minLen, maxLen);
+        let s = "";
+        for (let i = 0; i < len; i++) s += String(randInt(0, 9));
+        return s;
+      }
+
+      function buildBgPattern() {
+        const root = el.bgPattern;
+        if (!root) return;
+        root.innerHTML = "";
+
+        const w = Math.max(1, window.innerWidth || 1);
+        const h = Math.max(1, window.innerHeight || 1);
+        const count = clamp(Math.round((w * h) / 21000), 40, 120);
+
+        const locks = ["🔒", "🔐"];
+        const words = [t("patternWord")];
+
+        const frag = document.createDocumentFragment();
+
+        for (let i = 0; i < count; i++) {
+          const r = Math.random();
+          const span = document.createElement("span");
+          span.className = "bgItem";
+
+          if (r < 0.28) {
+            span.textContent = pick(words);
+            span.classList.add("word");
+            span.style.fontSize = `${randInt(14, 22)}px`;
+            span.style.opacity = String(randFloat(0.22, 0.5));
+            span.style.transform = `translate(-50%, -50%) rotate(${randInt(-25, 25)}deg)`;
+          } else if (r < 0.58) {
+            span.textContent = pick(locks);
+            span.style.fontSize = `${randInt(18, 34)}px`;
+            span.style.opacity = String(randFloat(0.18, 0.42));
+            span.style.transform = `translate(-50%, -50%) rotate(${randInt(-18, 18)}deg)`;
+          } else {
+            span.textContent = Math.random() < 0.55 ? randomDigits(1, 1) : randomDigits(2, 6);
+            span.style.fontSize = `${randInt(16, 30)}px`;
+            span.style.opacity = String(randFloat(0.2, 0.55));
+            span.style.transform = `translate(-50%, -50%) rotate(${randInt(-32, 32)}deg)`;
+          }
+
+          span.style.left = `${randFloat(4, 96)}%`;
+          span.style.top = `${randFloat(5, 95)}%`;
+          frag.appendChild(span);
+        }
+
+        root.appendChild(frag);
+      }
+
+      function setScreen(name) {
+        document.body.dataset.screen = name;
+      }
+
+      function show(screen) {
+        el.home.classList.remove("active");
+        el.map.classList.remove("active");
+        el.level.classList.remove("active");
+        screen.classList.add("active");
+        if (screen === el.home) setScreen("home");
+        else if (screen === el.map) setScreen("map");
+        else if (screen === el.level) setScreen("level");
+      }
+
+      function renderProgress() {
+        const completedCount = app.state.completed.length;
+        el.progressText.textContent = t("progressText", { completed: completedCount, unlocked: app.state.unlocked, total: TOTAL_LEVELS });
+      }
+
+      function stageOffset(i) {
+        const wave = Math.sin(i * 0.7) * 28;
+        const drift = Math.sin(i * 0.18) * 10;
+        return wave + drift;
+      }
+
+      function renderMap() {
+        renderProgress();
+        el.pathInner.innerHTML = "";
+        for (let i = 1; i <= TOTAL_LEVELS; i++) {
+          if (i !== 1) {
+            const conn = document.createElement("div");
+            conn.className = "connector";
+            el.pathInner.appendChild(conn);
+          }
+          const pos = document.createElement("div");
+          pos.className = "stagePos";
+          pos.style.transform = `translateY(${stageOffset(i)}px)`;
+
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "stage";
+          b.id = `stageBtn-${i}`;
+          b.dataset.level = String(i);
+          const unlocked = i <= app.state.unlocked;
+          const completed = app.state.completed.includes(i);
+          const boss = isBossLevel(i);
+          if (!unlocked) b.classList.add("locked");
+          if (completed) b.classList.add("completed");
+          if (boss) b.classList.add("boss");
+          b.setAttribute("aria-label", t("stageAria", { i }));
+          const stars = getStarsForLevel(i);
+          const starText = stars ? "★".repeat(stars) : "";
+          b.innerHTML = `<div class="n">${i}</div>${stars ? `<div class="s">${starText}</div>` : ""}`;
+          b.addEventListener("click", () => {
+            if (Date.now() - lastDragAt < 260) return;
+            if (!unlocked) return;
+            openStage({ kind: "level", id: i });
+          });
+          pos.appendChild(b);
+          el.pathInner.appendChild(pos);
+        }
+      }
+
+      function normalizeInput(input) {
+        const v = (input.value || "").replace(/[^\d]/g, "");
+        input.value = v.slice(0, 1);
+      }
+
+      function wireInputs() {
+        function distributeDigits(startIdx, digits) {
+          const ds = String(digits || "").replace(/[^\d]/g, "");
+          if (!ds) return;
+          for (let i = 0; i < ds.length; i++) {
+            const input = app.inputs[startIdx + i];
+            if (!input) break;
+            if (input.disabled) continue;
+            input.value = ds[i];
+          }
+          const last = Math.min(app.inputs.length - 1, startIdx + ds.length - 1);
+          if (app.inputs[last]) app.inputs[last].focus();
+        }
+
+        app.inputs.forEach((input, idx) => {
+          input.addEventListener("input", () => {
+            const raw = (input.value || "").replace(/[^\d]/g, "");
+            if (raw.length > 1) {
+              distributeDigits(idx, raw);
+            } else {
+              input.value = raw.slice(0, 1);
+              if (input.value && idx < app.inputs.length - 1) app.inputs[idx + 1].focus();
+            }
+          });
+          input.addEventListener("paste", (e) => {
+            const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
+            const digits = String(text).replace(/[^\d]/g, "");
+            if (!digits) return;
+            distributeDigits(idx, digits);
+            e.preventDefault();
+          });
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Backspace" && !input.value && idx > 0) app.inputs[idx - 1].focus();
+            if (e.key === "Enter") check();
+          });
+        });
+      }
+
+      function clearSlots() {
+        app.inputs.forEach((input) => {
+          if (input.dataset.locked === "1") return;
+          input.value = "";
+        });
+        app.inputs.forEach((input) => {
+          if (input.dataset.locked === "1") return;
+          input.disabled = false;
+        });
+        app.inputs.forEach((input) => {
+          const slot = input.parentElement;
+          if (input.dataset.locked === "1") {
+            slot.classList.remove("bad", "warn");
+            slot.classList.add("ok");
+            return;
+          }
+          slot.classList.remove("ok", "bad", "warn");
+        });
+        app.hints.forEach((h) => h.classList.remove("show"));
+        el.msg.textContent = "";
+        el.winBox.classList.remove("show");
+        if (el.history) el.history.innerHTML = "";
+        if (el.coach) el.coach.style.display = "none";
+        if (app.inputs[0]) app.inputs[0].focus();
+      }
+
+      function formatHMS(ms) {
+        const s = Math.max(0, Math.floor(ms / 1000));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const ss = s % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+      }
+
+      function dailyCooldownMs() {
+        return 24 * 60 * 60 * 1000;
+      }
+
+      function dailyAvailableInMs() {
+        const now = Date.now();
+        return Math.max(0, (app.state.dailyChallenge && app.state.dailyChallenge.availableAt ? app.state.dailyChallenge.availableAt : 0) - now);
+      }
+
+      function canStartDaily() {
+        return dailyAvailableInMs() === 0;
+      }
+
+      function updateDailyUI() {
+        const ms = dailyAvailableInMs();
+        const locked = ms > 0;
+        const label = locked ? t("dailyLockedPay", { hms: formatHMS(ms) }) : t("dailyBtn");
+        document.documentElement.dataset.dailyLocked = locked ? "1" : "0";
+        if (el.dailyBtn) {
+          el.dailyBtn.textContent = label;
+          el.dailyBtn.disabled = false;
+        }
+        if (el.dailyBtn2) {
+          el.dailyBtn2.textContent = label;
+          el.dailyBtn2.disabled = false;
+        }
+      }
+
+      function stageKey(stage) {
+        return stage.kind === "daily" ? `daily:${stage.id}` : `level:${stage.id}`;
+      }
+
+      function dailyCodeLength(key) {
+        const s = String(key);
+        let h = 2166136261;
+        for (let i = 0; i < s.length; i++) {
+          h ^= s.charCodeAt(i);
+          h = Math.imul(h, 16777619) >>> 0;
+        }
+        return clamp(4 + (h % 3), 3, 6);
+      }
+
+      function codeLengthForStage(stage) {
+        if (stage.kind === "daily") return dailyCodeLength(stage.id);
+        return codeLengthForLevel(stage.id);
+      }
+
+      function generateAnswerForStage(stage) {
+        if (stage.kind === "daily") {
+          const len = codeLengthForStage(stage);
+          let seed = 2166136261;
+          const key = String(stage.id);
+          for (let i = 0; i < key.length; i++) {
+            seed ^= key.charCodeAt(i);
+            seed = Math.imul(seed, 16777619) >>> 0;
+          }
+          const digits = [];
+          const used = new Set();
+          while (digits.length < len) {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            const d = seed % 10;
+            if (used.has(d)) continue;
+            used.add(d);
+            digits.push(String(d));
+          }
+          return digits.join("");
+        }
+        return generateAnswer(stage.id);
+      }
+
+      function isBossLevel(level) {
+        return level % 50 === 0;
+      }
+
+      function freeHintLimit() {
+        return 1;
+      }
+
+      function freeHintUsedCount(stage = app.stage) {
+        const key = stageKey(stage);
+        if (stage.kind === "daily") {
+          const m = app.state.dailyFreeHints || {};
+          if (typeof m[key] === "number") return Math.max(0, Math.floor(m[key]));
+          return app.state.daily.hintsUsed.includes(stage.id) ? 1 : 0;
+        }
+        const m = app.state.freeHints || {};
+        if (typeof m[key] === "number") return Math.max(0, Math.floor(m[key]));
+        return app.state.hintsUsed.includes(stage.id) ? 1 : 0;
+      }
+
+      function hasUsedFreeHint(stage = app.stage) {
+        return freeHintUsedCount(stage) >= freeHintLimit();
+      }
+
+      function markFreeHintUsed(stage = app.stage) {
+        const key = stageKey(stage);
+        const next = freeHintUsedCount(stage) + 1;
+        if (stage.kind === "daily") {
+          app.state.dailyFreeHints = app.state.dailyFreeHints || {};
+          app.state.dailyFreeHints[key] = next;
+          if (!app.state.daily.hintsUsed.includes(stage.id)) {
+            app.state.daily.hintsUsed.push(stage.id);
+            app.state.daily.hintsUsed.sort();
+          }
+        } else {
+          app.state.freeHints = app.state.freeHints || {};
+          app.state.freeHints[key] = next;
+          if (!app.state.hintsUsed.includes(stage.id)) {
+            app.state.hintsUsed.push(stage.id);
+            app.state.hintsUsed.sort((a, b) => a - b);
+          }
+        }
+        saveState(app.state);
+      }
+
+      function getStarsForLevel(level) {
+        const v = app.state.stars && app.state.stars[level];
+        const n = typeof v === "number" ? v : parseInt(v, 10);
+        return Number.isFinite(n) ? clamp(n, 0, 3) : 0;
+      }
+
+      function setStarsForLevel(level, stars) {
+        const next = clamp(stars, 0, 3);
+        const cur = getStarsForLevel(level);
+        if (next <= cur) return;
+        app.state.stars[level] = next;
+        saveState(app.state);
+      }
+
+      function getDailyStars(key) {
+        const v = app.state.daily.stars && app.state.daily.stars[key];
+        const n = typeof v === "number" ? v : parseInt(v, 10);
+        return Number.isFinite(n) ? clamp(n, 0, 3) : 0;
+      }
+
+      function setDailyStars(key, stars) {
+        const next = clamp(stars, 0, 3);
+        const cur = getDailyStars(key);
+        if (next <= cur) return;
+        app.state.daily.stars[key] = next;
+        saveState(app.state);
+      }
+
+      function awardCoins(amount) {
+        const n = Math.max(0, Math.floor(amount || 0));
+        if (!n) return;
+        app.state.coins = (app.state.coins || 0) + n;
+        saveState(app.state);
+        updateCoinsUI();
+        updateSettingsUI();
+      }
+
+      function ymdNow() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+
+      function dailyRewardCoins(streak) {
+        const s = clamp(Math.floor(streak || 0), 0, 30);
+        if (s <= 1) return 1;
+        if (s <= 3) return 2;
+        if (s <= 6) return 3;
+        if (s <= 10) return 4;
+        return 5;
+      }
+
+      function initDailyReward() {
+        app.state.dailyReward =
+          app.state.dailyReward && typeof app.state.dailyReward === "object"
+            ? app.state.dailyReward
+            : { lastYmd: "", streak: 0, claimedYmd: "" };
+        const now = ymdNow();
+        const last = typeof app.state.dailyReward.lastYmd === "string" ? app.state.dailyReward.lastYmd : "";
+        if (last !== now) {
+          const lastMs = last ? Date.parse(`${last}T00:00:00Z`) : 0;
+          const nowMs = Date.parse(`${now}T00:00:00Z`);
+          const diffDays = lastMs ? Math.round((nowMs - lastMs) / (24 * 60 * 60 * 1000)) : 0;
+          if (diffDays === 1) app.state.dailyReward.streak = (app.state.dailyReward.streak || 0) + 1;
+          else app.state.dailyReward.streak = 1;
+          app.state.dailyReward.lastYmd = now;
+          saveState(app.state);
+        }
+      }
+
+      function canClaimDailyReward() {
+        initDailyReward();
+        const now = ymdNow();
+        return app.state.dailyReward && app.state.dailyReward.claimedYmd !== now;
+      }
+
+      function claimDailyReward() {
+        initDailyReward();
+        const now = ymdNow();
+        if (app.state.dailyReward.claimedYmd === now) {
+          el.msg.textContent = t("dailyRewardClaimed");
+          updateSettingsUI();
+          return;
+        }
+        const coins = dailyRewardCoins(app.state.dailyReward.streak || 0);
+        app.state.dailyReward.claimedYmd = now;
+        saveState(app.state);
+        awardCoins(coins);
+        el.msg.textContent = t("dailyRewardReady", { coins });
+        updateSettingsUI();
+      }
+
+      function initMissions() {
+        app.state.missions =
+          app.state.missions && typeof app.state.missions === "object" ? app.state.missions : { ymd: "", solved: 0, noHint: 0, boss: 0, claimed: {} };
+        const now = ymdNow();
+        if (app.state.missions.ymd !== now) {
+          app.state.missions = { ymd: now, solved: 0, noHint: 0, boss: 0, claimed: {} };
+          saveState(app.state);
+        }
+      }
+
+      function missionDefs() {
+        return [
+          { id: "solved", title: () => t("missionSolvedTitle"), desc: (a, b) => t("missionSolvedDesc", { a, b }), target: 4, reward: 2 },
+          { id: "noHint", title: () => t("missionNoHintTitle"), desc: (a, b) => t("missionNoHintDesc", { a, b }), target: 1, reward: 2 },
+          { id: "boss", title: () => t("missionBossTitle"), desc: (a, b) => t("missionBossDesc", { a, b }), target: 1, reward: 3 },
+        ];
+      }
+
+      function missionProgress(id) {
+        initMissions();
+        if (id === "solved") return app.state.missions.solved || 0;
+        if (id === "noHint") return app.state.missions.noHint || 0;
+        if (id === "boss") return app.state.missions.boss || 0;
+        return 0;
+      }
+
+      function missionClaimed(id) {
+        initMissions();
+        return !!(app.state.missions.claimed && app.state.missions.claimed[id]);
+      }
+
+      function recordMissionWin(stage, usedHint) {
+        initMissions();
+        app.state.missions.solved = (app.state.missions.solved || 0) + 1;
+        if (!usedHint) app.state.missions.noHint = (app.state.missions.noHint || 0) + 1;
+        if (stage && stage.kind === "level" && isBossLevel(stage.id)) app.state.missions.boss = (app.state.missions.boss || 0) + 1;
+        saveState(app.state);
+      }
+
+      function claimMission(id) {
+        initMissions();
+        const def = missionDefs().find((m) => m.id === id);
+        if (!def) return;
+        const a = missionProgress(id);
+        const done = a >= def.target;
+        if (!done) return;
+        if (missionClaimed(id)) return;
+        app.state.missions.claimed = app.state.missions.claimed && typeof app.state.missions.claimed === "object" ? app.state.missions.claimed : {};
+        app.state.missions.claimed[id] = true;
+        saveState(app.state);
+        awardCoins(def.reward);
+        updateSettingsUI();
+      }
+
+      function renderMissions() {
+        if (!el.missionsList) return;
+        initMissions();
+        el.missionsList.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        for (const def of missionDefs()) {
+          const a = missionProgress(def.id);
+          const b = def.target;
+          const done = a >= b;
+          const claimed = missionClaimed(def.id);
+          const row = document.createElement("div");
+          row.className = "shopRow";
+          const btnLabel = claimed ? t("missionClaimed") : t("missionClaim", { coins: def.reward });
+          const disabled = claimed || !done;
+          row.innerHTML = `<div><div class="t">${def.title()}</div><div class="tiny">${def.desc(a, b)}</div></div><button class="btn ${done && !claimed ? "primary" : ""}" type="button" data-mission="${def.id}" ${disabled ? "disabled" : ""}>${btnLabel}</button>`;
+          frag.appendChild(row);
+        }
+        el.missionsList.appendChild(frag);
+      }
+
+      function spendCoins(amount) {
+        const n = Math.max(0, Math.floor(amount || 0));
+        if ((app.state.coins || 0) < n) return false;
+        app.state.coins -= n;
+        saveState(app.state);
+        updateCoinsUI();
+        updateSettingsUI();
+        return true;
+      }
+
+      function updateCoinsUI() {
+        if (el.coinsText) el.coinsText.textContent = String(app.state.coins || 0);
+      }
+
+      function applyReduceMotion() {
+        document.documentElement.dataset.reduceMotion = app.state.reduceMotion ? "1" : "0";
+      }
+
+      function applyLockShape() {
+        const shape = app.state.lockShape || "round";
+        document.documentElement.dataset.lockShape = shape;
+      }
+
+      function cycleMode() {
+        const cur = app.state.mode || "normal";
+        const next = cur === "normal" ? "timed" : cur === "timed" ? "limited" : "normal";
+        app.state.mode = next;
+        saveState(app.state);
+        updateSettingsUI();
+      }
+
+      function cycleShape() {
+        const cur = app.state.lockShape || "round";
+        const unlockedCircle = !!(app.state.unlocks && app.state.unlocks.circle);
+        const unlockedSquare = !!(app.state.unlocks && app.state.unlocks.square);
+        const options = ["round", unlockedCircle ? "circle" : null, unlockedSquare ? "square" : null].filter(Boolean);
+        const idx = Math.max(0, options.indexOf(cur));
+        const next = options[(idx + 1) % options.length];
+        app.state.lockShape = next;
+        saveState(app.state);
+        applyLockShape();
+        updateSettingsUI();
+      }
+
+      function toggleMotion() {
+        app.state.reduceMotion = !app.state.reduceMotion;
+        saveState(app.state);
+        applyReduceMotion();
+        updateSettingsUI();
+      }
+
+      function updateSettingsUI() {
+        if (el.settingsCoinsV) el.settingsCoinsV.textContent = String(app.state.coins || 0);
+        if (el.hintTokensV) el.hintTokensV.textContent = String(app.state.hintTokens || 0);
+
+        if (el.motionBtn) el.motionBtn.textContent = t("motionBtn", { on: !!app.state.reduceMotion });
+        if (el.modeBtn) el.modeBtn.textContent = t("modeBtn", { mode: app.state.mode || "normal" });
+
+        const shape = app.state.lockShape || "round";
+        if (el.shapeBtn) {
+          if (shape === "circle") el.shapeBtn.textContent = t("shapeCircle");
+          else if (shape === "square") el.shapeBtn.textContent = t("shapeSquare");
+          else el.shapeBtn.textContent = t("shapeRound");
+        }
+
+        if (el.buyCircleBtn) el.buyCircleBtn.textContent = t("buyCircleBtn", { owned: !!(app.state.unlocks && app.state.unlocks.circle) });
+        if (el.buySquareBtn) el.buySquareBtn.textContent = t("buySquareBtn", { owned: !!(app.state.unlocks && app.state.unlocks.square) });
+
+        const wins = app.state.stats && app.state.stats.wins ? app.state.stats.wins : 0;
+        const attempts = app.state.stats && app.state.stats.attempts ? app.state.stats.attempts : 0;
+        const avg = wins ? (attempts / wins).toFixed(1) : "0";
+        const streak = app.state.stats && app.state.stats.streakNoHint ? app.state.stats.streakNoHint : 0;
+        const best = app.state.stats && app.state.stats.bestNoHint ? app.state.stats.bestNoHint : 0;
+
+        if (el.statSolvedV) el.statSolvedV.textContent = String(app.state.completed.length);
+        if (el.statAvgV) el.statAvgV.textContent = String(avg);
+        if (el.statStreakV) el.statStreakV.textContent = String(streak);
+        if (el.statBestV) el.statBestV.textContent = String(best);
+
+        if (el.dailyRewardTitle) el.dailyRewardTitle.textContent = t("dailyRewardTitle");
+        initDailyReward();
+        if (el.dailyRewardSub) el.dailyRewardSub.textContent = t("dailyRewardSub", { n: app.state.dailyReward.streak || 0 });
+        const ready = canClaimDailyReward();
+        const coins = dailyRewardCoins(app.state.dailyReward.streak || 0);
+        if (el.dailyRewardStatus) el.dailyRewardStatus.textContent = ready ? t("dailyRewardReady", { coins }) : t("dailyRewardClaimed");
+        if (el.claimDailyRewardBtn) {
+          el.claimDailyRewardBtn.textContent = t("dailyRewardBtn");
+          el.claimDailyRewardBtn.disabled = !ready;
+        }
+
+        if (el.missionsTitle) el.missionsTitle.textContent = t("missionsTitle");
+        renderMissions();
+
+        renderAchievements();
+      }
+
+      function updateShopUI() {
+        if (el.shopDesc) el.shopDesc.textContent = t("shopDesc");
+        if (el.coinPacksTitle) el.coinPacksTitle.textContent = t("coinPacksTitle");
+        if (el.coinPacksSub) el.coinPacksSub.textContent = t("coinPacksSub");
+        if (el.featuresTitle) el.featuresTitle.textContent = t("featuresTitle");
+        if (el.featReveal1K) el.featReveal1K.textContent = t("featReveal1K");
+        if (el.featReveal2K) el.featReveal2K.textContent = t("featReveal2K");
+        if (el.shopHint1K) el.shopHint1K.textContent = t("shopHint1K");
+        if (el.shopHint10K) el.shopHint10K.textContent = t("shopHint10K");
+        if (el.shopHint10Sub) el.shopHint10Sub.textContent = t("shopHint10Sub");
+        if (el.shopHint25K) el.shopHint25K.textContent = t("shopHint25K");
+        if (el.shopHint25Sub) el.shopHint25Sub.textContent = t("shopHint25Sub");
+        if (el.buyPack099Btn) el.buyPack099Btn.textContent = t("applePayBtn");
+        if (el.buyPack299Btn) el.buyPack299Btn.textContent = t("applePayBtn");
+        if (el.buyPack499Btn) el.buyPack499Btn.textContent = t("applePayBtn");
+        if (el.buyPack999Btn) el.buyPack999Btn.textContent = t("applePayBtn");
+
+        const inLevel = el.level && el.level.classList.contains("active") && app.stage && !app.session.over;
+        const n1 = app.state.items && app.state.items.reveal1 ? app.state.items.reveal1 : 0;
+        const n2 = app.state.items && app.state.items.reveal2 ? app.state.items.reveal2 : 0;
+        if (el.featReveal1Owned) el.featReveal1Owned.textContent = t("ownedN", { n: n1 });
+        if (el.featReveal2Owned) el.featReveal2Owned.textContent = t("ownedN", { n: n2 });
+        if (el.shopHint1Owned) el.shopHint1Owned.textContent = t("ownedN", { n: app.state.hintTokens || 0 });
+
+        if (el.buyHintTokenBtn) el.buyHintTokenBtn.textContent = t("buyHintTokenBtn");
+        if (el.buyHintPack10Btn) el.buyHintPack10Btn.textContent = t("buyHintPack10Btn");
+        if (el.buyHintPack25Btn) el.buyHintPack25Btn.textContent = t("buyHintPack25Btn");
+        if (el.buyUseReveal1Btn) el.buyUseReveal1Btn.textContent = t("buyWithCoins", { cost: 12 });
+        if (el.buyUseReveal2Btn) el.buyUseReveal2Btn.textContent = t("buyWithCoins", { cost: 20 });
+
+        updateSettingsUI();
+        updateLevelFeaturesUI();
+      }
+
+      function updateLevelFeaturesUI() {
+        ensureItems();
+        const n1 = app.state.items.reveal1 || 0;
+        const n2 = app.state.items.reveal2 || 0;
+        if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.textContent = t("inLevelFeatureBtn", { name: t("featReveal1K"), n: n1 });
+        if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.textContent = t("inLevelFeatureBtn", { name: t("featReveal2K"), n: n2 });
+        if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.disabled = app.session && app.session.over;
+        if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.disabled = app.session && app.session.over;
+      }
+
+      const ACHS = [
+        {
+          id: "solve_10",
+          reward: 12,
+          title: { ar: "حل 10 مراحل", en: "Solve 10 levels" },
+          desc: { ar: "أكمل 10 مراحل", en: "Complete 10 levels" },
+          ok: () => app.state.completed.length >= 10,
+        },
+        {
+          id: "nohint_10",
+          reward: 15,
+          title: { ar: "10 بدون تلميح", en: "10 no-hint" },
+          desc: { ar: "حل 10 مراحل بدون أي تلميح", en: "Solve 10 levels without hints" },
+          ok: () => (app.state.stats && app.state.stats.bestNoHint ? app.state.stats.bestNoHint : 0) >= 10,
+        },
+        {
+          id: "boss_1",
+          reward: 14,
+          title: { ar: "قفل زعيم", en: "Boss lock" },
+          desc: { ar: "افتح قفل مرحلة 50", en: "Unlock level 50" },
+          ok: () => app.state.completed.includes(50),
+        },
+        {
+          id: "daily_3",
+          reward: 10,
+          title: { ar: "3 تحديات يومية", en: "3 daily challenges" },
+          desc: { ar: "أكمل 3 تحديات يومية", en: "Complete 3 daily challenges" },
+          ok: () => (app.state.daily.completed || []).length >= 3,
+        },
+      ];
+
+      function isAchieved(id) {
+        return app.state.achievements.includes(id);
+      }
+
+      function completeAchievement(id, reward) {
+        if (isAchieved(id)) return;
+        app.state.achievements.push(id);
+        app.state.achievements.sort();
+        saveState(app.state);
+        awardCoins(reward);
+      }
+
+      function renderAchievements() {
+        if (!el.achList) return;
+        el.achList.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        for (const a of ACHS) {
+          const row = document.createElement("div");
+          row.className = "shopRow";
+          const title = currentLang() === "en" ? a.title.en : a.title.ar;
+          const desc = currentLang() === "en" ? a.desc.en : a.desc.ar;
+          const done = isAchieved(a.id) || a.ok();
+          row.innerHTML = `<div><div class="t">${done ? "✅ " : ""}${title}</div><div class="tiny">${desc}</div></div><div class="tiny">+${a.reward}🪙</div>`;
+          frag.appendChild(row);
+          if (!isAchieved(a.id) && a.ok()) completeAchievement(a.id, a.reward);
+        }
+        el.achList.appendChild(frag);
+      }
+
+      function computeStars(attempts, usedHint) {
+        if (!usedHint && attempts <= 2) return 3;
+        if (attempts <= 4) return 2;
+        return 1;
+      }
+
+      function renderHistory() {
+        if (!el.history) return;
+        el.history.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        const items = app.history.slice(-5).reverse();
+        for (const item of items) {
+          const row = document.createElement("div");
+          row.className = "historyItem";
+          const dots = item.result.map((s) => `<span class="dot ${s}"></span>`).join("");
+          row.innerHTML = `<div class="historyGuess">${item.guess}</div><div class="historyDots">${dots}</div>`;
+          frag.appendChild(row);
+        }
+        el.history.appendChild(frag);
+      }
+
+      function coachTextForStage(stage) {
+        if (stage.kind !== "level") return "";
+        const n = stage.id;
+        if (app.state.seenCoach.includes(String(n))) return "";
+        const ar = [
+          "اكتب رقم في كل خانة ثم اضغط تحقق.",
+          "جرب تغيّر رقم واحد فقط في كل محاولة عشان تلاحظ النتيجة.",
+          "الأصفر يعني الرقم موجود لكن مكانه غلط.",
+          "استخدم التلميح إذا علقت… وتقدر تشتري تلميحات من الإعدادات.",
+          "هدفك تقلل المحاولات عشان تجمع نجوم أكثر.",
+        ];
+        const en = [
+          "Fill each slot then press Check.",
+          "Change one digit per attempt to learn faster.",
+          "Yellow means the digit exists but is in the wrong position.",
+          "Use a hint if stuck… you can buy hints in Settings.",
+          "Fewer attempts = more stars.",
+        ];
+        const idx = clamp(n - 1, 0, 4);
+        return currentLang() === "en" ? en[idx] : ar[idx];
+      }
+
+      function showCoach(stage) {
+        if (!el.coach) return;
+        const text = coachTextForStage(stage);
+        if (!text) {
+          el.coach.style.display = "none";
+          return;
+        }
+        el.coach.textContent = text;
+        el.coach.style.display = "";
+        app.state.seenCoach.push(String(stage.id));
+        app.state.seenCoach = Array.from(new Set(app.state.seenCoach)).slice(-80);
+        saveState(app.state);
+      }
+
+      function resetSession() {
+        if (app.session.timerId) clearInterval(app.session.timerId);
+        app.session = { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false };
+        if (el.timerBadge) el.timerBadge.style.display = "none";
+      }
+
+      function startTimer(seconds) {
+        resetSession();
+        app.session.timeLeft = seconds;
+        if (el.timerBadge) {
+          el.timerBadge.style.display = "";
+          el.timerBadge.textContent = t("timerBadge", { s: app.session.timeLeft });
+        }
+        app.session.timerId = setInterval(() => {
+          if (app.session.over) return;
+          app.session.timeLeft -= 1;
+          if (el.timerBadge) el.timerBadge.textContent = t("timerBadge", { s: Math.max(0, app.session.timeLeft) });
+          if (app.session.timeLeft <= 0) {
+            app.session.over = true;
+            if (el.msg) el.msg.textContent = t("timeUp");
+          }
+        }, 1000);
+      }
+
+      function setModeUI(stage) {
+        const mode = stage.kind === "daily" ? "daily" : app.state.mode || "normal";
+        if (!el.modeBadge) return;
+        if (mode === "limited" && app.session.attemptLimit) {
+          el.modeBadge.textContent = `${t("modeBadge", { mode })} (${app.session.attemptLimit})`;
+          return;
+        }
+        el.modeBadge.textContent = t("modeBadge", { mode });
+      }
+
+      function renderSlotsForStage(stage) {
+        const len = codeLengthForStage(stage);
+        el.slots.style.gridTemplateColumns = `repeat(${len}, 1fr)`;
+        el.slots.innerHTML = "";
+        app.inputs = [];
+        app.hints = [];
+        app.history = [];
+
+        for (let i = 0; i < len; i++) {
+          const wrap = document.createElement("div");
+          wrap.className = "slotWrap";
+
+          const hint = document.createElement("div");
+          hint.className = "hint";
+          hint.textContent = t("hintBubble");
+
+          const slot = document.createElement("div");
+          slot.className = "slot";
+
+          const input = document.createElement("input");
+          input.inputMode = "numeric";
+          input.autocomplete = "off";
+          input.maxLength = 1;
+
+          slot.appendChild(input);
+          wrap.appendChild(hint);
+          wrap.appendChild(slot);
+          el.slots.appendChild(wrap);
+
+          app.inputs.push(input);
+          app.hints.push(hint);
+        }
+
+        wireInputs();
+      }
+
+      function openStage(stage) {
+        app.stage = stage;
+        app.attempts = 0;
+        el.attemptsNum.textContent = "0";
+        el.levelNum.textContent = stage.kind === "daily" ? stage.id : String(stage.id);
+        if (el.levelLabel) el.levelLabel.textContent = stage.kind === "daily" ? t("dailyBtn") : t("levelLabel");
+        renderSlotsForStage(stage);
+        clearSlots();
+        resetSession();
+        el.hintBtn.textContent = t("hintBtn", { left: Math.max(0, freeHintLimit() - freeHintUsedCount(stage)) });
+        el.hintBtn.disabled = false;
+        el.checkBtn.disabled = false;
+        app.session.usedAnyHint = false;
+        app.session.usedPaidHint = false;
+        updateLevelFeaturesUI();
+
+        if (stage.kind !== "daily") {
+          const mode = app.state.mode || "normal";
+          const len = codeLengthForStage(stage);
+          if (mode === "timed") startTimer(clamp(50 + len * 8, 45, 110));
+          else if (mode === "limited") app.session.attemptLimit = len + 2;
+        }
+        setModeUI(stage);
+
+        showCoach(stage);
+        show(el.level);
+      }
+
+      function setHint(i) {
+        const h = app.hints[i];
+        h.classList.remove("show");
+        void h.offsetWidth;
+        h.classList.add("show");
+      }
+
+      function check() {
+        if (app.session.over) return;
+        const guess = app.inputs.map((x) => x.value).join("");
+        const len = codeLengthForStage(app.stage);
+        if (!isDigitsN(guess, len)) {
+          el.msg.textContent = t("enterDigits", { len });
+          return;
+        }
+        const answer = generateAnswerForStage(app.stage);
+        const result = evaluateGuess(guess, answer);
+
+        app.attempts += 1;
+        el.attemptsNum.textContent = String(app.attempts);
+        el.msg.textContent = "";
+        app.history.push({ guess, result });
+        renderHistory();
+
+        for (let i = 0; i < result.length; i++) {
+          const slot = app.inputs[i].parentElement;
+          slot.classList.remove("ok", "bad", "warn");
+          slot.classList.add(result[i]);
+          if (result[i] === "warn") setHint(i);
+        }
+
+        const solved = result.every((s) => s === "ok");
+        if (!solved) {
+          if (app.stage.kind !== "daily" && (app.state.mode || "normal") === "limited" && app.session.attemptLimit) {
+            if (app.attempts >= app.session.attemptLimit) {
+              app.session.over = true;
+              el.msg.textContent = t("attemptsOver");
+            }
+          }
+          return;
+        }
+
+        app.session.over = true;
+        if (app.session.timerId) clearInterval(app.session.timerId);
+
+        const usedHint = !!app.session.usedAnyHint || hasUsedFreeHint(app.stage);
+        const stars = computeStars(app.attempts, usedHint);
+
+        recordMissionWin(app.stage, usedHint);
+
+        if (app.stage.kind === "daily") {
+          if (!app.state.daily.completed.includes(app.stage.id)) {
+            app.state.daily.completed.push(app.stage.id);
+            app.state.daily.completed.sort();
+          }
+          setDailyStars(app.stage.id, stars);
+          app.state.stats.wins += 1;
+          app.state.stats.attempts += app.attempts;
+          if (!usedHint) {
+            app.state.stats.streakNoHint += 1;
+            app.state.stats.bestNoHint = Math.max(app.state.stats.bestNoHint, app.state.stats.streakNoHint);
+          } else {
+            app.state.stats.streakNoHint = 0;
+          }
+          const now = Date.now();
+          if (!app.state.dailyChallenge) app.state.dailyChallenge = { id: 1, availableAt: 0, lastCompletedAt: 0 };
+          app.state.dailyChallenge.lastCompletedAt = now;
+          app.state.dailyChallenge.availableAt = now + dailyCooldownMs();
+          app.state.dailyChallenge.id = Math.max(1, Math.floor((app.state.dailyChallenge.id || 1) + 1));
+          saveState(app.state);
+          awardCoins(5);
+          updateDailyUI();
+        } else {
+          const level = app.stage.id;
+          if (!app.state.completed.includes(level)) {
+            app.state.completed.push(level);
+            app.state.completed.sort((a, b) => a - b);
+          }
+          setStarsForLevel(level, stars);
+          if (app.state.unlocked < level + 1) app.state.unlocked = clamp(level + 1, 1, TOTAL_LEVELS);
+
+          app.state.stats.wins += 1;
+          app.state.stats.attempts += app.attempts;
+          if (!usedHint) {
+            app.state.stats.streakNoHint += 1;
+            app.state.stats.bestNoHint = Math.max(app.state.stats.bestNoHint, app.state.stats.streakNoHint);
+          } else {
+            app.state.stats.streakNoHint = 0;
+          }
+
+          saveState(app.state);
+          const bossBonus = isBossLevel(level) ? 2 : 0;
+          awardCoins(2 + stars + bossBonus);
+        }
+
+        renderMap();
+        updateSettingsUI();
+
+        el.winBox.classList.add("show");
+        el.msg.textContent = "✅";
+
+        if (app.stage.kind !== "daily" && app.stage.id >= TOTAL_LEVELS) {
+          el.nextBtn.disabled = true;
+          el.nextBtn.textContent = t("nextEnded");
+        } else {
+          el.nextBtn.disabled = false;
+          el.nextBtn.textContent = t("nextBtn");
+        }
+      }
+
+      function openModal(mode) {
+        modalMode = mode;
+        lastFocusedEl = document.activeElement;
+        el.modalBackdrop.dataset.mode = mode;
+        if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "math");
+        if (el.modalTitle) {
+          el.modalTitle.textContent =
+            mode === "settings" ? t("settingsTitle") : mode === "shop" ? t("shopModalTitle") : mode === "math" ? t("mathTitle") : t("howTitle");
+        }
+        if (el.howToContent) el.howToContent.style.display = mode === "howto" ? "" : "none";
+        if (el.settingsContent) el.settingsContent.style.display = mode === "settings" ? "" : "none";
+        if (el.shopContent) el.shopContent.style.display = mode === "shop" ? "" : "none";
+        if (el.mathContent) el.mathContent.style.display = mode === "math" ? "" : "none";
+        updateThemeBtn();
+        if (mode === "settings") updateSettingsUI();
+        if (mode === "shop") updateShopUI();
+        el.modalBackdrop.classList.add("show");
+        el.modalBackdrop.setAttribute("aria-hidden", "false");
+        el.closeModalBtn.focus();
+
+        if (mode === "settings" && el.modal && el.settingsBtn) {
+          requestAnimationFrame(() => {
+            const br = el.settingsBtn.getBoundingClientRect();
+            const mr = el.modal.getBoundingClientRect();
+            const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
+            const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
+            el.modal.style.setProperty("--modal-origin", `${ox}px ${oy}px`);
+          });
+        } else if (el.modal) {
+          el.modal.style.removeProperty("--modal-origin");
+        }
+      }
+      function openHowTo() {
+        openModal("howto");
+      }
+
+      function openSettings() {
+        openModal("settings");
+      }
+
+      function closeHowTo() {
+        el.modalBackdrop.classList.remove("show");
+        el.modalBackdrop.setAttribute("aria-hidden", "true");
+        delete el.modalBackdrop.dataset.mode;
+        if (el.modal) el.modal.classList.remove("compact");
+        if (app.session && app.session.mathPuzzle) delete app.session.mathPuzzle;
+        if (lastFocusedEl && typeof lastFocusedEl.focus === "function") lastFocusedEl.focus();
+      }
+
+      function goMap() {
+        renderMap();
+        show(el.map);
+        requestAnimationFrame(() => focusMapPath());
+      }
+
+      function goHome() {
+        closeHowTo();
+        show(el.home);
+      }
+
+      function enableMapControls() {
+        if (!el.path) return;
+
+        const drag = { active: false, pointerId: null, startX: 0, startScrollLeft: 0, moved: false };
+
+        el.path.addEventListener("pointerdown", (e) => {
+          if (e.target && e.target.closest && e.target.closest("button.stage")) return;
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          drag.active = true;
+          drag.pointerId = e.pointerId;
+          drag.startX = e.clientX;
+          drag.startScrollLeft = el.path.scrollLeft;
+          drag.moved = false;
+          el.path.classList.add("dragging");
+          focusMapPath();
+          try {
+            el.path.setPointerCapture(e.pointerId);
+          } catch {}
+        });
+
+        el.path.addEventListener("pointermove", (e) => {
+          if (!drag.active || e.pointerId !== drag.pointerId) return;
+          const dx = e.clientX - drag.startX;
+          if (!drag.moved && Math.abs(dx) > 6) drag.moved = true;
+          el.path.scrollLeft = drag.startScrollLeft - dx;
+          if (drag.moved) e.preventDefault();
+        });
+
+        function endDrag(e) {
+          if (!drag.active) return;
+          if (e && drag.pointerId !== null && e.pointerId !== drag.pointerId) return;
+          drag.active = false;
+          drag.pointerId = null;
+          el.path.classList.remove("dragging");
+          if (drag.moved) lastDragAt = Date.now();
+        }
+
+        el.path.addEventListener("pointerup", endDrag);
+        el.path.addEventListener("pointercancel", endDrag);
+        el.path.addEventListener("lostpointercapture", endDrag);
+
+        el.path.addEventListener("keydown", (e) => {
+          if (!el.map.classList.contains("active")) return;
+          if (el.modalBackdrop.classList.contains("show")) return;
+          if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+            el.path.scrollBy({ left: -240, behavior: "smooth" });
+            e.preventDefault();
+          } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+            el.path.scrollBy({ left: 240, behavior: "smooth" });
+            e.preventDefault();
+          }
+        });
+      }
+
+      function freeHintDigit(stage) {
+        const answer = generateAnswerForStage(stage);
+        let seed = 2166136261;
+        const k = stageKey(stage);
+        for (let i = 0; i < k.length; i++) {
+          seed ^= k.charCodeAt(i);
+          seed = Math.imul(seed, 16777619) >>> 0;
+        }
+        const idx = seed % answer.length;
+        return answer[idx];
+      }
+
+      function spendHintToken() {
+        const cur = app.state.hintTokens || 0;
+        if (cur <= 0) return false;
+        app.state.hintTokens = cur - 1;
+        saveState(app.state);
+        updateSettingsUI();
+        return true;
+      }
+
+      function updateHintBtnLabel() {
+        el.hintBtn.textContent = t("hintBtn", { left: Math.max(0, freeHintLimit() - freeHintUsedCount(app.stage)) });
+      }
+
+      function paidHintReveal(stage) {
+        const answer = generateAnswerForStage(stage).split("");
+        const candidates = [];
+        for (let i = 0; i < answer.length; i++) {
+          const input = app.inputs[i];
+          if (!input) continue;
+          if (input.disabled) continue;
+          candidates.push(i);
+        }
+        if (!candidates.length) return false;
+        const idx = candidates[Math.floor(Math.random() * candidates.length)];
+        const input = app.inputs[idx];
+        input.value = answer[idx];
+        input.disabled = true;
+        input.dataset.locked = "1";
+        const slot = input.parentElement;
+        slot.classList.remove("bad", "warn");
+        slot.classList.add("ok");
+        return true;
+      }
+
+      function paidHintEliminate(stage) {
+        const answer = generateAnswerForStage(stage);
+        const used = new Set(answer.split(""));
+        let d = String(randInt(0, 9));
+        let tries = 0;
+        while (used.has(d) && tries < 30) {
+          d = String(randInt(0, 9));
+          tries += 1;
+        }
+        if (used.has(d)) return false;
+        el.msg.textContent = t("digitNotInLock", { digit: d });
+        return true;
+      }
+
+      function paidHintCount(stage) {
+        if (!app.history.length) {
+          el.msg.textContent = t("makeGuessFirst");
+          return true;
+        }
+        const answer = generateAnswerForStage(stage);
+        const last = app.history[app.history.length - 1];
+        let count = 0;
+        for (const ch of last.guess) if (answer.includes(ch)) count += 1;
+        el.msg.textContent = t("digitsPresent", { count });
+        return true;
+      }
+
+      function useHint() {
+        if (app.session.over) return;
+        if (!hasUsedFreeHint(app.stage)) {
+          const digit = freeHintDigit(app.stage);
+          markFreeHintUsed(app.stage);
+          app.session.usedAnyHint = true;
+          updateHintBtnLabel();
+          el.msg.textContent = t("hintMsg", { digit });
+          return;
+        }
+
+        if (!spendHintToken()) {
+          openShop();
+          return;
+        }
+
+        app.session.usedAnyHint = true;
+        app.session.usedPaidHint = true;
+        const type = app.state.paidHintType || "reveal";
+        const ok =
+          type === "eliminate"
+            ? paidHintEliminate(app.stage)
+            : type === "count"
+              ? paidHintCount(app.stage)
+              : paidHintReveal(app.stage);
+        if (!ok) el.msg.textContent = t("hintFailed");
+      }
+
+      function shareResult() {
+        const stars =
+          app.stage.kind === "daily" ? getDailyStars(app.stage.id) : app.stage.kind === "level" ? getStarsForLevel(app.stage.id) : 0;
+        const title = app.stage.kind === "daily" ? `${t("dailyBtn")} ${app.stage.id}` : `${t("levelLabel")} ${app.stage.id}`;
+        const text = t("shareText", { title, attempts: app.attempts, stars });
+        const done = () => (el.msg.textContent = t("copied"));
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, done);
+        } else {
+          window.prompt("Copy", text);
+          done();
+        }
+      }
+
+      function openDaily() {
+        updateDailyUI();
+        if (!canStartDaily()) {
+          const ok = window.confirm(t("dailyPayConfirm"));
+          if (!ok) {
+            el.msg.textContent = t("dailyLocked", { hms: formatHMS(dailyAvailableInMs()) });
+            return;
+          }
+          if (!spendCoins(3)) {
+            el.msg.textContent = t("notEnoughCoins");
+            return;
+          }
+          if (!app.state.dailyChallenge) app.state.dailyChallenge = { id: 1, availableAt: 0, lastCompletedAt: 0 };
+          app.state.dailyChallenge.availableAt = 0;
+          saveState(app.state);
+        }
+        if (!app.state.dailyChallenge) app.state.dailyChallenge = { id: 1, availableAt: 0, lastCompletedAt: 0 };
+        openStage({ kind: "daily", id: app.state.dailyChallenge.id });
+      }
+
+      function goToStageNumber(n) {
+        const num = clamp(Math.floor(n || 0), 1, TOTAL_LEVELS);
+        const btn = document.getElementById(`stageBtn-${num}`);
+        if (!btn) return;
+        btn.scrollIntoView({ behavior: app.state.reduceMotion ? "auto" : "smooth", inline: "center", block: "nearest" });
+        focusMapPath();
+      }
+
+      function buyHintToken() {
+        if (!spendCoins(4)) {
+          el.msg.textContent = t("notEnoughCoins");
+          return;
+        }
+        app.state.hintTokens = (app.state.hintTokens || 0) + 1;
+        saveState(app.state);
+        updateSettingsUI();
+        updateShopUI();
+        el.msg.textContent = t("bought");
+      }
+
+      function buyHintPack(amount, cost) {
+        if (!spendCoins(cost)) {
+          el.msg.textContent = t("notEnoughCoins");
+          return;
+        }
+        app.state.hintTokens = (app.state.hintTokens || 0) + amount;
+        saveState(app.state);
+        updateSettingsUI();
+        updateShopUI();
+        el.msg.textContent = t("bought");
+      }
+
+      function buyCircle() {
+        if (app.state.unlocks && app.state.unlocks.circle) return;
+        if (!spendCoins(60)) {
+          el.msg.textContent = t("notEnoughCoins");
+          return;
+        }
+        app.state.unlocks.circle = true;
+        saveState(app.state);
+        updateSettingsUI();
+        el.msg.textContent = t("bought");
+      }
+
+      function buySquare() {
+        if (app.state.unlocks && app.state.unlocks.square) return;
+        if (!spendCoins(60)) {
+          el.msg.textContent = t("notEnoughCoins");
+          return;
+        }
+        app.state.unlocks.square = true;
+        saveState(app.state);
+        updateSettingsUI();
+        el.msg.textContent = t("bought");
+      }
+
+      function openShop() {
+        openModal("shop");
+      }
+
+      function ensureItems() {
+        if (!app.state.items || typeof app.state.items !== "object") app.state.items = { reveal1: 0, reveal2: 0 };
+        if (!Number.isFinite(app.state.items.reveal1)) app.state.items.reveal1 = 0;
+        if (!Number.isFinite(app.state.items.reveal2)) app.state.items.reveal2 = 0;
+        if (Number.isFinite(app.state.items.math)) {
+          app.state.items.reveal2 += Math.max(0, Math.floor(app.state.items.math));
+          delete app.state.items.math;
+        }
+      }
+
+      async function startCheckout(packId) {
+        el.msg.textContent = t("paymentRedirecting");
+        try {
+          const res = await fetch("/api/create-checkout-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ packId }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || !data.url) {
+            el.msg.textContent = t("paymentNotReady");
+            return;
+          }
+          window.location.href = data.url;
+        } catch {
+          el.msg.textContent = t("paymentNotReady");
+        }
+      }
+
+      async function consumeCheckoutReturn() {
+        const url = new URL(window.location.href);
+        const status = url.searchParams.get("checkout");
+        const sessionId = url.searchParams.get("session_id");
+        if (!status) return;
+
+        url.searchParams.delete("checkout");
+        url.searchParams.delete("session_id");
+        window.history.replaceState({}, document.title, url.toString());
+
+        if (status !== "success" || !sessionId) {
+          el.msg.textContent = t("paymentFailed");
+          return;
+        }
+
+        if (app.state.processedSessions && app.state.processedSessions.includes(sessionId)) {
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/confirm-session?session_id=${encodeURIComponent(sessionId)}`, { method: "GET" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || typeof data.coins !== "number") {
+            el.msg.textContent = t("paymentFailed");
+            return;
+          }
+          app.state.processedSessions = Array.isArray(app.state.processedSessions) ? app.state.processedSessions : [];
+          app.state.processedSessions.push(sessionId);
+          app.state.processedSessions = app.state.processedSessions.slice(-50);
+          saveState(app.state);
+
+          awardCoins(data.coins);
+          el.msg.textContent = t("paymentApplied", { coins: data.coins });
+          updateShopUI();
+        } catch {
+          el.msg.textContent = t("paymentFailed");
+        }
+      }
+
+      function applyRevealOneNow() {
+        const ok = paidHintReveal(app.stage);
+        if (!ok) return false;
+        app.session.usedAnyHint = true;
+        app.session.usedPaidHint = true;
+        return true;
+      }
+
+      function applyRevealTwoNow() {
+        const ok1 = paidHintReveal(app.stage);
+        const ok2 = paidHintReveal(app.stage);
+        const ok = ok1 || ok2;
+        if (!ok) return false;
+        app.session.usedAnyHint = true;
+        app.session.usedPaidHint = true;
+        return true;
+      }
+
+      function useOrBuyFeature(id) {
+        ensureItems();
+        const cost = id === "reveal2" ? 20 : 12;
+        if (!spendCoins(cost)) {
+          el.msg.textContent = t("notEnoughCoins");
+          return;
+        }
+
+        if (id === "reveal2") app.state.items.reveal2 += 1;
+        else app.state.items.reveal1 += 1;
+        saveState(app.state);
+        el.msg.textContent = t("bought");
+
+        updateShopUI();
+      }
+
+      function mathSeedFromString(s) {
+        let h = 2166136261;
+        for (let i = 0; i < s.length; i++) {
+          h ^= s.charCodeAt(i);
+          h = Math.imul(h, 16777619) >>> 0;
+        }
+        return h >>> 0;
+      }
+
+      function makeMathRng(seed) {
+        let s = seed >>> 0;
+        return () => {
+          s ^= s << 13;
+          s ^= s >>> 17;
+          s ^= s << 5;
+          return (s >>> 0) || 1;
+        };
+      }
+
+      function mathRandInt(next, a, b) {
+        const n = next();
+        return a + (n % (b - a + 1));
+      }
+
+      function makeMathPuzzle(stage) {
+        const answer = generateAnswerForStage(stage);
+        const seed = mathSeedFromString(`${stageKey(stage)}:math`);
+        const next = makeMathRng(seed);
+        const pickIdx = mathRandInt(next, 0, Math.max(0, answer.length - 1));
+        const digit = parseInt(answer[pickIdx], 10);
+
+        const level = stage.kind === "daily" ? stage.id * 40 : stage.id;
+        const tier = clamp(Math.floor((level - 1) / 120), 0, 6);
+        const pat = next() % 3;
+
+        for (let tries = 0; tries < 30; tries++) {
+          if (pat === 0) {
+            if (digit >= 2 && digit <= 8) {
+              const a = mathRandInt(next, 1, digit - 1);
+              const b = digit - a;
+              return { digit, eq: `${a} + ${b} = ؟` };
+            }
+            if (digit === 9) return { digit, eq: `4 + 5 = ؟` };
+            if (digit === 1) return { digit, eq: `7 - 6 = ؟` };
+            if (digit === 0) return { digit, eq: `9 - 9 = ؟` };
+          } else if (pat === 1) {
+            const b = mathRandInt(next, 1, 6 + tier * 2);
+            const a = digit + b;
+            if (a > 0 && a <= 24) return { digit, eq: `${a} - ${b} = ؟` };
+          } else {
+            const a = mathRandInt(next, 6 + tier, 14 + tier * 2);
+            const b = mathRandInt(next, 2, 9);
+            const c = a + b - digit;
+            if (c >= 1 && c <= 22) return { digit, eq: `(${a} + ${b}) - ${c} = ؟` };
+          }
+        }
+        return { digit, eq: `8 - 4 = ؟` };
+      }
+
+      function openMathPuzzle() {
+        if (!el.mathEq || !el.mathAnswer || !el.mathYesBtn || !el.mathCancelBtn || !el.mathNote) return;
+        app.session.mathPuzzle = makeMathPuzzle(app.stage);
+        el.mathEq.textContent = app.session.mathPuzzle.eq;
+        el.mathNote.textContent = t("mathNote");
+        el.mathAnswer.value = "";
+        el.mathAnswer.placeholder = t("mathPlaceholder");
+        el.mathYesBtn.textContent = t("mathYesBtn");
+        el.mathCancelBtn.textContent = t("mathCancelBtn");
+        openModal("math");
+        requestAnimationFrame(() => el.mathAnswer && el.mathAnswer.focus());
+      }
+
+      function submitMathPuzzle() {
+        if (!app.session || !app.session.mathPuzzle) return;
+        if (!el.mathAnswer) return;
+        const raw = (el.mathAnswer.value || "").trim();
+        const n = parseInt(raw.replace(/[^\d]/g, ""), 10);
+        if (!Number.isFinite(n) || n < 0 || n > 9) {
+          if (el.mathNote) el.mathNote.textContent = t("mathEnterDigit");
+          return;
+        }
+
+        const have = app.state.items && app.state.items.reveal2 ? app.state.items.reveal2 : 0;
+        if (have <= 0) {
+          closeHowTo();
+          openShop();
+          return;
+        }
+
+        app.state.items.reveal2 -= 1;
+        saveState(app.state);
+        app.session.usedAnyHint = true;
+        app.session.usedPaidHint = true;
+
+        const digit = app.session.mathPuzzle.digit;
+        if (n === digit) {
+          el.msg.textContent = t("mathCorrect", { digit });
+        } else {
+          el.msg.textContent = t("mathWrongUsed");
+        }
+        delete app.session.mathPuzzle;
+        closeHowTo();
+        updateShopUI();
+      }
+
+      function useOwnedFeatureOrOpenShop(id) {
+        ensureItems();
+        const inLevel = el.level && el.level.classList.contains("active") && app.stage && !app.session.over;
+        if (!inLevel) {
+          openShop();
+          return;
+        }
+
+        const have = id === "reveal2" ? app.state.items.reveal2 : app.state.items.reveal1;
+        if (have <= 0) {
+          openShop();
+          return;
+        }
+
+        if (id === "reveal2") {
+          openMathPuzzle();
+          return;
+        }
+
+        app.state.items.reveal1 -= 1;
+        saveState(app.state);
+        const ok = applyRevealOneNow();
+        if (!ok) {
+          app.state.items.reveal1 += 1;
+          saveState(app.state);
+          el.msg.textContent = t("hintFailed");
+        }
+        updateShopUI();
+      }
+
+      el.startBtn.addEventListener("click", () => goMap());
+      el.dailyBtn.addEventListener("click", () => openDaily());
+      el.dailyBtn2.addEventListener("click", () => openDaily());
+      el.howBtn.addEventListener("click", () => openHowTo());
+      el.backToMapBtn.addEventListener("click", () => goMap());
+      el.mapBtn2.addEventListener("click", () => goMap());
+      el.checkBtn.addEventListener("click", () => check());
+      el.hintBtn.addEventListener("click", () => useHint());
+      el.clearBtn.addEventListener("click", () => clearSlots());
+      el.retryBtn.addEventListener("click", () => openStage({ ...app.stage }));
+      el.shareBtn.addEventListener("click", () => shareResult());
+
+      el.goStageBtn.addEventListener("click", () => {
+        const n = parseInt((el.stageSearch.value || "").replace(/[^\d]/g, ""), 10);
+        if (!Number.isFinite(n)) return;
+        goToStageNumber(n);
+      });
+      el.stageSearch.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        const n = parseInt((el.stageSearch.value || "").replace(/[^\d]/g, ""), 10);
+        if (!Number.isFinite(n)) return;
+        goToStageNumber(n);
+      });
+
+      el.nextBtn.addEventListener("click", () => {
+        if (app.stage.kind !== "level") {
+          goMap();
+          return;
+        }
+        if (app.stage.id >= TOTAL_LEVELS) return;
+        const next = app.stage.id + 1;
+        if (next > app.state.unlocked) goMap();
+        else openStage({ kind: "level", id: next });
+      });
+
+      el.settingsBtn.addEventListener("click", () => openSettings());
+      el.homeHeaderBtn.addEventListener("click", () => goHome());
+      el.motionBtn.addEventListener("click", () => toggleMotion());
+      el.shapeBtn.addEventListener("click", () => cycleShape());
+      el.modeBtn.addEventListener("click", () => cycleMode());
+      if (el.coinsBadge) el.coinsBadge.addEventListener("click", () => openShop());
+      if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.addEventListener("click", () => useOwnedFeatureOrOpenShop("reveal1"));
+      if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.addEventListener("click", () => useOwnedFeatureOrOpenShop("reveal2"));
+      if (el.buyCircleBtn) el.buyCircleBtn.addEventListener("click", () => buyCircle());
+      if (el.buySquareBtn) el.buySquareBtn.addEventListener("click", () => buySquare());
+      if (el.buyPack099Btn) el.buyPack099Btn.addEventListener("click", () => startCheckout("pack_099"));
+      if (el.buyPack299Btn) el.buyPack299Btn.addEventListener("click", () => startCheckout("pack_299"));
+      if (el.buyPack499Btn) el.buyPack499Btn.addEventListener("click", () => startCheckout("pack_499"));
+      if (el.buyPack999Btn) el.buyPack999Btn.addEventListener("click", () => startCheckout("pack_999"));
+      if (el.buyHintTokenBtn) el.buyHintTokenBtn.addEventListener("click", () => buyHintToken());
+      if (el.buyHintPack10Btn) el.buyHintPack10Btn.addEventListener("click", () => buyHintPack(10, 39));
+      if (el.buyHintPack25Btn) el.buyHintPack25Btn.addEventListener("click", () => buyHintPack(25, 89));
+      if (el.buyUseReveal1Btn) el.buyUseReveal1Btn.addEventListener("click", () => useOrBuyFeature("reveal1"));
+      if (el.buyUseReveal2Btn) el.buyUseReveal2Btn.addEventListener("click", () => useOrBuyFeature("reveal2"));
+      if (el.mathYesBtn) el.mathYesBtn.addEventListener("click", () => submitMathPuzzle());
+      if (el.mathCancelBtn) el.mathCancelBtn.addEventListener("click", () => closeHowTo());
+      if (el.mathAnswer) {
+        el.mathAnswer.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter") return;
+          submitMathPuzzle();
+        });
+      }
+      if (el.claimDailyRewardBtn) el.claimDailyRewardBtn.addEventListener("click", () => claimDailyReward());
+      if (el.missionsList) {
+        el.missionsList.addEventListener("click", (e) => {
+          const btn = e.target && e.target.closest ? e.target.closest("button[data-mission]") : null;
+          if (!btn) return;
+          const id = btn.getAttribute("data-mission") || "";
+          if (!id) return;
+          claimMission(id);
+        });
+      }
+
+      el.themeBtn.addEventListener("click", () => {
+        const next = currentTheme() === "cream" ? "dark" : "cream";
+        applyTheme(next);
+        app.state.theme = next;
+        saveState(app.state);
+        updateThemeBtn();
+        buildBgPattern();
+      });
+      el.langBtn.addEventListener("click", () => {
+        applyLanguage(currentLang() === "en" ? "ar" : "en");
+      });
+
+      el.closeModalBtn.addEventListener("click", () => closeHowTo());
+      el.modalBackdrop.addEventListener("click", (e) => {
+        if (e.target === el.modalBackdrop) closeHowTo();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        if (el.modalBackdrop.classList.contains("show")) closeHowTo();
+      });
+
+      let bgResizeT = null;
+      window.addEventListener("resize", () => {
+        clearTimeout(bgResizeT);
+        bgResizeT = setTimeout(() => buildBgPattern(), 180);
+      });
+
+      applyTheme(app.state.theme || "dark");
+      applyLanguage(app.state.lang || "ar");
+      applyReduceMotion();
+      applyLockShape();
+      updateCoinsUI();
+      updateSettingsUI();
+      enableMapControls();
+      buildBgPattern();
+      renderMap();
+      setScreen("home");
+      consumeCheckoutReturn();
+      updateDailyUI();
+      setInterval(() => updateDailyUI(), 1000);
+    </script>
+  </body>
+</html>

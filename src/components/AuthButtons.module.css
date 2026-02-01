@@ -1,0 +1,51 @@
+.stack {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn {
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0 14px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.26);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.google {
+  background: #ffffff;
+  color: #111111;
+}
+
+.apple {
+  background: #111111;
+  color: #ffffff;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
