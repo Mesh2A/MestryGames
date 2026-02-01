@@ -34,3 +34,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Apple Pay (Stripe domain verification)
+
+Stripe Apple Pay domain verification requires a file to be served at:
+
+`/.well-known/apple-developer-merchantid-domain-association`
+
+This project serves it from an App Route:
+
+`src/app/.well-known/apple-developer-merchantid-domain-association/route.ts`
+
+Set this environment variable in Vercel (Production) with the exact file contents provided by Stripe:
+
+`APPLE_PAY_DOMAIN_ASSOCIATION`
