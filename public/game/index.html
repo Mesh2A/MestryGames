@@ -494,6 +494,7 @@
         user-select: none;
         font-size: 26px;
         line-height: 1;
+        direction: ltr;
       }
       .mapArrow.left {
         left: 10px;
@@ -1122,8 +1123,8 @@
             <div id="path" class="path" tabindex="0">
               <div id="pathInner" class="pathInner"></div>
             </div>
-            <button id="mapPrevBtn" class="mapArrow left" type="button" aria-label="Prev">‹</button>
-            <button id="mapNextBtn" class="mapArrow right" type="button" aria-label="Next">›</button>
+            <button id="mapPrevBtn" class="mapArrow left" type="button" aria-label="Prev">◀</button>
+            <button id="mapNextBtn" class="mapArrow right" type="button" aria-label="Next">▶</button>
           </div>
         </section>
 
@@ -3172,13 +3173,42 @@
         if (!el.path) return;
 
         function scrollMapBy(dir) {
-          const behavior = app.state.reduceMotion ? "auto" : "smooth";
-          const delta = Math.max(260, Math.floor((window.innerWidth || 360) * 0.82));
-          el.path.scrollBy({ left: dir * delta, behavior });
+          const behavior = "smooth";
+          const view = el.path.getBoundingClientRect();
+          const cx = view.left + view.width / 2;
+          const btns = el.path.querySelectorAll("button.stage");
+          let bestLevel = 1;
+          let bestDist = Infinity;
+          for (const b of btns) {
+            const r = b.getBoundingClientRect();
+            const d = Math.abs(r.left + r.width / 2 - cx);
+            if (d < bestDist) {
+              bestDist = d;
+              const n = parseInt(b.dataset.level || "1", 10);
+              if (Number.isFinite(n)) bestLevel = n;
+            }
+          }
+          const target = clamp(bestLevel + dir * 2, 1, TOTAL_LEVELS);
+          goToStageNumber(target, behavior);
         }
 
         if (el.mapPrevBtn) el.mapPrevBtn.addEventListener("click", () => scrollMapBy(-1));
         if (el.mapNextBtn) el.mapNextBtn.addEventListener("click", () => scrollMapBy(1));
+
+        el.path.addEventListener(
+          "wheel",
+          (e) => {
+            if (el.map.classList.contains("active")) e.preventDefault();
+          },
+          { passive: false }
+        );
+        el.path.addEventListener(
+          "touchmove",
+          (e) => {
+            if (el.map.classList.contains("active")) e.preventDefault();
+          },
+          { passive: false }
+        );
 
         el.path.addEventListener("keydown", (e) => {
           if (!el.map.classList.contains("active")) return;
@@ -3328,9 +3358,9 @@
         openStage({ kind: "daily", id: app.state.dailyChallenge.id });
       }
 
-      function goToStageNumber(n) {
+      function goToStageNumber(n, behaviorOverride) {
         const num = clamp(Math.floor(n || 0), 1, TOTAL_LEVELS);
-        const behavior = app.state.reduceMotion ? "auto" : "smooth";
+        const behavior = behaviorOverride || "smooth";
         let tries = 0;
         function tryScroll() {
           const btn = document.getElementById(`stageBtn-${num}`);
