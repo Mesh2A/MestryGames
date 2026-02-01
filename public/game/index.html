@@ -268,8 +268,8 @@
         width: 100%;
       }
       .panel.homeCard {
-        width: min(280px, 84vw);
-        aspect-ratio: 1 / 1;
+        width: min(320px, 92vw);
+        min-height: 420px;
         box-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
       }
       html[data-daily-locked="1"] .panel.homeCard {
@@ -301,6 +301,11 @@
         justify-content: center;
         white-space: normal;
         line-height: 1.35;
+      }
+      @media (max-width: 520px) {
+        .panel.homeCard {
+          min-height: 450px;
+        }
       }
       .panel {
         width: min(860px, 100%);
@@ -431,6 +436,7 @@
         color: var(--text);
         outline: none;
         width: 120px;
+        font-size: 16px;
       }
       .miniInput::placeholder {
         color: var(--muted);
