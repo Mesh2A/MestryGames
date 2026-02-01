@@ -467,16 +467,49 @@
         -ms-overflow-style: none;
         padding: 26px 22px;
         -webkit-overflow-scrolling: touch;
-        touch-action: pan-y;
-        cursor: grab;
+        touch-action: none;
+        cursor: default;
         outline: none;
         direction: ltr;
       }
-      .path.dragging {
-        cursor: grabbing;
-      }
       .path::-webkit-scrollbar {
         display: none;
+      }
+      .mapArrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(2, 8, 20, 0.45);
+        color: rgba(255, 255, 255, 0.95);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        z-index: 5;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        user-select: none;
+        font-size: 26px;
+        line-height: 1;
+      }
+      .mapArrow.left {
+        left: 10px;
+      }
+      .mapArrow.right {
+        right: 10px;
+      }
+      html[data-reduce-motion="1"] .mapArrow {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+      @media (max-width: 520px) {
+        .mapArrow {
+          width: 46px;
+          height: 46px;
+        }
       }
       .pathInner {
         height: 100%;
@@ -1089,6 +1122,8 @@
             <div id="path" class="path" tabindex="0">
               <div id="pathInner" class="pathInner"></div>
             </div>
+            <button id="mapPrevBtn" class="mapArrow left" type="button" aria-label="Prev">‹</button>
+            <button id="mapNextBtn" class="mapArrow right" type="button" aria-label="Next">›</button>
           </div>
         </section>
 
@@ -1626,6 +1661,8 @@
         achList: document.getElementById("achList"),
         progressText: document.getElementById("progressText"),
         pathInner: document.getElementById("pathInner"),
+        mapPrevBtn: document.getElementById("mapPrevBtn"),
+        mapNextBtn: document.getElementById("mapNextBtn"),
         levelLabel: document.getElementById("levelLabel"),
         levelNum: document.getElementById("levelNum"),
         attemptsLabel: document.getElementById("attemptsLabel"),
@@ -1688,7 +1725,7 @@
           howBtn: "طريقة اللعبه",
           progressK: "التقدم",
           helpK: "مساعدة",
-          helpText: "اسحب يمين/يسار للتنقل في الخريطة",
+          helpText: "استخدم الأسهم أو البحث للانتقال للمراحل",
           levelLabel: "المرحلة",
           attemptsLabel: "المحاولات:",
           checkBtn: "تحقق",
@@ -1836,7 +1873,7 @@
           howBtn: "How to play",
           progressK: "Progress",
           helpK: "Help",
-          helpText: "Drag left/right to navigate the map",
+          helpText: "Use arrows or search to navigate levels",
           levelLabel: "Level",
           attemptsLabel: "Attempts:",
           checkBtn: "Check",
@@ -2199,6 +2236,7 @@
           const end = Math.min(TOTAL_LEVELS, i + batchSize - 1);
 
           for (; i <= end; i++) {
+            const level = i;
             if (i !== 1) {
               const conn = document.createElement("div");
               conn.className = "connector";
@@ -2206,27 +2244,27 @@
             }
             const pos = document.createElement("div");
             pos.className = "stagePos";
-            pos.style.transform = `translateY(${stageOffset(i)}px)`;
+            pos.style.transform = `translateY(${stageOffset(level)}px)`;
 
             const b = document.createElement("button");
             b.type = "button";
             b.className = "stage";
-            b.id = `stageBtn-${i}`;
-            b.dataset.level = String(i);
-            const unlocked = i <= app.state.unlocked;
-            const completed = app.state.completed.includes(i);
-            const boss = isBossLevel(i);
+            b.id = `stageBtn-${level}`;
+            b.dataset.level = String(level);
+            const unlocked = level <= app.state.unlocked;
+            const completed = app.state.completed.includes(level);
+            const boss = isBossLevel(level);
             if (!unlocked) b.classList.add("locked");
             if (completed) b.classList.add("completed");
             if (boss) b.classList.add("boss");
-            b.setAttribute("aria-label", t("stageAria", { i }));
-            const stars = getStarsForLevel(i);
+            b.setAttribute("aria-label", t("stageAria", { i: level }));
+            const stars = getStarsForLevel(level);
             const starText = stars ? "★".repeat(stars) : "";
-            b.innerHTML = `<div class="n">${i}</div>${stars ? `<div class="s">${starText}</div>` : ""}`;
+            b.innerHTML = `<div class="n">${level}</div>${stars ? `<div class="s">${starText}</div>` : ""}`;
             b.addEventListener("click", () => {
               if (Date.now() - lastDragAt < 260) return;
               if (!unlocked) return;
-              openStage({ kind: "level", id: i });
+              openStage({ kind: "level", id: level });
             });
             pos.appendChild(b);
             frag.appendChild(pos);
@@ -3116,7 +3154,13 @@
       function goMap() {
         renderMap();
         show(el.map);
-        requestAnimationFrame(() => focusMapPath());
+        requestAnimationFrame(() => {
+          if (el.path) el.path.scrollLeft = 0;
+          setTimeout(() => {
+            if (el.path) el.path.scrollLeft = 0;
+          }, 250);
+          focusMapPath();
+        });
       }
 
       function goHome() {
@@ -3127,52 +3171,23 @@
       function enableMapControls() {
         if (!el.path) return;
 
-        const drag = { active: false, pointerId: null, startX: 0, startScrollLeft: 0, moved: false };
-
-        el.path.addEventListener("pointerdown", (e) => {
-          if (e.target && e.target.closest && e.target.closest("button.stage")) return;
-          if (e.pointerType === "mouse" && e.button !== 0) return;
-          drag.active = true;
-          drag.pointerId = e.pointerId;
-          drag.startX = e.clientX;
-          drag.startScrollLeft = el.path.scrollLeft;
-          drag.moved = false;
-          el.path.classList.add("dragging");
-          focusMapPath();
-          try {
-            el.path.setPointerCapture(e.pointerId);
-          } catch {}
-        });
-
-        el.path.addEventListener("pointermove", (e) => {
-          if (!drag.active || e.pointerId !== drag.pointerId) return;
-          const dx = e.clientX - drag.startX;
-          if (!drag.moved && Math.abs(dx) > 6) drag.moved = true;
-          el.path.scrollLeft = drag.startScrollLeft - dx;
-          if (drag.moved) e.preventDefault();
-        });
-
-        function endDrag(e) {
-          if (!drag.active) return;
-          if (e && drag.pointerId !== null && e.pointerId !== drag.pointerId) return;
-          drag.active = false;
-          drag.pointerId = null;
-          el.path.classList.remove("dragging");
-          if (drag.moved) lastDragAt = Date.now();
+        function scrollMapBy(dir) {
+          const behavior = app.state.reduceMotion ? "auto" : "smooth";
+          const delta = Math.max(260, Math.floor((window.innerWidth || 360) * 0.82));
+          el.path.scrollBy({ left: dir * delta, behavior });
         }
 
-        el.path.addEventListener("pointerup", endDrag);
-        el.path.addEventListener("pointercancel", endDrag);
-        el.path.addEventListener("lostpointercapture", endDrag);
+        if (el.mapPrevBtn) el.mapPrevBtn.addEventListener("click", () => scrollMapBy(-1));
+        if (el.mapNextBtn) el.mapNextBtn.addEventListener("click", () => scrollMapBy(1));
 
         el.path.addEventListener("keydown", (e) => {
           if (!el.map.classList.contains("active")) return;
           if (el.modalBackdrop.classList.contains("show")) return;
           if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-            el.path.scrollBy({ left: -240, behavior: "smooth" });
+            scrollMapBy(-1);
             e.preventDefault();
           } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-            el.path.scrollBy({ left: 240, behavior: "smooth" });
+            scrollMapBy(1);
             e.preventDefault();
           }
         });
@@ -3315,10 +3330,20 @@
 
       function goToStageNumber(n) {
         const num = clamp(Math.floor(n || 0), 1, TOTAL_LEVELS);
-        const btn = document.getElementById(`stageBtn-${num}`);
-        if (!btn) return;
-        btn.scrollIntoView({ behavior: app.state.reduceMotion ? "auto" : "smooth", inline: "center", block: "nearest" });
-        focusMapPath();
+        const behavior = app.state.reduceMotion ? "auto" : "smooth";
+        let tries = 0;
+        function tryScroll() {
+          const btn = document.getElementById(`stageBtn-${num}`);
+          if (btn) {
+            btn.scrollIntoView({ behavior, inline: "center", block: "nearest" });
+            focusMapPath();
+            return;
+          }
+          tries += 1;
+          if (tries > 80) return;
+          requestAnimationFrame(tryScroll);
+        }
+        tryScroll();
       }
 
       function buyHintToken() {
