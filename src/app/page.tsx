@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import AuthButtons from "@/components/AuthButtons";
+import LogoutButton from "@/components/LogoutButton";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -13,7 +14,14 @@ export default async function Home() {
           <div className={styles.brand}>فتح الاقفال</div>
           <div className={styles.desc}>تسجيل الدخول يحفظ تقدمك وعمليات الشراء على حسابك.</div>
           <div className={styles.actions}>
-            {session ? <Link className={styles.primary} href="/play">ابدأ اللعب</Link> : <AuthButtons />}
+            {session ? (
+              <>
+                <Link className={styles.primary} href="/play">ابدأ اللعب</Link>
+                <LogoutButton className={styles.secondary} />
+              </>
+            ) : (
+              <AuthButtons />
+            )}
           </div>
           <div className={styles.meta}>
             {session?.user?.email ? <span>مسجل: {session.user.email}</span> : <span>غير مسجل</span>}
