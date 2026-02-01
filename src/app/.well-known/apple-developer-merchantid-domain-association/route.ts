@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  const content = process.env.APPLE_PAY_DOMAIN_ASSOCIATION || "";
+  const plain = process.env.APPLE_PAY_DOMAIN_ASSOCIATION || "";
+  const b64 = process.env.APPLE_PAY_DOMAIN_ASSOCIATION_B64 || "";
+  const content = b64 ? Buffer.from(b64, "base64").toString("utf8") : plain;
   if (!content) return new NextResponse("not_configured", { status: 503 });
 
   return new NextResponse(content, {
@@ -14,4 +16,3 @@ export function GET() {
     },
   });
 }
-

@@ -48,3 +48,7 @@ This project serves it from an App Route:
 Set this environment variable in Vercel (Production) with the exact file contents provided by Stripe:
 
 `APPLE_PAY_DOMAIN_ASSOCIATION`
+
+If your platform has issues with multiline env vars, set a base64-encoded value instead:
+
+`APPLE_PAY_DOMAIN_ASSOCIATION_B64`
