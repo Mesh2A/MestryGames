@@ -23,6 +23,7 @@
         --glow-a: rgba(34, 211, 238, 0.22);
         --glow-b: rgba(99, 102, 241, 0.22);
         --glow-c: rgba(236, 72, 153, 0.18);
+        --ui-blur: 0px;
         --bg-grad-a: radial-gradient(1200px 720px at 18% 0%, rgba(34, 211, 238, 0.18), transparent 62%);
         --bg-grad-b: radial-gradient(1100px 760px at 84% 10%, rgba(99, 102, 241, 0.16), transparent 64%),
           radial-gradient(900px 620px at 52% 110%, rgba(236, 72, 153, 0.08), transparent 58%);
@@ -222,8 +223,8 @@
         padding: 10px 14px;
         border-radius: 12px;
         cursor: pointer;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
         box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
         transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
         user-select: none;
@@ -400,8 +401,8 @@
         border-radius: 22px;
         border: 1px solid var(--panel-border);
         background: var(--panel-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
         box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
         overflow: hidden;
         position: relative;
@@ -564,8 +565,8 @@
         place-items: center;
         cursor: pointer;
         z-index: 5;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
         user-select: none;
         font-size: 26px;
         line-height: 1;
@@ -614,8 +615,8 @@
         border: 1px solid rgba(255, 255, 255, 0.22);
         background: radial-gradient(90px 70px at 30% 25%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.03) 100%),
           linear-gradient(180deg, var(--glow-a), var(--glow-b));
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
         box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
         cursor: pointer;
         transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
@@ -669,8 +670,8 @@
         gap: 10px;
       }
       html[data-mobile="0"] .assistCard {
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
       }
       .assistCard .t {
         font-weight: 900;
@@ -855,8 +856,8 @@
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: linear-gradient(165deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
         display: grid;
         place-items: center;
         transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
@@ -929,8 +930,8 @@
         opacity: 0;
         pointer-events: none;
         box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
       }
       html[data-reduce-motion="1"] .hint {
         box-shadow: none;
@@ -1003,6 +1004,9 @@
       .historyGuess {
         font-weight: 900;
         letter-spacing: 1px;
+        direction: ltr;
+        unicode-bidi: plaintext;
+        font-variant-numeric: tabular-nums;
       }
       .historyDots {
         display: flex;
@@ -1124,8 +1128,8 @@
         place-items: center;
         padding: 20px;
         background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
         z-index: 20;
         opacity: 0;
         visibility: hidden;
@@ -1415,6 +1419,16 @@
                     <div>
                       <div id="settingsHintsK" class="t">تلميحات</div>
                       <div class="tiny"><span id="hintTokensV">0</span></div>
+                    </div>
+                  </div>
+                  <div class="shopRow">
+                    <div>
+                      <div id="syncK" class="t">نقل البيانات</div>
+                      <div id="syncSub" class="tiny">انسخ الكود من جهاز، والصقه في الجهاز الثاني.</div>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
+                      <button id="exportBtn" class="btn" type="button">نسخ كود</button>
+                      <button id="importBtn" class="btn primary" type="button">استيراد</button>
                     </div>
                   </div>
                   <div class="shopRow">
@@ -1712,6 +1726,41 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       }
 
+      function toB64Unicode(str) {
+        const encoded = encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)));
+        return btoa(encoded);
+      }
+
+      function fromB64Unicode(b64) {
+        const bin = atob(String(b64 || ""));
+        let pct = "";
+        for (let i = 0; i < bin.length; i++) pct += "%" + bin.charCodeAt(i).toString(16).padStart(2, "0");
+        return decodeURIComponent(pct);
+      }
+
+      function exportTransferCode() {
+        return toB64Unicode(JSON.stringify({ v: 1, state: app.state }));
+      }
+
+      function importTransferCode(code) {
+        try {
+          const raw = fromB64Unicode(code);
+          const data = JSON.parse(raw);
+          if (!data || typeof data !== "object" || data.v !== 1 || !data.state) return false;
+          app.state = normalizeState(data.state);
+          saveState(app.state);
+          applyTheme(app.state.theme || "ocean");
+          updateCoinsUI();
+          updateSettingsUI();
+          updateShopUI();
+          renderMap();
+          buildBgPattern();
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
       function generateAnswer(level) {
         const len = codeLengthForLevel(level);
         if (level === 1 && len === 3) return "432";
@@ -1810,6 +1859,10 @@
         settingsCoinsV: document.getElementById("settingsCoinsV"),
         settingsHintsK: document.getElementById("settingsHintsK"),
         hintTokensV: document.getElementById("hintTokensV"),
+        syncK: document.getElementById("syncK"),
+        syncSub: document.getElementById("syncSub"),
+        exportBtn: document.getElementById("exportBtn"),
+        importBtn: document.getElementById("importBtn"),
         settingsThemeK: document.getElementById("settingsThemeK"),
         themeBtn: document.getElementById("themeBtn"),
         settingsLangK: document.getElementById("settingsLangK"),
@@ -1978,6 +2031,13 @@
           howWarn2: "بيكون لونه أصفر.",
           howHintNote: "في كل مرحلة عندك تلميح واحد فقط.",
           settingsDesc: "غيّر لون الشاشة لراحة العين.",
+          syncK: "نقل البيانات",
+          syncSub: "انسخ الكود من جهاز، والصقه في الجهاز الثاني.",
+          exportBtn: "نسخ كود",
+          importBtn: "استيراد",
+          importPrompt: "الصق كود النقل هنا:",
+          importBad: "الكود غير صحيح.",
+          imported: "تم النقل ✅",
           themeBtn: ({ theme }) =>
             theme === "cream" ? "لون الشاشة: كريمي" : theme === "royal" ? "لون الشاشة: ملكي" : "لون الشاشة: محيط",
           langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
@@ -2135,6 +2195,13 @@
           howWarn2: "it turns yellow.",
           howHintNote: "You only get one hint per level.",
           settingsDesc: "Choose a screen color for comfort.",
+          syncK: "Transfer data",
+          syncSub: "Copy the code from one device and paste it into another.",
+          exportBtn: "Copy code",
+          importBtn: "Import",
+          importPrompt: "Paste the transfer code here:",
+          importBad: "Invalid code.",
+          imported: "Imported ✅",
           themeBtn: ({ theme }) => (theme === "cream" ? "Screen: Cream" : theme === "royal" ? "Screen: Royal" : "Screen: Ocean"),
           langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
           progressText: ({ completed, unlocked, total }) => `${completed} completed — unlocked up to ${unlocked} / ${total}`,
@@ -2320,6 +2387,10 @@
         if (el.settingsDesc) el.settingsDesc.textContent = t("settingsDesc");
         if (el.settingsCoinsK) el.settingsCoinsK.textContent = t("settingsCoinsK");
         if (el.settingsHintsK) el.settingsHintsK.textContent = t("settingsHintsK");
+        if (el.syncK) el.syncK.textContent = t("syncK");
+        if (el.syncSub) el.syncSub.textContent = t("syncSub");
+        if (el.exportBtn) el.exportBtn.textContent = t("exportBtn");
+        if (el.importBtn) el.importBtn.textContent = t("importBtn");
         if (el.settingsThemeK) el.settingsThemeK.textContent = t("settingsThemeK");
         if (el.settingsLangK) el.settingsLangK.textContent = t("settingsLangK");
         if (el.settingsMotionK) el.settingsMotionK.textContent = t("settingsMotionK");
@@ -2590,6 +2661,10 @@
 
         app.inputs.forEach((input, idx) => {
           input.addEventListener("input", () => {
+            if (app.session && app.session.autoClearId) {
+              clearTimeout(app.session.autoClearId);
+              app.session.autoClearId = null;
+            }
             const raw = (input.value || "").replace(/[^\d]/g, "");
             if (raw.length > 1) {
               distributeDigits(idx, raw);
@@ -2599,6 +2674,10 @@
             }
           });
           input.addEventListener("paste", (e) => {
+            if (app.session && app.session.autoClearId) {
+              clearTimeout(app.session.autoClearId);
+              app.session.autoClearId = null;
+            }
             const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
             const digits = String(text).replace(/[^\d]/g, "");
             if (!digits) return;
@@ -2613,6 +2692,10 @@
       }
 
       function clearSlots() {
+        if (app.session && app.session.autoClearId) {
+          clearTimeout(app.session.autoClearId);
+          app.session.autoClearId = null;
+        }
         app.inputs.forEach((input) => {
           if (input.dataset.locked === "1") return;
           input.value = "";
@@ -2636,6 +2719,20 @@
         if (el.history) el.history.innerHTML = "";
         if (el.coach) el.coach.style.display = "none";
         if (document.documentElement.dataset.mobile !== "1" && app.inputs[0]) app.inputs[0].focus();
+      }
+
+      function clearGuessOnly() {
+        app.inputs.forEach((input) => {
+          if (input.dataset.locked === "1") return;
+          input.value = "";
+        });
+        app.inputs.forEach((input) => {
+          if (input.dataset.locked === "1") return;
+          input.disabled = false;
+          const slot = input.parentElement;
+          slot.classList.remove("ok", "bad", "warn");
+        });
+        app.hints.forEach((h) => h.classList.remove("show"));
       }
 
       function formatHMS(ms) {
@@ -3144,7 +3241,7 @@
           const row = document.createElement("div");
           row.className = "historyItem";
           const dots = item.result.map((s) => `<span class="dot ${s}"></span>`).join("");
-          row.innerHTML = `<div class="historyGuess">${item.guess}</div><div class="historyDots">${dots}</div>`;
+          row.innerHTML = `<div class="historyGuess"><span dir="ltr">${item.guess}</span></div><div class="historyDots">${dots}</div>`;
           frag.appendChild(row);
         }
         el.history.appendChild(frag);
@@ -3188,7 +3285,8 @@
 
       function resetSession() {
         if (app.session.timerId) clearInterval(app.session.timerId);
-        app.session = { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false };
+        if (app.session.autoClearId) clearTimeout(app.session.autoClearId);
+        app.session = { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false, autoClearId: null };
         if (el.timerBadge) el.timerBadge.style.display = "none";
       }
 
@@ -3328,6 +3426,13 @@
               app.session.over = true;
               el.msg.textContent = t("attemptsOver");
             }
+          }
+          if (!app.session.over) {
+            if (app.session.autoClearId) clearTimeout(app.session.autoClearId);
+            app.session.autoClearId = setTimeout(() => {
+              if (!app.session || app.session.over) return;
+              clearGuessOnly();
+            }, 2500);
           }
           return;
         }
@@ -4124,6 +4229,28 @@
       el.langBtn.addEventListener("click", () => {
         applyLanguage(currentLang() === "en" ? "ar" : "en");
       });
+
+      if (el.exportBtn) {
+        el.exportBtn.addEventListener("click", async () => {
+          const code = exportTransferCode();
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(code);
+            else window.prompt("Copy", code);
+            el.msg.textContent = t("copied");
+          } catch {
+            window.prompt("Copy", code);
+            el.msg.textContent = t("copied");
+          }
+        });
+      }
+      if (el.importBtn) {
+        el.importBtn.addEventListener("click", () => {
+          const code = window.prompt(t("importPrompt"), "");
+          if (!code) return;
+          const ok = importTransferCode(String(code).trim());
+          el.msg.textContent = ok ? t("imported") : t("importBad");
+        });
+      }
 
       el.closeModalBtn.addEventListener("click", () => closeHowTo());
       el.modalBackdrop.addEventListener("click", (e) => {
