@@ -19,9 +19,14 @@
         --bad: #ef4444;
         --warn: #f59e0b;
         --shadow: rgba(0, 0, 0, 0.45);
-        --bg-grad-a: radial-gradient(1200px 700px at 60% 0%, rgba(38, 182, 198, 0.22), transparent 60%);
-        --bg-grad-b: radial-gradient(900px 600px at 10% 10%, rgba(34, 197, 94, 0.08), transparent 55%);
-        --bg-grad-c: linear-gradient(180deg, #020814, var(--bg-0) 40%, #021827);
+        --shine: rgba(255, 255, 255, 0.22);
+        --glow-a: rgba(34, 211, 238, 0.22);
+        --glow-b: rgba(99, 102, 241, 0.22);
+        --glow-c: rgba(236, 72, 153, 0.18);
+        --bg-grad-a: radial-gradient(1200px 720px at 18% 0%, rgba(34, 211, 238, 0.18), transparent 62%);
+        --bg-grad-b: radial-gradient(1100px 760px at 84% 10%, rgba(99, 102, 241, 0.16), transparent 64%),
+          radial-gradient(900px 620px at 52% 110%, rgba(236, 72, 153, 0.08), transparent 58%);
+        --bg-grad-c: linear-gradient(180deg, #020316, #060922 45%, #020818);
         --btn-border: rgba(255, 255, 255, 0.22);
         --btn-bg: rgba(255, 255, 255, 0.11);
         --btn-hover-bg: rgba(255, 255, 255, 0.16);
@@ -37,6 +42,38 @@
         --sea-opacity: 0.95;
         --slot-radius: 18px;
       }
+      html[data-theme="royal"] {
+        --bg-0: #050816;
+        --sea-0: #101b48;
+        --sea-1: #1a2a78;
+        --sea-2: #3b82f6;
+        --glass: rgba(255, 255, 255, 0.11);
+        --glass-2: rgba(255, 255, 255, 0.2);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.7);
+        --shadow: rgba(0, 0, 0, 0.48);
+        --shine: rgba(255, 255, 255, 0.22);
+        --glow-a: rgba(59, 130, 246, 0.22);
+        --glow-b: rgba(139, 92, 246, 0.22);
+        --glow-c: rgba(236, 72, 153, 0.18);
+        --bg-grad-a: radial-gradient(1200px 720px at 18% 0%, rgba(59, 130, 246, 0.18), transparent 62%);
+        --bg-grad-b: radial-gradient(1100px 760px at 82% 10%, rgba(139, 92, 246, 0.16), transparent 66%),
+          radial-gradient(900px 640px at 56% 110%, rgba(236, 72, 153, 0.08), transparent 58%);
+        --bg-grad-c: linear-gradient(180deg, #02030c, var(--bg-0) 50%, #02081a);
+        --btn-border: rgba(255, 255, 255, 0.2);
+        --btn-bg: rgba(255, 255, 255, 0.1);
+        --btn-hover-bg: rgba(255, 255, 255, 0.15);
+        --btn-hover-border: rgba(255, 255, 255, 0.3);
+        --btn-primary-grad: linear-gradient(135deg, rgba(59, 130, 246, 0.68), rgba(139, 92, 246, 0.26));
+        --btn-primary-grad-hover: linear-gradient(135deg, rgba(59, 130, 246, 0.82), rgba(139, 92, 246, 0.34));
+        --btn-primary-border: rgba(59, 130, 246, 0.82);
+        --btn-primary-border-hover: rgba(59, 130, 246, 0.92);
+        --panel-border: rgba(255, 255, 255, 0.14);
+        --panel-bg: rgba(255, 255, 255, 0.06);
+        --modal-bg: rgba(2, 8, 20, 0.74);
+        --pattern-color: rgba(255, 255, 255, 0.08);
+        --sea-opacity: 0.92;
+      }
       html[data-theme="cream"] {
         --bg-0: #f1e8d8;
         --glass: rgba(0, 0, 0, 0.06);
@@ -44,9 +81,14 @@
         --text: rgba(18, 22, 26, 0.92);
         --muted: rgba(18, 22, 26, 0.62);
         --shadow: rgba(0, 0, 0, 0.22);
-        --bg-grad-a: radial-gradient(1200px 700px at 60% 0%, rgba(38, 182, 198, 0.1), transparent 60%);
-        --bg-grad-b: radial-gradient(900px 600px at 10% 10%, rgba(99, 102, 241, 0.06), transparent 55%);
-        --bg-grad-c: linear-gradient(180deg, #fff8ed, var(--bg-0) 55%, #ecdfc9);
+        --shine: rgba(255, 255, 255, 0.55);
+        --glow-a: rgba(14, 165, 233, 0.14);
+        --glow-b: rgba(99, 102, 241, 0.12);
+        --glow-c: rgba(217, 119, 6, 0.12);
+        --bg-grad-a: radial-gradient(1200px 720px at 18% 0%, rgba(14, 165, 233, 0.16), transparent 62%);
+        --bg-grad-b: radial-gradient(1100px 760px at 82% 10%, rgba(99, 102, 241, 0.12), transparent 66%),
+          radial-gradient(900px 640px at 56% 110%, rgba(217, 119, 6, 0.09), transparent 58%);
+        --bg-grad-c: linear-gradient(180deg, #fff7ed, var(--bg-0) 60%, #efe6d6);
         --btn-border: rgba(0, 0, 0, 0.14);
         --btn-bg: rgba(255, 255, 255, 0.62);
         --btn-hover-bg: rgba(255, 255, 255, 0.78);
@@ -88,6 +130,20 @@
         color: var(--text);
         background: var(--bg-grad-a), var(--bg-grad-b), var(--bg-grad-c);
         overflow: hidden;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      html[data-mobile="0"] body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(900px 520px at 18% 8%, var(--glow-a), transparent 68%),
+          radial-gradient(1100px 620px at 82% 12%, var(--glow-b), transparent 72%),
+          repeating-linear-gradient(25deg, rgba(255, 255, 255, 0.03) 0 2px, rgba(255, 255, 255, 0) 2px 7px);
+        opacity: 0.55;
+        mix-blend-mode: overlay;
       }
       .app {
         height: 100%;
@@ -108,8 +164,18 @@
       }
       header h1 {
         margin: 0;
-        font-size: 18px;
+        font-size: clamp(16px, 2.2vw, 19px);
         letter-spacing: 0.2px;
+      }
+      @supports (-webkit-background-clip: text) {
+        html[data-mobile="0"] header h1 {
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.78)),
+            radial-gradient(220px 90px at 20% 30%, var(--glow-a), transparent 70%),
+            radial-gradient(240px 100px at 80% 0%, var(--glow-b), transparent 72%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+        }
       }
       header .sub {
         display: none;
@@ -179,30 +245,34 @@
       .btn:active {
         transform: translateY(0) scale(0.995);
       }
+      .btn:focus-visible {
+        outline: 2px solid var(--glow-a);
+        outline-offset: 3px;
+      }
       .btn.primary {
         background: var(--btn-primary-grad);
         border-color: var(--btn-primary-border);
-        box-shadow: 0 16px 52px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(34, 211, 238, 0.12) inset;
+        box-shadow: 0 16px 52px rgba(0, 0, 0, 0.24), 0 0 0 1px var(--glow-a) inset;
       }
       .btn.primary:hover {
         background: var(--btn-primary-grad-hover);
         border-color: var(--btn-primary-border-hover);
-        box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(34, 211, 238, 0.18) inset;
+        box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--glow-a) inset;
       }
       html[data-mobile="0"] .btn::before {
         content: "";
         position: absolute;
         inset: -2px;
-        background: radial-gradient(140px 80px at 30% 15%, rgba(255, 255, 255, 0.22), transparent 65%),
-          radial-gradient(160px 120px at 70% 0%, rgba(34, 211, 238, 0.22), transparent 70%),
+        background: radial-gradient(140px 80px at 30% 15%, var(--shine), transparent 65%),
+          radial-gradient(160px 120px at 70% 0%, var(--glow-a), transparent 70%),
           linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
         opacity: 0.85;
         pointer-events: none;
         transform: translateZ(0);
       }
       html[data-mobile="0"] .btn.primary::before {
-        background: radial-gradient(150px 90px at 28% 18%, rgba(255, 255, 255, 0.22), transparent 62%),
-          radial-gradient(220px 130px at 75% 0%, rgba(99, 102, 241, 0.22), transparent 72%);
+        background: radial-gradient(150px 90px at 28% 18%, var(--shine), transparent 62%),
+          radial-gradient(220px 130px at 75% 0%, var(--glow-b), transparent 72%);
         opacity: 0.9;
       }
       .btn.danger {
@@ -334,6 +404,13 @@
         -webkit-backdrop-filter: blur(12px);
         box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
         overflow: hidden;
+        position: relative;
+      }
+      html[data-mobile="0"] .panel {
+        background-image: radial-gradient(420px 240px at 18% 10%, var(--shine), transparent 62%),
+          radial-gradient(520px 320px at 78% 0%, var(--glow-a), transparent 72%),
+          radial-gradient(520px 320px at 92% 10%, var(--glow-b), transparent 72%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
       }
       html[data-reduce-motion="1"] .panel {
         backdrop-filter: none;
@@ -376,50 +453,7 @@
         font-weight: 700;
       }
       .sea {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        opacity: var(--sea-opacity);
-        z-index: 0;
-      }
-      .sea::before {
-        content: "";
-        position: absolute;
-        inset: -40px;
-        background: radial-gradient(1200px 500px at 50% 85%, rgba(38, 182, 198, 0.45), transparent 65%),
-          linear-gradient(180deg, rgba(6, 60, 90, 0.15) 0%, rgba(10, 109, 136, 0.24) 35%, rgba(38, 182, 198, 0.16) 100%);
-        filter: blur(0px);
-      }
-      .sea::after {
-        content: "";
-        position: absolute;
-        inset: -120px;
-        background: repeating-linear-gradient(
-            110deg,
-            rgba(255, 255, 255, 0.08) 0px,
-            rgba(255, 255, 255, 0.08) 2px,
-            rgba(255, 255, 255, 0) 18px,
-            rgba(255, 255, 255, 0) 40px
-          ),
-          radial-gradient(900px 500px at 20% 85%, rgba(255, 255, 255, 0.12), transparent 60%);
-        mix-blend-mode: overlay;
-        opacity: 0.28;
-        transform: rotate(-8deg);
-        animation: shimmer 6.5s ease-in-out infinite;
-      }
-      @keyframes shimmer {
-        0% {
-          translate: -2% 0;
-          opacity: 0.22;
-        }
-        50% {
-          translate: 2% -1%;
-          opacity: 0.34;
-        }
-        100% {
-          translate: -2% 0;
-          opacity: 0.22;
-        }
+        display: none;
       }
       .map {
         grid-template-rows: auto 1fr;
@@ -455,6 +489,14 @@
         outline: none;
         width: 120px;
         font-size: 16px;
+      }
+      .miniInput:focus {
+        border-color: rgba(255, 255, 255, 0.34);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06), 0 0 0 1px var(--glow-a) inset;
+      }
+      html[data-theme="cream"] .miniInput:focus {
+        border-color: rgba(0, 0, 0, 0.2);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--glow-a) inset;
       }
       .miniInput::placeholder {
         color: var(--muted);
@@ -571,7 +613,7 @@
         position: relative;
         border: 1px solid rgba(255, 255, 255, 0.22);
         background: radial-gradient(90px 70px at 30% 25%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.03) 100%),
-          linear-gradient(180deg, rgba(34, 211, 238, 0.06), rgba(99, 102, 241, 0.03));
+          linear-gradient(180deg, var(--glow-a), var(--glow-b));
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
@@ -587,8 +629,8 @@
         position: absolute;
         inset: 1px;
         border-radius: 17px;
-        background: radial-gradient(120px 90px at 28% 18%, rgba(255, 255, 255, 0.22), transparent 60%),
-          radial-gradient(180px 120px at 80% 0%, rgba(34, 211, 238, 0.18), transparent 72%);
+        background: radial-gradient(120px 90px at 28% 18%, var(--shine), transparent 60%),
+          radial-gradient(180px 120px at 80% 0%, var(--glow-a), transparent 72%);
         opacity: 0.95;
         pointer-events: none;
       }
@@ -750,6 +792,10 @@
         color: var(--muted);
         font-size: 12px;
       }
+      html[data-mobile="0"] .badge {
+        background-image: radial-gradient(220px 120px at 30% 0%, var(--shine), transparent 70%),
+          radial-gradient(260px 140px at 85% 0%, var(--glow-a), transparent 76%);
+      }
       .lock {
         margin-top: 10px;
         display: grid;
@@ -760,6 +806,35 @@
         grid-template-columns: repeat(3, 1fr);
         gap: 12px;
         align-items: start;
+      }
+      .slots.shake {
+        animation: slotsShake 420ms cubic-bezier(0.2, 0.9, 0.2, 1);
+      }
+      @keyframes slotsShake {
+        0% {
+          transform: translateX(0);
+        }
+        14% {
+          transform: translateX(-10px);
+        }
+        30% {
+          transform: translateX(8px);
+        }
+        46% {
+          transform: translateX(-7px);
+        }
+        62% {
+          transform: translateX(5px);
+        }
+        78% {
+          transform: translateX(-3px);
+        }
+        100% {
+          transform: translateX(0);
+        }
+      }
+      html[data-reduce-motion="1"] .slots.shake {
+        animation: none;
       }
       html[data-lock-shape="circle"] .slots,
       html[data-lock-shape="square"] .slots {
@@ -791,10 +866,16 @@
         position: absolute;
         inset: 1px;
         border-radius: calc(var(--slot-radius) - 1px);
-        background: radial-gradient(120px 70px at 30% 20%, rgba(255, 255, 255, 0.2), transparent 60%),
+        background: radial-gradient(120px 70px at 30% 20%, var(--shine), transparent 60%),
+          radial-gradient(160px 100px at 80% 0%, var(--glow-a), transparent 72%),
           linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
         opacity: 0.9;
         pointer-events: none;
+      }
+      html[data-theme="cream"] .slot {
+        border-color: rgba(0, 0, 0, 0.12);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.56));
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.14);
       }
       html[data-mobile="1"] .slot {
         background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
@@ -1073,6 +1154,11 @@
         will-change: transform, opacity;
         transition: transform 280ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 220ms ease;
       }
+      html[data-mobile="0"] .modal {
+        background-image: radial-gradient(520px 280px at 18% 0%, var(--shine), transparent 64%),
+          radial-gradient(620px 360px at 86% 0%, var(--glow-b), transparent 74%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+      }
       @media (max-width: 520px) {
         .modal {
           width: 100%;
@@ -1175,7 +1261,7 @@
       <header>
         <div class="brand">
           <h1 id="brandTitle">لعبة القفل</h1>
-          <div id="brandSub" class="sub">مراحل على خريطة فوق بحر لامع</div>
+          <div id="brandSub" class="sub">تصميم مودرن — افتح الأقفال وارتقِ</div>
         </div>
         <div class="actions">
           <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
@@ -1184,7 +1270,6 @@
         </div>
       </header>
       <main>
-        <div class="sea" aria-hidden="true"></div>
         <div id="bgPattern" class="bgPattern" aria-hidden="true"></div>
 
         <section id="homeScreen" class="screen home active">
@@ -1223,7 +1308,6 @@
             </div>
           </div>
           <div class="mapWrap">
-            <div class="sea" aria-hidden="true"></div>
             <div id="path" class="path" tabindex="0">
               <div id="pathInner" class="pathInner"></div>
             </div>
@@ -1854,7 +1938,7 @@
         ar: {
           docTitle: "فتح الاقفال",
           brandTitle: "فتح الاقفال",
-          brandSub: "",
+          brandSub: "تصميم مودرن — افتح الأقفال وارتقِ",
           settingsBtn: "اعدادات",
           homeHeaderBtn: "الرئيسية",
           homeTitle: "فتح الاقفال",
@@ -1894,7 +1978,8 @@
           howWarn2: "بيكون لونه أصفر.",
           howHintNote: "في كل مرحلة عندك تلميح واحد فقط.",
           settingsDesc: "غيّر لون الشاشة لراحة العين.",
-          themeBtn: ({ theme }) => (theme === "cream" ? "لون الشاشة: كريمي" : "لون الشاشة: طبيعي"),
+          themeBtn: ({ theme }) =>
+            theme === "cream" ? "لون الشاشة: كريمي" : theme === "royal" ? "لون الشاشة: ملكي" : "لون الشاشة: محيط",
           langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
           progressText: ({ completed, unlocked, total }) => `${completed} مكتملة — مفتوح حتى ${unlocked} / ${total}`,
           stageAria: ({ i }) => `المرحلة ${i}`,
@@ -2010,7 +2095,7 @@
         en: {
           docTitle: "Unlock Locks",
           brandTitle: "Unlock Locks",
-          brandSub: "",
+          brandSub: "Modern design — unlock and climb",
           settingsBtn: "Settings",
           homeHeaderBtn: "Home",
           homeTitle: "Unlock Locks",
@@ -2050,7 +2135,7 @@
           howWarn2: "it turns yellow.",
           howHintNote: "You only get one hint per level.",
           settingsDesc: "Choose a screen color for comfort.",
-          themeBtn: ({ theme }) => (theme === "cream" ? "Screen: Cream" : "Screen: Normal"),
+          themeBtn: ({ theme }) => (theme === "cream" ? "Screen: Cream" : theme === "royal" ? "Screen: Royal" : "Screen: Ocean"),
           langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
           progressText: ({ completed, unlocked, total }) => `${completed} completed — unlocked up to ${unlocked} / ${total}`,
           stageAria: ({ i }) => `Level ${i}`,
@@ -2273,12 +2358,22 @@
         }
       }
 
+      function normalizeTheme(theme) {
+        const t = String(theme || "").toLowerCase();
+        if (t === "dark") return "ocean";
+        if (t === "ocean" || t === "royal" || t === "cream") return t;
+        return "ocean";
+      }
+
       function applyTheme(theme) {
-        document.documentElement.dataset.theme = theme === "cream" ? "cream" : "dark";
+        const next = normalizeTheme(theme);
+        document.documentElement.dataset.theme = next;
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", next === "cream" ? "#fff8ed" : next === "royal" ? "#050816" : "#04111f");
       }
 
       function currentTheme() {
-        return document.documentElement.dataset.theme === "cream" ? "cream" : "dark";
+        return normalizeTheme(document.documentElement.dataset.theme || "ocean");
       }
 
       function updateThemeBtn() {
@@ -3222,6 +3317,12 @@
 
         const solved = result.every((s) => s === "ok");
         if (!solved) {
+          if (el.slots) {
+            el.slots.classList.remove("shake");
+            void el.slots.offsetWidth;
+            el.slots.classList.add("shake");
+            setTimeout(() => el.slots && el.slots.classList.remove("shake"), 480);
+          }
           if (app.stage.kind !== "daily" && (app.state.mode || "normal") === "limited" && app.session.attemptLimit) {
             if (app.attempts >= app.session.attemptLimit) {
               app.session.over = true;
@@ -3992,7 +4093,9 @@
           if (!btn) return;
           const id = btn.id || "";
           if (id === "hintBtn" || id === "levelFeatReveal1Btn" || id === "levelFeatReveal2Btn") {
-            setTimeout(() => closeHowTo(), 0);
+            setTimeout(() => {
+              if (el.modalBackdrop && el.modalBackdrop.dataset.mode === "assist") closeHowTo();
+            }, 0);
           }
         });
       }
@@ -4008,7 +4111,10 @@
       }
 
       el.themeBtn.addEventListener("click", () => {
-        const next = currentTheme() === "cream" ? "dark" : "cream";
+        const order = ["ocean", "royal", "cream"];
+        const cur = currentTheme();
+        const idx = Math.max(0, order.indexOf(cur));
+        const next = order[(idx + 1) % order.length];
         applyTheme(next);
         app.state.theme = next;
         saveState(app.state);
@@ -4034,7 +4140,12 @@
         bgResizeT = setTimeout(() => buildBgPattern(), 180);
       });
 
-      applyTheme(app.state.theme || "dark");
+      const initialTheme = normalizeTheme(app.state.theme || "ocean");
+      if (app.state.theme !== initialTheme) {
+        app.state.theme = initialTheme;
+        saveState(app.state);
+      }
+      applyTheme(initialTheme);
       applyLanguage(app.state.lang || "ar");
       applyReduceMotion();
       applyLockShape();
