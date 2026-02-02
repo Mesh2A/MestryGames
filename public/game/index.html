@@ -161,6 +161,8 @@
         box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
         transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
         user-select: none;
+        position: relative;
+        overflow: hidden;
       }
       html[data-reduce-motion="1"] .btn {
         backdrop-filter: none;
@@ -186,6 +188,22 @@
         background: var(--btn-primary-grad-hover);
         border-color: var(--btn-primary-border-hover);
         box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(34, 211, 238, 0.18) inset;
+      }
+      html[data-mobile="0"] .btn::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        background: radial-gradient(140px 80px at 30% 15%, rgba(255, 255, 255, 0.22), transparent 65%),
+          radial-gradient(160px 120px at 70% 0%, rgba(34, 211, 238, 0.22), transparent 70%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+        opacity: 0.85;
+        pointer-events: none;
+        transform: translateZ(0);
+      }
+      html[data-mobile="0"] .btn.primary::before {
+        background: radial-gradient(150px 90px at 28% 18%, rgba(255, 255, 255, 0.22), transparent 62%),
+          radial-gradient(220px 130px at 75% 0%, rgba(99, 102, 241, 0.22), transparent 72%);
+        opacity: 0.9;
       }
       .btn.danger {
         background: linear-gradient(135deg, rgba(239, 68, 68, 0.75), rgba(190, 24, 93, 0.25));
@@ -552,7 +570,8 @@
         border-radius: 18px;
         position: relative;
         border: 1px solid rgba(255, 255, 255, 0.22);
-        background: radial-gradient(90px 70px at 30% 25%, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.08) 55%, rgba(255, 255, 255, 0.03) 100%);
+        background: radial-gradient(90px 70px at 30% 25%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1) 55%, rgba(255, 255, 255, 0.03) 100%),
+          linear-gradient(180deg, rgba(34, 211, 238, 0.06), rgba(99, 102, 241, 0.03));
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 18px 35px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
@@ -562,6 +581,16 @@
         place-items: center;
         user-select: none;
         flex: 0 0 auto;
+      }
+      html[data-mobile="0"] .stage::before {
+        content: "";
+        position: absolute;
+        inset: 1px;
+        border-radius: 17px;
+        background: radial-gradient(120px 90px at 28% 18%, rgba(255, 255, 255, 0.22), transparent 60%),
+          radial-gradient(180px 120px at 80% 0%, rgba(34, 211, 238, 0.18), transparent 72%);
+        opacity: 0.95;
+        pointer-events: none;
       }
       html[data-reduce-motion="1"] .stage {
         backdrop-filter: none;
@@ -577,6 +606,36 @@
       }
       html[data-mobile="1"] .stage::after {
         display: none;
+      }
+      .assistGrid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 12px;
+      }
+      @media (max-width: 740px) {
+        .assistGrid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .assistCard {
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+      }
+      html[data-mobile="0"] .assistCard {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      .assistCard .t {
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+      .assistCard .tiny {
+        color: var(--muted);
       }
       html[data-theme="cream"] .stage {
         border-color: rgba(0, 0, 0, 0.16);
@@ -714,17 +773,31 @@
         justify-items: stretch;
       }
       .slot {
+        position: relative;
         width: 100%;
         height: 74px;
         border-radius: var(--slot-radius);
         border: 1px solid rgba(255, 255, 255, 0.18);
-        background: rgba(255, 255, 255, 0.07);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         display: grid;
         place-items: center;
         transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+      }
+      html[data-mobile="0"] .slot::before {
+        content: "";
+        position: absolute;
+        inset: 1px;
+        border-radius: calc(var(--slot-radius) - 1px);
+        background: radial-gradient(120px 70px at 30% 20%, rgba(255, 255, 255, 0.2), transparent 60%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+        opacity: 0.9;
+        pointer-events: none;
+      }
+      html[data-mobile="1"] .slot {
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
       }
       html[data-reduce-motion="1"] .slot {
         box-shadow: none;
@@ -1179,9 +1252,7 @@
                 <div class="levelActions">
                   <div class="left">
                     <button id="checkBtn" class="btn primary" type="button">تحقق</button>
-                    <button id="hintBtn" class="btn" type="button">تلميح (1)</button>
-                    <button id="levelFeatReveal1Btn" class="btn" type="button">كشف مكان رقم (0)</button>
-                    <button id="levelFeatReveal2Btn" class="btn" type="button">تلميح رقمين (0)</button>
+                    <button id="assistBtn" class="btn" type="button">مساعدة</button>
                     <button id="clearBtn" class="btn" type="button">مسح</button>
                     <button id="retryBtn" class="btn" type="button">إعادة المحاولة</button>
                   </div>
@@ -1222,6 +1293,32 @@
                   <li><span id="howWarn" class="c-warn">وإذا رقم صح مكانه خطا</span> <span id="howWarn2">بيكون لونه أصفر.</span></li>
                 </ul>
                 <div id="howHintNote" style="margin-top:12px" class="tiny">في كل مرحلة عندك تلميح واحد فقط.</div>
+              </div>
+              <div id="assistContent" style="display:none">
+                <div id="assistIntro" class="tiny"></div>
+                <div class="assistGrid">
+                  <div class="assistCard">
+                    <div>
+                      <div id="assistHintK" class="t"></div>
+                      <div id="assistHintSub" class="tiny"></div>
+                    </div>
+                    <button id="hintBtn" class="btn primary" type="button">تلميح (1)</button>
+                  </div>
+                  <div class="assistCard">
+                    <div>
+                      <div id="assistReveal1K" class="t"></div>
+                      <div id="assistReveal1Sub" class="tiny"></div>
+                    </div>
+                    <button id="levelFeatReveal1Btn" class="btn" type="button">كشف مكان رقم (0)</button>
+                  </div>
+                  <div class="assistCard">
+                    <div>
+                      <div id="assistReveal2K" class="t"></div>
+                      <div id="assistReveal2Sub" class="tiny"></div>
+                    </div>
+                    <button id="levelFeatReveal2Btn" class="btn" type="button">مسألة رياضه (0)</button>
+                  </div>
+                </div>
               </div>
               <div id="settingsContent" style="display:none">
                 <div id="settingsDesc" class="tiny">غيّر لون الشاشة لراحة العين.</div>
@@ -1607,6 +1704,14 @@
         modalTitle: document.getElementById("modalTitle"),
         closeModalBtn: document.getElementById("closeModalBtn"),
         howToContent: document.getElementById("howToContent"),
+        assistContent: document.getElementById("assistContent"),
+        assistIntro: document.getElementById("assistIntro"),
+        assistHintK: document.getElementById("assistHintK"),
+        assistHintSub: document.getElementById("assistHintSub"),
+        assistReveal1K: document.getElementById("assistReveal1K"),
+        assistReveal1Sub: document.getElementById("assistReveal1Sub"),
+        assistReveal2K: document.getElementById("assistReveal2K"),
+        assistReveal2Sub: document.getElementById("assistReveal2Sub"),
         howLine1: document.getElementById("howLine1"),
         howOk: document.getElementById("howOk"),
         howOk2: document.getElementById("howOk2"),
@@ -1707,6 +1812,7 @@
         hintBtn: document.getElementById("hintBtn"),
         levelFeatReveal1Btn: document.getElementById("levelFeatReveal1Btn"),
         levelFeatReveal2Btn: document.getElementById("levelFeatReveal2Btn"),
+        assistBtn: document.getElementById("assistBtn"),
         clearBtn: document.getElementById("clearBtn"),
         retryBtn: document.getElementById("retryBtn"),
         backToMapBtn: document.getElementById("backToMapBtn"),
@@ -1756,6 +1862,13 @@
           startBtn: "ابدأ",
           howBtn: "طريقة اللعبه",
           logoutBtn: "تسجيل خروج",
+          assistBtn: "مساعدة",
+          assistTitle: "مساعدة",
+          assistIntro: "هذه 3 مساعدات للمرحلة. اضغط على المساعدة لاستخدامها.",
+          assistHintK: "تلميح",
+          assistHintSub: "يكشف لك رقم موجود في القفل (مرة واحدة لكل مرحلة).",
+          assistReveal1Sub: "يكشف لك مكان رقم واحد داخل القفل.",
+          assistReveal2Sub: "مسألة سريعة تكشف لك رقم إذا جاوبت صح.",
           progressK: "التقدم",
           helpK: "مساعدة",
           helpText: "استخدم الأسهم أو البحث للانتقال للمراحل",
@@ -1905,6 +2018,13 @@
           startBtn: "Start",
           howBtn: "How to play",
           logoutBtn: "Logout",
+          assistBtn: "Help",
+          assistTitle: "Help",
+          assistIntro: "These are 3 assists for this level. Tap an assist to use it.",
+          assistHintK: "Hint",
+          assistHintSub: "Reveals a digit that exists in the code (once per level).",
+          assistReveal1Sub: "Reveals the position of one digit.",
+          assistReveal2Sub: "Quick math to reveal a digit if correct.",
           progressK: "Progress",
           helpK: "Help",
           helpText: "Use arrows or search to navigate levels",
@@ -2078,6 +2198,7 @@
         if (el.dailyBtn) el.dailyBtn.textContent = t("dailyBtn");
         if (el.howBtn) el.howBtn.textContent = t("howBtn");
         if (el.logoutBtn) el.logoutBtn.textContent = t("logoutBtn");
+        if (el.assistBtn) el.assistBtn.textContent = t("assistBtn");
         if (el.progressK) el.progressK.textContent = t("progressK");
         if (el.helpK) el.helpK.textContent = t("helpK");
         if (el.helpText) el.helpText.textContent = t("helpText");
@@ -2104,6 +2225,13 @@
         if (el.howWarn) el.howWarn.textContent = t("howWarn");
         if (el.howWarn2) el.howWarn2.textContent = t("howWarn2");
         if (el.howHintNote) el.howHintNote.textContent = t("howHintNote");
+        if (el.assistIntro) el.assistIntro.textContent = t("assistIntro");
+        if (el.assistHintK) el.assistHintK.textContent = t("assistHintK");
+        if (el.assistHintSub) el.assistHintSub.textContent = t("assistHintSub");
+        if (el.assistReveal1K) el.assistReveal1K.textContent = t("featReveal1K");
+        if (el.assistReveal1Sub) el.assistReveal1Sub.textContent = t("assistReveal1Sub");
+        if (el.assistReveal2K) el.assistReveal2K.textContent = t("featReveal2K");
+        if (el.assistReveal2Sub) el.assistReveal2Sub.textContent = t("assistReveal2Sub");
         if (el.settingsDesc) el.settingsDesc.textContent = t("settingsDesc");
         if (el.settingsCoinsK) el.settingsCoinsK.textContent = t("settingsCoinsK");
         if (el.settingsHintsK) el.settingsHintsK.textContent = t("settingsHintsK");
@@ -3178,15 +3306,28 @@
         if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "math");
         if (el.modalTitle) {
           el.modalTitle.textContent =
-            mode === "settings" ? t("settingsTitle") : mode === "shop" ? t("shopModalTitle") : mode === "math" ? t("mathTitle") : t("howTitle");
+            mode === "settings"
+              ? t("settingsTitle")
+              : mode === "shop"
+              ? t("shopModalTitle")
+              : mode === "math"
+              ? t("mathTitle")
+              : mode === "assist"
+              ? t("assistTitle")
+              : t("howTitle");
         }
         if (el.howToContent) el.howToContent.style.display = mode === "howto" ? "" : "none";
+        if (el.assistContent) el.assistContent.style.display = mode === "assist" ? "" : "none";
         if (el.settingsContent) el.settingsContent.style.display = mode === "settings" ? "" : "none";
         if (el.shopContent) el.shopContent.style.display = mode === "shop" ? "" : "none";
         if (el.mathContent) el.mathContent.style.display = mode === "math" ? "" : "none";
         updateThemeBtn();
         if (mode === "settings") updateSettingsUI();
         if (mode === "shop") updateShopUI();
+        if (mode === "assist") {
+          updateLevelFeaturesUI();
+          updateHintBtnLabel();
+        }
         el.modalBackdrop.classList.add("show");
         el.modalBackdrop.setAttribute("aria-hidden", "false");
         el.closeModalBtn.focus();
@@ -3196,6 +3337,14 @@
             const br = el.settingsBtn.getBoundingClientRect();
             const mr = el.modal.getBoundingClientRect();
             const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
+            const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
+            el.modal.style.setProperty("--modal-origin", `${ox}px ${oy}px`);
+          });
+        } else if (mode === "assist" && el.modal && el.assistBtn) {
+          requestAnimationFrame(() => {
+            const br = el.assistBtn.getBoundingClientRect();
+            const mr = el.modal.getBoundingClientRect();
+            const ox = clamp(br.left + br.width * 0.5 - mr.left, 10, mr.width - 10);
             const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
             el.modal.style.setProperty("--modal-origin", `${ox}px ${oy}px`);
           });
@@ -3774,6 +3923,7 @@
       el.dailyBtn.addEventListener("click", () => openDaily());
       el.dailyBtn2.addEventListener("click", () => openDaily());
       el.howBtn.addEventListener("click", () => openHowTo());
+      if (el.assistBtn) el.assistBtn.addEventListener("click", () => openModal("assist"));
       if (el.logoutBtn) {
         el.logoutBtn.style.display = "";
         el.logoutBtn.addEventListener("click", () => signOutFromGame());
@@ -3834,6 +3984,16 @@
         el.mathAnswer.addEventListener("keydown", (e) => {
           if (e.key !== "Enter") return;
           submitMathPuzzle();
+        });
+      }
+      if (el.assistContent) {
+        el.assistContent.addEventListener("click", (e) => {
+          const btn = e.target && e.target.closest ? e.target.closest("button") : null;
+          if (!btn) return;
+          const id = btn.id || "";
+          if (id === "hintBtn" || id === "levelFeatReveal1Btn" || id === "levelFeatReveal2Btn") {
+            setTimeout(() => closeHowTo(), 0);
+          }
         });
       }
       if (el.claimDailyRewardBtn) el.claimDailyRewardBtn.addEventListener("click", () => claimDailyReward());
