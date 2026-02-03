@@ -159,6 +159,7 @@ export default function AuthButtons() {
                   if (!r.ok) {
                     const code = data && typeof data.error === "string" ? data.error : "server_error";
                     if (code === "username_taken") setRegError("اليوزرنيم مستخدم.");
+                    else if (code === "email_taken") setRegError("الإيميل مستخدم. سجل عن طريق قوقل.");
                     else if (code === "already_registered") setRegError("الحساب موجود مسبقاً.");
                     else if (code === "bad_username") setRegError("اليوزرنيم لازم 3-18 (حروف/أرقام/_).");
                     else if (code === "bad_email") setRegError("الإيميل غير صحيح.");

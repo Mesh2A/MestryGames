@@ -70,6 +70,12 @@ export async function POST(req: NextRequest) {
       const usernameOwner = await tx.gameProfile.findFirst({ where: { username }, select: { id: true } });
       if (usernameOwner) return { ok: false as const, error: "username_taken" as const };
 
+      const emailOwner = await tx.gameProfile.findFirst({
+        where: { OR: [{ email }, { contactEmail: email }] },
+        select: { id: true },
+      });
+      if (emailOwner) return { ok: false as const, error: "email_taken" as const };
+
       await createCredentialsProfileTx(tx, { username, contactEmail: email, passwordHash });
       return { ok: true as const };
     });

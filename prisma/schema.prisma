@@ -10,7 +10,7 @@ model GameProfile {
   id        String   @id @default(cuid())
   publicId  String?  @unique
   email     String   @unique
-  contactEmail String?
+  contactEmail String? @unique
   username  String?  @unique
   passwordHash String?
   state     Json
@@ -28,8 +28,6 @@ model GameProfile {
   giftsReceived FriendGift[] @relation("GiftTo")
   giftEventsSent FriendGiftEvent[] @relation("GiftEventFrom")
   giftEventsReceived FriendGiftEvent[] @relation("GiftEventTo")
-
-  @@index([contactEmail])
 }
 
 model Purchase {
