@@ -52,3 +52,35 @@ Set this environment variable in Vercel (Production) with the exact file content
 If your platform has issues with multiline env vars, set a base64-encoded value instead:
 
 `APPLE_PAY_DOMAIN_ASSOCIATION_B64`
+
+## Stripe Webhook (recommended)
+
+This project supports server-side, idempotent purchase fulfillment via a Stripe webhook:
+
+Endpoint:
+
+`/api/stripe/webhook`
+
+Add this environment variable in Vercel (Production, Preview, Development):
+
+`STRIPE_WEBHOOK_SECRET`
+
+In Stripe Dashboard, create a Webhook Endpoint pointing to:
+
+`https://mestrygames.com/api/stripe/webhook`
+
+Subscribe at least to:
+
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+
+## Admin coins panel
+
+Open:
+
+`/admin/coins`
+
+Allow access by setting one of these environment variables in Vercel:
+
+- `ADMIN_EMAIL` (recommended)
+- `ADMIN_EMAILS` (comma/space-separated)
