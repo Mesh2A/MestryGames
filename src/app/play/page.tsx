@@ -7,7 +7,8 @@ export default async function PlayPage() {
 
   const name = session?.user?.name || "";
   const firstName = String(name).trim().split(/\s+/).filter(Boolean)[0] || "";
-  const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 8) || "dev";
+  const vercelId = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || "";
+  const buildId = vercelId ? String(vercelId).slice(0, 12) : "dev";
   const src = firstName
     ? `/game/index.html?fn=${encodeURIComponent(firstName)}&v=${encodeURIComponent(buildId)}`
     : `/game/index.html?v=${encodeURIComponent(buildId)}`;
