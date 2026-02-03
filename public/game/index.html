@@ -204,7 +204,7 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: none;
+        display: none !important;
         pointer-events: none;
       }
       html[data-mobile="0"] .userCenter {
@@ -212,6 +212,28 @@
           radial-gradient(320px 160px at 85% 0%, var(--glow-a), transparent 76%);
       }
       @media (max-width: 520px) {
+        header {
+          padding: 12px 12px;
+          flex-wrap: wrap;
+          align-items: flex-start;
+        }
+        header .brand {
+          width: 100%;
+          justify-content: space-between;
+        }
+        header .actions {
+          width: 100%;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        header .actions .btn {
+          padding: 8px 10px;
+          font-size: 12px;
+        }
+        header .actions .badgeMini {
+          padding: 7px 10px;
+        }
         .userCenter {
           font-size: 11px;
           padding: 7px 10px;
@@ -1244,6 +1266,10 @@
       .modalBackdrop[data-mode="shop"] .modal {
         transform: translateY(-16px) scale(0.975);
       }
+      .modalBackdrop[data-mode="name"] .modal {
+        width: min(420px, 100%);
+        transform: translateY(-8px) scale(0.985);
+      }
       .modalHead {
         display: flex;
         align-items: center;
@@ -1318,6 +1344,39 @@
         backdrop-filter: blur(12px);
         padding: 12px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        max-height: calc(100vh - 96px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+      .avatarCircle {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.08);
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        letter-spacing: 0.4px;
+      }
+      .avatarMini {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.08);
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        font-size: 12px;
+      }
+      .avatarBtn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        text-align: center;
       }
       .friendsTop {
         display: flex;
@@ -1343,6 +1402,12 @@
         margin-top: 10px;
         display: grid;
         gap: 2px;
+      }
+      .friendsMeRow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
       }
       .friendsMe .k {
         opacity: 0.78;
@@ -1558,7 +1623,7 @@
         <div class="actions">
           <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
           <button id="settingsBtn" class="btn ghost" type="button">اعدادات</button>
-          <button id="friendsBtn" class="btn ghost" type="button">الأصدقاء</button>
+          <button id="friendsBtn" class="btn ghost" type="button">الحساب</button>
           <button id="homeHeaderBtn" class="btn ghost" type="button">الرئيسية</button>
         </div>
       </header>
@@ -1785,6 +1850,26 @@
                   </div>
                 </div>
               </div>
+              <div id="nameContent" style="display:none">
+                <div class="tiny">اكتب اسمك الجديد (2-18 حرف).</div>
+                <div style="margin-top:12px; display:grid; gap:10px">
+                  <div class="shopRow">
+                    <div>
+                      <div class="t">اسمك الحالي</div>
+                      <div id="nameCurrent" class="tiny">—</div>
+                    </div>
+                    <div>
+                      <div class="t">الحالة</div>
+                      <div id="nameStatus" class="tiny">—</div>
+                    </div>
+                  </div>
+                  <input id="nameInput" class="miniInput" autocomplete="off" placeholder="اكتب الاسم هنا" />
+                  <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
+                    <button id="nameCancelBtn" class="btn" type="button">إلغاء</button>
+                    <button id="nameSaveBtn" class="btn primary" type="button">حفظ</button>
+                  </div>
+                </div>
+              </div>
               <div id="shopContent" style="display:none">
                 <div id="shopDesc" class="tiny">اشتر عملات (Apple Pay) أو اشتر ميزات بالعملات.</div>
                 <div class="shopList">
@@ -1905,12 +1990,15 @@
     <div id="friendsPanel" class="friendsPanel" aria-hidden="true">
       <div class="friendsCard">
         <div class="friendsTop">
-          <div class="friendsTitle">الأصدقاء</div>
+          <div class="friendsTitle">الحساب</div>
           <button id="friendsCloseBtn" class="friendsClose" type="button" aria-label="Close">✕</button>
         </div>
         <div class="friendsMe">
           <div class="k">اسمك</div>
-          <div id="friendsMeName" class="v">—</div>
+          <div class="friendsMeRow">
+            <div id="friendsMeName" class="v">—</div>
+            <div id="friendsMeAvatar" class="avatarCircle" aria-hidden="true">—</div>
+          </div>
           <div class="k">ID: <span id="friendsMeId" class="v">—</span></div>
         </div>
         <div class="friendsTabs" role="tablist" aria-label="Friends Tabs">
@@ -2375,6 +2463,12 @@
         settingsDesc: document.getElementById("settingsDesc"),
         nameChangeSub: document.getElementById("nameChangeSub"),
         changeNameBtn: document.getElementById("changeNameBtn"),
+        nameContent: document.getElementById("nameContent"),
+        nameCurrent: document.getElementById("nameCurrent"),
+        nameStatus: document.getElementById("nameStatus"),
+        nameInput: document.getElementById("nameInput"),
+        nameSaveBtn: document.getElementById("nameSaveBtn"),
+        nameCancelBtn: document.getElementById("nameCancelBtn"),
         settingsCoinsK: document.getElementById("settingsCoinsK"),
         settingsCoinsV: document.getElementById("settingsCoinsV"),
         settingsHintsK: document.getElementById("settingsHintsK"),
@@ -4074,7 +4168,7 @@
         modalMode = mode;
         lastFocusedEl = document.activeElement;
         el.modalBackdrop.dataset.mode = mode;
-        if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "math");
+        if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "math" || mode === "name");
         if (el.modalTitle) {
           el.modalTitle.textContent =
             mode === "settings"
@@ -4085,11 +4179,14 @@
               ? t("mathTitle")
               : mode === "assist"
               ? t("assistTitle")
+              : mode === "name"
+              ? "تغيير الاسم"
               : t("howTitle");
         }
         if (el.howToContent) el.howToContent.style.display = mode === "howto" ? "" : "none";
         if (el.assistContent) el.assistContent.style.display = mode === "assist" ? "" : "none";
         if (el.settingsContent) el.settingsContent.style.display = mode === "settings" ? "" : "none";
+        if (el.nameContent) el.nameContent.style.display = mode === "name" ? "" : "none";
         if (el.shopContent) el.shopContent.style.display = mode === "shop" ? "" : "none";
         if (el.mathContent) el.mathContent.style.display = mode === "math" ? "" : "none";
         updateThemeBtn();
@@ -4473,7 +4570,13 @@
         openModal("shop");
       }
 
-      async function changeNameFlow() {
+      function formatNameStatus(freeUsed, credits) {
+        if (!freeUsed) return "مجانًا لأول مرة";
+        if (credits > 0) return `متاح (${credits})`;
+        return "غير متاح";
+      }
+
+      async function openNameModal() {
         if (!cloud.enabled) {
           enqueueToast({ title: "تغيير الاسم", body: "سجّل دخولك أولاً.", autoMs: 2400 });
           return;
@@ -4484,36 +4587,65 @@
             enqueueToast({ title: "فشل", body: "فشل تحميل حالة تغيير الاسم.", autoMs: 2400 });
             return;
           }
-          const current = (info.data && typeof info.data.displayName === "string" ? info.data.displayName : app.state.displayName || "").trim();
-          const next = window.prompt("اكتب اسمك الجديد (2-18 حرف)", current || "");
-          if (!next) return;
+          const current = info.data && typeof info.data.displayName === "string" ? info.data.displayName.trim() : "";
+          const freeUsed = !!(info.data && info.data.freeUsed);
+          const credits = Math.max(0, Math.floor((info.data && typeof info.data.credits === "number" ? info.data.credits : 0) || 0));
+
+          if (freeUsed && credits <= 0) {
+            enqueueToast({ title: "لا تملك ميزة تغيير الاسم", body: "", autoMs: 2400 });
+            return;
+          }
+
+          if (el.nameCurrent) el.nameCurrent.textContent = current || "—";
+          if (el.nameStatus) el.nameStatus.textContent = formatNameStatus(freeUsed, credits);
+          if (el.nameInput) el.nameInput.value = current || "";
+          openModal("name");
+          setTimeout(() => {
+            if (el.nameInput && typeof el.nameInput.focus === "function") el.nameInput.focus();
+          }, 0);
+        } catch {
+          enqueueToast({ title: "فشل", body: "فشل فتح نافذة تغيير الاسم.", autoMs: 2400 });
+        }
+      }
+
+      async function saveNameFromModal() {
+        if (!cloud.enabled) {
+          enqueueToast({ title: "تغيير الاسم", body: "سجّل دخولك أولاً.", autoMs: 2400 });
+          return;
+        }
+        const next = el.nameInput ? String(el.nameInput.value || "").trim() : "";
+        if (!next) return;
+        if (el.nameSaveBtn) el.nameSaveBtn.disabled = true;
+        try {
           const r = await friendsJson("/api/profile/name", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ displayName: String(next) }),
+            body: JSON.stringify({ displayName: next }),
           });
           if (!r.ok) {
             if (r.status === 402) {
-              enqueueToast({
-                title: "تغيير الاسم",
-                body: "يتطلب شراء تغيير الاسم.",
-                actions: [{ label: "المشتريات", primary: true, onClick: async () => openShop() }],
-              });
+              closeHowTo();
+              enqueueToast({ title: "لا تملك ميزة تغيير الاسم", body: "", autoMs: 2400 });
               return;
             }
             enqueueToast({ title: "فشل", body: (r.data && r.data.error) || "فشل تغيير الاسم.", autoMs: 2400 });
             return;
           }
-          if (r.data && typeof r.data.displayName === "string") app.state.displayName = r.data.displayName;
+
+          const newName = r.data && typeof r.data.displayName === "string" ? r.data.displayName.trim() : next;
+          app.state.displayName = newName;
           app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
           if (r.data && typeof r.data.freeUsed === "boolean") app.state.nameChange.freeUsed = r.data.freeUsed;
           if (r.data && typeof r.data.credits === "number") app.state.nameChange.credits = Math.max(0, Math.floor(r.data.credits));
           saveState(app.state);
           updateUserCenter();
           updateSettingsUI();
-          enqueueToast({ title: "تم", body: "تم تغيير الاسم.", autoMs: 1800 });
+          closeHowTo();
+          enqueueToast({ title: "تم تحديث الاسم", body: `الاسم الجديد: "${newName}"`, autoMs: 2600 });
         } catch {
           enqueueToast({ title: "فشل", body: "فشل تغيير الاسم.", autoMs: 2400 });
+        } finally {
+          if (el.nameSaveBtn) el.nameSaveBtn.disabled = false;
         }
       }
 
@@ -4824,6 +4956,7 @@
         btn: document.getElementById("friendsBtn"),
         meName: document.getElementById("friendsMeName"),
         meId: document.getElementById("friendsMeId"),
+        meAvatar: document.getElementById("friendsMeAvatar"),
         tabFriendsBtn: document.getElementById("friendsTabFriendsBtn"),
         tabGiftsBtn: document.getElementById("friendsTabGiftsBtn"),
         tabAddBtn: document.getElementById("friendsTabAddBtn"),
@@ -5181,6 +5314,7 @@
           !canGift && giftAvailableAt
             ? `<div class="friendsTiny">الإهداء متاح بعد: ${escapeHtml(new Date(giftAvailableAt).toLocaleString())}</div>`
             : "";
+        const friendAvatarLetter = sel && sel.firstName ? String(sel.firstName).trim().slice(0, 1).toUpperCase() : "P";
         const detailsHtml =
           details && details.id === friendsState.selectedId
             ? `<div class="friendsTiny">ستريك: ${escapeHtml(details.stats?.streak ?? 0)} | فوز: ${escapeHtml(details.stats?.wins ?? 0)} | فتح: ${escapeHtml(details.stats?.unlocked ?? 1)}</div>
@@ -5190,7 +5324,12 @@
         friendsUI.actions.innerHTML = `
           <div class="friendsTiny" style="opacity:.92">اللاعب: ${escapeHtml(sel ? sel.firstName : "")} — ${escapeHtml(friendsState.selectedId)}</div>
           <div class="friendsActionRow">
-            <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>اهداء</button>
+            <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>
+              <div class="avatarBtn">
+                <div class="avatarMini">${escapeHtml(friendAvatarLetter)}</div>
+                <div>اهداء</div>
+              </div>
+            </button>
             <button id="friendsRemoveBtn" class="btn danger" type="button">حذف صديق</button>
             <button id="friendsDetailsBtn" class="btn" type="button">تفاصيل اللاعب</button>
           </div>
@@ -5225,6 +5364,10 @@
         friendsState.me = me.data;
         if (friendsUI.meName) friendsUI.meName.textContent = friendsState.me.firstName || "—";
         if (friendsUI.meId) friendsUI.meId.textContent = friendsState.me.id || "—";
+        if (friendsUI.meAvatar) {
+          const a = String(friendsState.me.firstName || "P").trim().slice(0, 1).toUpperCase() || "P";
+          friendsUI.meAvatar.textContent = a;
+        }
 
         const list = await friendsJson("/api/friends/list", { method: "GET" });
         friendsState.friends = list.ok && list.data && Array.isArray(list.data.friends) ? list.data.friends : [];
@@ -5364,7 +5507,15 @@
       el.motionBtn.addEventListener("click", () => toggleMotion());
       el.shapeBtn.addEventListener("click", () => cycleShape());
       el.modeBtn.addEventListener("click", () => cycleMode());
-      if (el.changeNameBtn) el.changeNameBtn.addEventListener("click", () => changeNameFlow());
+      if (el.changeNameBtn) el.changeNameBtn.addEventListener("click", () => openNameModal());
+      if (el.nameCancelBtn) el.nameCancelBtn.addEventListener("click", () => closeHowTo());
+      if (el.nameSaveBtn) el.nameSaveBtn.addEventListener("click", () => saveNameFromModal());
+      if (el.nameInput) {
+        el.nameInput.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter") return;
+          saveNameFromModal();
+        });
+      }
       if (el.coinsBadge) el.coinsBadge.addEventListener("click", () => openShop());
       if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.addEventListener("click", () => useOwnedFeatureOrOpenShop("reveal1"));
       if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.addEventListener("click", () => useOwnedFeatureOrOpenShop("reveal2"));
