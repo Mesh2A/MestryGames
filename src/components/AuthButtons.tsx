@@ -105,7 +105,7 @@ export default function AuthButtons() {
                 redirect: false,
                 identifier: normalizedIdentifier,
                 password,
-                callbackUrl: "/play",
+                callbackUrl: window.location.href,
               });
               if (!res || res.error) {
                 setError("بيانات الدخول غير صحيحة.");
@@ -158,7 +158,7 @@ export default function AuthButtons() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => signIn(p.id, { callbackUrl: "/play" })}
+                onClick={() => signIn(p.id, { callbackUrl: window.location.href })}
                 className={`${styles.btn} ${p.id === "apple" ? styles.apple : styles.google}`}
               >
                 <span className={styles.icon} aria-hidden="true">
@@ -217,7 +217,7 @@ export default function AuthButtons() {
                     redirect: false,
                     identifier: regUsername.trim(),
                     password: regPassword,
-                    callbackUrl: "/play",
+                    callbackUrl: window.location.href,
                   });
                   if (!res || res.error) {
                     setRegError("تم إنشاء الحساب لكن تعذر تسجيل الدخول. حاول تسجيل الدخول.");

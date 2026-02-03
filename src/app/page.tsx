@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import AuthButtons from "@/components/AuthButtons";
 import LogoutButton from "@/components/LogoutButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const session = await getServerSession(authOptions);
   return (

@@ -2,6 +2,8 @@ import { authOptions } from "@/lib/auth";
 import AuthButtons from "@/components/AuthButtons";
 import { getServerSession } from "next-auth/next";
 
+export const dynamic = "force-dynamic";
+
 export default async function PlayPage() {
   const session = await getServerSession(authOptions);
 
