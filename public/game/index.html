@@ -1350,9 +1350,9 @@
         -webkit-overflow-scrolling: touch;
       }
       .avatarSquare {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+        width: 60px;
+        height: 60px;
+        border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: rgba(255, 255, 255, 0.06);
         display: grid;
@@ -1366,6 +1366,12 @@
         height: 100%;
         object-fit: cover;
         display: block;
+      }
+      @media (max-width: 520px) {
+        .avatarSquare {
+          width: 56px;
+          height: 56px;
+        }
       }
       .friendsTop {
         display: flex;
@@ -1395,8 +1401,23 @@
       .friendsMeRow {
         display: flex;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: space-between;
         gap: 10px;
+      }
+      .friendsMeRight {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .friendsMeRow .avatarSquare {
+        margin-inline-start: auto;
+      }
+      .friendsPhotoBtn {
+        min-height: 32px;
+        padding: 6px 9px;
+        font-size: 12px;
+        border-radius: 12px;
       }
       .friendsMe .k {
         opacity: 0.78;
@@ -1492,6 +1513,20 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
+        align-items: flex-end;
+      }
+      .friendsActionRow .btn {
+        min-height: 36px;
+        padding: 8px 10px;
+        font-size: 12px;
+        border-radius: 12px;
+      }
+      .friendsGiftStack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        margin-inline-start: auto;
       }
       .friendsTiny {
         font-size: 11px;
@@ -1985,11 +2020,13 @@
         <div class="friendsMe">
           <div class="k">اسمك</div>
           <div class="friendsMeRow">
-            <div id="friendsMeName" class="v">—</div>
-            <label class="btn ghost" style="min-height:38px; padding:8px 10px">
-              تغيير الصورة
-              <input id="friendsPhotoInput" type="file" accept="image/*" style="display:none" />
-            </label>
+            <div class="friendsMeRight">
+              <div id="friendsMeName" class="v">—</div>
+              <label class="btn ghost friendsPhotoBtn">
+                تغيير الصورة
+                <input id="friendsPhotoInput" type="file" accept="image/*" style="display:none" />
+              </label>
+            </div>
             <div id="friendsMeAvatar" class="avatarSquare" aria-hidden="true"></div>
           </div>
           <div class="k">ID: <span id="friendsMeId" class="v">—</span></div>
@@ -5328,7 +5365,7 @@
           pollFriendRequestEvents().catch(() => {});
           pollGiftEvents().catch(() => {});
           pollRemoteStateLight().catch(() => {});
-          if (friendsState.open && Date.now() - lastFriendsPullAt > 12000) {
+          if (friendsState.open && Date.now() - lastFriendsPullAt > 6000) {
             lastFriendsPullAt = Date.now();
             loadFriendsData().catch(() => {});
           }
@@ -5426,12 +5463,12 @@
         friendsUI.actions.innerHTML = `
           <div class="friendsTiny" style="opacity:.92">اللاعب: ${escapeHtml(sel ? sel.firstName : "")} — ${escapeHtml(friendsState.selectedId)}</div>
           <div class="friendsActionRow">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:6px">
+            <button id="friendsRemoveBtn" class="btn danger" type="button">حذف صديق</button>
+            <button id="friendsDetailsBtn" class="btn" type="button">تفاصيل اللاعب</button>
+            <div class="friendsGiftStack">
               <div class="avatarSquare">${friendAvatarHtml}</div>
               <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>اهداء</button>
             </div>
-            <button id="friendsRemoveBtn" class="btn danger" type="button">حذف صديق</button>
-            <button id="friendsDetailsBtn" class="btn" type="button">تفاصيل اللاعب</button>
           </div>
           ${giftNote}
           ${detailsHtml}
