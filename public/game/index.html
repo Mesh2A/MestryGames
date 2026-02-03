@@ -1342,7 +1342,7 @@
         top: 74px;
         left: 16px;
         right: auto;
-        width: min(820px, calc(100vw - 24px));
+        width: min(420px, calc(100vw - 24px));
         z-index: 999;
         transform: translateY(-140%);
         transition: transform 260ms ease;
@@ -1394,10 +1394,11 @@
       .chatLayout {
         margin-top: 10px;
         display: grid;
-        grid-template-columns: minmax(210px, 250px) 1fr;
+        grid-template-columns: 1fr;
+        grid-template-rows: 240px 1fr;
         gap: 10px;
         min-height: 300px;
-        height: 520px;
+        height: 560px;
       }
       .chatLeft {
         border-radius: 14px;
@@ -1413,7 +1414,11 @@
         display: grid;
         gap: 8px;
         overflow: auto;
-        padding: 2px;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.18);
+        align-content: start;
       }
       .chatFriendRow {
         width: 100%;
@@ -1471,22 +1476,22 @@
         justify-content: flex-start;
       }
       .chatBubble {
-        max-width: min(420px, 82%);
+        max-width: min(260px, 86%);
         padding: 10px 12px;
         border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.06);
+        background: rgba(37, 99, 235, 0.1);
         white-space: pre-wrap;
         word-break: break-word;
         line-height: 1.5;
       }
       .chatBubble.me {
         border-color: rgba(37, 99, 235, 0.65);
-        background: rgba(37, 99, 235, 0.16);
+        background: rgba(37, 99, 235, 0.22);
       }
       .chatMetaLine {
         margin-top: 4px;
-        font-size: 10px;
+        font-size: 9px;
         opacity: 0.72;
       }
       .friendLine {
@@ -1651,7 +1656,11 @@
         gap: 8px;
         max-height: 260px;
         overflow: auto;
-        padding: 2px;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.18);
+        align-content: start;
       }
       .giftRow {
         text-align: right;
@@ -5427,6 +5436,19 @@
         return `قبل ${d} أيام`;
       }
 
+      function formatHm(ms) {
+        const t = Number(ms || 0);
+        if (!Number.isFinite(t) || t <= 0) return "";
+        try {
+          return new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+        } catch {
+          const d = new Date(t);
+          const hh = String(d.getHours()).padStart(2, "0");
+          const mm = String(d.getMinutes()).padStart(2, "0");
+          return `${hh}:${mm}`;
+        }
+      }
+
       function isOnlineFromLastSeen(ms) {
         const t = Number(ms || 0);
         if (!Number.isFinite(t) || t <= 0) return false;
@@ -5487,16 +5509,28 @@
             const fromId = m && typeof m.fromId === "string" ? m.fromId : "";
             const text = m && typeof m.text === "string" ? m.text : "";
             const createdAt = m && typeof m.createdAt === "number" ? m.createdAt : 0;
+            const pending = !!(m && typeof m === "object" && m.pending);
             const mine = myId && fromId === myId;
             return `<div class="chatMsgRow ${mine ? "me" : "them"}">
               <div class="chatBubble ${mine ? "me" : ""}">
                 <div>${escapeHtml(text)}</div>
-                <div class="chatMetaLine">${escapeHtml(formatAgo(createdAt))}</div>
+                <div class="chatMetaLine">${escapeHtml(formatHm(createdAt))}${pending ? " · ..." : ""}</div>
               </div>
             </div>`;
           })
           .join("");
         chatUI.messages.scrollTop = chatUI.messages.scrollHeight;
+      }
+
+      function makeClientMsgId() {
+        try {
+          const a = new Uint8Array(16);
+          crypto.getRandomValues(a);
+          const h = [...a].map((x) => x.toString(16).padStart(2, "0")).join("");
+          return `c_${h}`;
+        } catch {
+          return `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        }
       }
 
       async function sendChatMessage() {
@@ -5505,21 +5539,33 @@
         const input = chatUI.input;
         const text = input && typeof input.value === "string" ? input.value.replace(/\s+/g, " ").trim() : "";
         if (!text) return;
-        if (chatUI.sendBtn) chatUI.sendBtn.disabled = true;
-        if (chatUI.input) chatUI.input.disabled = true;
+        const myId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
+        const clientId = makeClientMsgId();
+        const now = Date.now();
+        const optimistic = { id: clientId, fromId: myId, toId: peerId, text, createdAt: now, pending: true };
+        if (chatUI.input) chatUI.input.value = "";
+        writeChatThread(peerId, [...readChatThread(peerId), optimistic]);
+        renderChatMessages();
+
         const r = await chatJson("/api/chat/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ toId: peerId, text }),
+          body: JSON.stringify({ toId: peerId, text, clientId }),
         });
         if (!r.ok) {
           enqueueToast({ title: "فشل", body: (r.data && r.data.error) || "تعذر الإرسال.", autoMs: 2200 });
+          const cur = readChatThread(peerId).filter((m) => !(m && typeof m === "object" && m.id === clientId));
+          writeChatThread(peerId, cur);
+          renderChatMessages();
         } else {
-          if (chatUI.input) chatUI.input.value = "";
           const msg = r.data && r.data.msg ? r.data.msg : null;
           if (msg) {
             const current = readChatThread(peerId);
-            writeChatThread(peerId, [...current, msg]);
+            const next = current.map((m) => {
+              if (m && typeof m === "object" && m.id === clientId) return msg;
+              return m;
+            });
+            writeChatThread(peerId, next);
             renderChatMessages();
           } else {
             loadChatThread(peerId)
@@ -5527,8 +5573,6 @@
               .catch(() => {});
           }
         }
-        if (chatUI.sendBtn) chatUI.sendBtn.disabled = false;
-        if (chatUI.input) chatUI.input.disabled = false;
         if (chatUI.input) chatUI.input.focus();
       }
 
@@ -5539,15 +5583,18 @@
         if (!r.ok || !r.data || !Array.isArray(r.data.messages)) return;
         const items = r.data.messages;
         let maxAt = since;
+        const myId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
         for (const m of items) {
           const createdAt = m && typeof m.createdAt === "number" ? m.createdAt : 0;
           const fromId = m && typeof m.fromId === "string" ? m.fromId : "";
           const toId = m && typeof m.toId === "string" ? m.toId : "";
           if (createdAt > maxAt) maxAt = createdAt;
-          const peerId = fromId && fromId !== (friendsState.me && friendsState.me.id) ? fromId : toId;
+          const peerId = myId && fromId === myId ? toId : fromId;
           if (!peerId) continue;
           const current = readChatThread(peerId);
-          const exists = current.some((x) => x && typeof x === "object" && (x.id || "") === (m.id || ""));
+          const mid = m && typeof m.id === "string" ? m.id : "";
+          if (!mid) continue;
+          const exists = current.some((x) => x && typeof x === "object" && typeof x.id === "string" && x.id === mid);
           if (exists) continue;
           writeChatThread(peerId, [...current, m]);
         }

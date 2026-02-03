@@ -60,6 +60,11 @@ export async function POST(req: NextRequest) {
       ? String((body as { text: string }).text)
       : "";
   const text = textRaw.replace(/\s+/g, " ").trim().slice(0, 240);
+  const clientIdRaw =
+    body && typeof body === "object" && "clientId" in body && typeof (body as { clientId?: unknown }).clientId === "string"
+      ? String((body as { clientId: string }).clientId).trim()
+      : "";
+  const clientId = /^c_[a-f0-9]{32}$/i.test(clientIdRaw) ? clientIdRaw : "";
 
   if (!toId || !text) return NextResponse.json({ error: "bad_request" }, { status: 400 });
 
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest) {
       if (!fromRow?.publicId || !toRow?.publicId) return { ok: false as const, status: 404 as const };
 
       const now = Date.now();
-      const id = randomUUID();
+      const id = clientId || randomUUID();
       const fromState = readStateObj(fromRow.state);
       const toState = readStateObj(toRow.state);
 
