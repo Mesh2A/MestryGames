@@ -2426,6 +2426,10 @@
                     <div class="t" id="settingsModeK">وضع اللعب</div>
                     <button id="modeBtn" class="btn" type="button">عادي</button>
                   </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsVersionK">النسخة</div>
+                    <div id="settingsVersionV" class="tiny" dir="ltr" style="user-select:text">—</div>
+                  </div>
                 </div>
               </div>
               <div id="missionsContent" style="display:none">
@@ -3282,6 +3286,8 @@
         shapeBtn: document.getElementById("shapeBtn"),
         settingsModeK: document.getElementById("settingsModeK"),
         modeBtn: document.getElementById("modeBtn"),
+        settingsVersionK: document.getElementById("settingsVersionK"),
+        settingsVersionV: document.getElementById("settingsVersionV"),
         shopContent: document.getElementById("shopContent"),
         mathContent: document.getElementById("mathContent"),
         mathEq: document.getElementById("mathEq"),
@@ -3519,6 +3525,7 @@
           shapeSquare: "مربع",
           locked: "مقفلة",
           settingsModeK: "وضع اللعب",
+          settingsVersionK: "النسخة",
           modeBtn: ({ mode }) => (mode === "timed" ? "وقت" : mode === "limited" ? "محاولات" : "عادي"),
           settingsHintTypeK: "نوع تلميح مدفوع",
           paidHintReveal: "كشف مكان رقم",
@@ -3687,6 +3694,7 @@
           shapeSquare: "Square",
           locked: "Locked",
           settingsModeK: "Mode",
+          settingsVersionK: "Version",
           modeBtn: ({ mode }) => (mode === "timed" ? "Timed" : mode === "limited" ? "Limited" : "Normal"),
           settingsHintTypeK: "Paid hint type",
           paidHintReveal: "Reveal position",
@@ -3833,6 +3841,7 @@
         if (el.settingsMotionK) el.settingsMotionK.textContent = t("settingsMotionK");
         if (el.settingsShapeK) el.settingsShapeK.textContent = t("settingsShapeK");
         if (el.settingsModeK) el.settingsModeK.textContent = t("settingsModeK");
+        if (el.settingsVersionK) el.settingsVersionK.textContent = t("settingsVersionK");
         if (el.shopDesc) el.shopDesc.textContent = t("shopDesc");
         if (el.coinPacksTitle) el.coinPacksTitle.textContent = t("coinPacksTitle");
         if (el.coinPacksSub) el.coinPacksSub.textContent = t("coinPacksSub");
@@ -4509,6 +4518,54 @@
         updateSettingsUI();
       }
 
+      const versionState = {
+        fetched: false,
+        fetching: false,
+        commitSha: "",
+        commitRef: "",
+        environment: "",
+        region: "",
+      };
+
+      function shortSha(sha) {
+        const s = String(sha || "").trim();
+        return s ? s.slice(0, 7) : "";
+      }
+
+      function renderVersionValue() {
+        if (!el.settingsVersionV) return;
+        const sha = shortSha(versionState.commitSha);
+        if (!sha) {
+          el.settingsVersionV.textContent = versionState.fetching ? "…" : "—";
+          return;
+        }
+        const ref = String(versionState.commitRef || "").trim();
+        const env = String(versionState.environment || "").trim();
+        const region = String(versionState.region || "").trim();
+        const tail = [ref ? `(${ref})` : "", env, region].filter(Boolean).join(" • ");
+        el.settingsVersionV.textContent = tail ? `${sha} ${tail}` : sha;
+      }
+
+      async function fetchVersionOnce() {
+        if (versionState.fetching || versionState.fetched) return;
+        versionState.fetching = true;
+        renderVersionValue();
+        try {
+          const r = await fetch("/api/version", { method: "GET", cache: "no-store" });
+          if (!r.ok) return;
+          const d = await r.json();
+          versionState.commitSha = d && typeof d.commitSha === "string" ? d.commitSha : "";
+          versionState.commitRef = d && typeof d.commitRef === "string" ? d.commitRef : "";
+          versionState.environment = d && typeof d.environment === "string" ? d.environment : "";
+          versionState.region = d && typeof d.region === "string" ? d.region : "";
+          versionState.fetched = true;
+        } catch {
+        } finally {
+          versionState.fetching = false;
+          renderVersionValue();
+        }
+      }
+
       function updateSettingsUI() {
         if (el.settingsCoinsV) el.settingsCoinsV.textContent = String(app.state.coins || 0);
         if (el.hintTokensV) el.hintTokensV.textContent = String(app.state.hintTokens || 0);
@@ -4531,6 +4588,8 @@
 
         if (el.motionBtn) el.motionBtn.textContent = t("motionBtn", { on: !!app.state.reduceMotion });
         if (el.modeBtn) el.modeBtn.textContent = t("modeBtn", { mode: app.state.mode || "normal" });
+        renderVersionValue();
+        fetchVersionOnce().catch(() => {});
 
         const shape = app.state.lockShape || "round";
         if (el.shapeBtn) {
