@@ -1723,13 +1723,13 @@
         base.processedSessions = Array.isArray(s.processedSessions) ? s.processedSessions.filter((x) => typeof x === "string").slice(-50) : [];
         base.dailyReward = s.dailyReward && typeof s.dailyReward === "object" ? s.dailyReward : base.dailyReward;
         const lastClaimAtRaw =
-          base.dailyReward && typeof base.dailyReward === "object" && "lastClaimAt" in base.dailyReward ? (base.dailyReward as { lastClaimAt?: unknown }).lastClaimAt : 0;
+          base.dailyReward && typeof base.dailyReward === "object" && "lastClaimAt" in base.dailyReward ? base.dailyReward.lastClaimAt : 0;
         const lastClaimAt =
           typeof lastClaimAtRaw === "number" && Number.isFinite(lastClaimAtRaw)
             ? Math.max(0, Math.floor(lastClaimAtRaw))
             : (() => {
                 const ymd =
-                  base.dailyReward && typeof base.dailyReward === "object" && "claimedYmd" in base.dailyReward ? (base.dailyReward as { claimedYmd?: unknown }).claimedYmd : "";
+                  base.dailyReward && typeof base.dailyReward === "object" && "claimedYmd" in base.dailyReward ? base.dailyReward.claimedYmd : "";
                 const y = typeof ymd === "string" ? ymd : "";
                 const ms = y ? Date.parse(`${y}T00:00:00Z`) : 0;
                 return Number.isFinite(ms) ? ms : 0;
@@ -1792,14 +1792,79 @@
         return base;
       }
 
+      function safeParseState(raw) {
+        try {
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          return normalizeState(parsed);
+        } catch {
+          return null;
+        }
+      }
+
+      function isDefaultishState(s) {
+        if (!s || typeof s !== "object") return true;
+        const unlocked = typeof s.unlocked === "number" ? s.unlocked : 1;
+        const completedLen = Array.isArray(s.completed) ? s.completed.length : 0;
+        const coins = typeof s.coins === "number" ? s.coins : 0;
+        const hintTokens = typeof s.hintTokens === "number" ? s.hintTokens : 0;
+        const items = s.items && typeof s.items === "object" ? s.items : { reveal1: 0, reveal2: 0 };
+        const r1 = typeof items.reveal1 === "number" ? items.reveal1 : 0;
+        const r2 = typeof items.reveal2 === "number" ? items.reveal2 : 0;
+        const wins = s.stats && typeof s.stats === "object" && typeof s.stats.wins === "number" ? s.stats.wins : 0;
+        return unlocked <= 1 && completedLen === 0 && coins === 0 && hintTokens === 0 && r1 === 0 && r2 === 0 && wins === 0;
+      }
+
+      function scoreState(s) {
+        const completedLen = Array.isArray(s.completed) ? s.completed.length : 0;
+        const unlocked = typeof s.unlocked === "number" ? s.unlocked : 1;
+        const coins = typeof s.coins === "number" ? s.coins : 0;
+        const hintTokens = typeof s.hintTokens === "number" ? s.hintTokens : 0;
+        const items = s.items && typeof s.items === "object" ? s.items : { reveal1: 0, reveal2: 0 };
+        const r1 = typeof items.reveal1 === "number" ? items.reveal1 : 0;
+        const r2 = typeof items.reveal2 === "number" ? items.reveal2 : 0;
+        const wins = s.stats && typeof s.stats === "object" && typeof s.stats.wins === "number" ? s.stats.wins : 0;
+        return completedLen * 1000000 + unlocked * 1000 + wins * 100 + (coins + hintTokens * 2 + r1 * 4 + r2 * 6);
+      }
+
       function loadState() {
         try {
           const raw = localStorage.getItem(storageKey);
-          if (!raw) return defaultState();
-          return normalizeState(JSON.parse(raw));
+          const parsed = safeParseState(raw);
+          if (parsed) return parsed;
         } catch {
-          return defaultState();
         }
+
+        try {
+          let best = null;
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!k || k === storageKey) continue;
+            if (!k.startsWith(STORAGE_KEY)) continue;
+            const raw = localStorage.getItem(k);
+            const s = safeParseState(raw);
+            if (!s) continue;
+            if (!best) {
+              best = s;
+              continue;
+            }
+            const aTs = best.lastWriteAt || 0;
+            const bTs = s.lastWriteAt || 0;
+            if (bTs > aTs) {
+              best = s;
+              continue;
+            }
+            if (bTs === aTs && scoreState(s) > scoreState(best)) {
+              best = s;
+            }
+          }
+          if (best) {
+            localStorage.setItem(storageKey, JSON.stringify(best));
+            return best;
+          }
+        } catch {}
+
+        return defaultState();
       }
 
       function saveState(state) {
@@ -3069,7 +3134,7 @@
             : { lastClaimAt: 0 };
         const last =
           app.state.dailyReward && typeof app.state.dailyReward === "object" && "lastClaimAt" in app.state.dailyReward
-            ? (app.state.dailyReward as { lastClaimAt?: unknown }).lastClaimAt
+            ? app.state.dailyReward.lastClaimAt
             : 0;
         const n = typeof last === "number" && Number.isFinite(last) ? Math.max(0, Math.floor(last)) : 0;
         app.state.dailyReward = { lastClaimAt: n };
@@ -4498,9 +4563,13 @@
         if (remote) {
           const localTs = app.state.lastWriteAt || 0;
           const remoteTs = remote.lastWriteAt || 0;
-          if (remoteTs > localTs) {
+          const localDefaultish = isDefaultishState(app.state);
+          const remoteDefaultish = isDefaultishState(remote);
+          if ((localDefaultish && !remoteDefaultish) || remoteTs > localTs || (remoteTs === localTs && remoteTs === 0)) {
             app.state = remote;
             saveStateSilent(app.state);
+          } else if (remoteDefaultish && !localDefaultish) {
+            cloudPut(app.state).catch(() => {});
           } else {
             cloudPut(app.state).catch(() => {});
           }
