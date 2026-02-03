@@ -3020,6 +3020,10 @@
         } catch {
         }
 
+        if (storageKey !== STORAGE_KEY) {
+          return defaultState();
+        }
+
         try {
           let best = null;
           for (let i = 0; i < localStorage.length; i++) {
