@@ -9,6 +9,14 @@ function sortPair(a: string, b: string) {
   return a < b ? [a, b] : [b, a];
 }
 
+function readPhotoFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).photo;
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
@@ -36,6 +44,7 @@ export async function GET(req: NextRequest) {
         id: target.publicId,
         firstName: firstNameFromEmail(target.email),
         createdAt: target.createdAt.toISOString(),
+        photo: readPhotoFromState(target.state),
         coins: readCoinsFromState(target.state),
         stats: getProfileStats(target.state),
       },
@@ -45,4 +54,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

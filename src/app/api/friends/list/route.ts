@@ -11,6 +11,14 @@ function readDisplayNameFromState(state: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function readPhotoFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).photo;
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
+}
+
 function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
   const name = String(displayName || "").trim();
   if (name) return name.split(/\s+/).filter(Boolean)[0] || name;
@@ -60,6 +68,7 @@ export async function GET() {
       .map((p) => ({
         id: p.publicId,
         firstName: firstNameFromDisplayNameOrEmail(readDisplayNameFromState(p.state), p.email),
+        photo: readPhotoFromState(p.state),
         coins: readCoinsFromState(p.state),
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),

@@ -10,6 +10,14 @@ function readDisplayNameFromState(state: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function readPhotoFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).photo;
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
+}
+
 function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
   const name = String(displayName || "").trim();
   if (name) return name.split(/\s+/).filter(Boolean)[0] || name;
@@ -24,11 +32,13 @@ export async function GET() {
   try {
     const profile = await ensureGameProfile(email);
     const displayName = readDisplayNameFromState(profile.state);
+    const photo = readPhotoFromState(profile.state);
     return NextResponse.json(
       {
         email: profile.email,
         id: profile.publicId,
         displayName,
+        photo,
         firstName: firstNameFromDisplayNameOrEmail(displayName, profile.email),
         createdAt: profile.createdAt.toISOString(),
         stats: getProfileStats(profile.state),
