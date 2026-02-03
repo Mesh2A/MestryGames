@@ -2350,6 +2350,7 @@
           useOwned: ({ n }) => `استخدام (${n})`,
           applePayBtn: "Apple Pay",
           paymentNotReady: "الدفع غير مفعل حالياً.",
+          paymentLoginRequired: "سجّل دخولك أولاً لإتمام الشراء.",
           paymentRedirecting: "جاري فتح الدفع…",
           paymentFailed: "فشل الدفع أو لم يكتمل.",
           paymentApplied: ({ coins }) => `تمت إضافة ${coins} عملة.`,
@@ -2515,6 +2516,7 @@
           useOwned: ({ n }) => `Use (${n})`,
           applePayBtn: "Apple Pay",
           paymentNotReady: "Payments are not configured yet.",
+          paymentLoginRequired: "Please sign in to complete the purchase.",
           paymentRedirecting: "Opening payment…",
           paymentFailed: "Payment failed or not completed.",
           paymentApplied: ({ coins }) => `Added ${coins} coins.`,
@@ -4174,6 +4176,10 @@
             body: JSON.stringify({ packId }),
           });
           const data = await res.json().catch(() => ({}));
+          if (res.status === 401) {
+            el.msg.textContent = t("paymentLoginRequired");
+            return;
+          }
           if (!res.ok || !data || !data.url) {
             el.msg.textContent = t("paymentNotReady");
             return;
@@ -4206,17 +4212,26 @@
         try {
           const res = await fetch(`/api/confirm-session?session_id=${encodeURIComponent(sessionId)}`, { method: "GET" });
           const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data || typeof data.coins !== "number") {
+          if (res.status === 401) {
+            el.msg.textContent = t("paymentLoginRequired");
+            return;
+          }
+          if (!res.ok || !data || typeof data.coinsAdded !== "number") {
             el.msg.textContent = t("paymentFailed");
             return;
           }
           app.state.processedSessions = Array.isArray(app.state.processedSessions) ? app.state.processedSessions : [];
           app.state.processedSessions.push(sessionId);
           app.state.processedSessions = app.state.processedSessions.slice(-50);
+          const totalCoins = typeof data.totalCoins === "number" && Number.isFinite(data.totalCoins) ? Math.max(0, Math.floor(data.totalCoins)) : null;
+          if (totalCoins !== null) app.state.coins = totalCoins;
           saveState(app.state);
 
-          awardCoins(data.coins);
-          el.msg.textContent = t("paymentApplied", { coins: data.coins });
+          const added = Math.max(0, Math.floor(data.coinsAdded));
+          if (added) {
+            if (totalCoins === null) awardCoins(added);
+            el.msg.textContent = t("paymentApplied", { coins: added });
+          }
           updateShopUI();
         } catch {
           el.msg.textContent = t("paymentFailed");

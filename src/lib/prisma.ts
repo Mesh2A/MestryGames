@@ -1,20 +1,26 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; pool?: Pool };
 
-function sqliteFileFromDatabaseUrl(url: string) {
-  const u = String(url || "").trim();
-  if (!u) return "./dev.db";
-  if (u === ":memory:" || u === "file::memory:") return ":memory:";
-  if (u.startsWith("file:")) return u.slice("file:".length);
-  return u;
-}
+const fallbackDatabaseUrl = "postgresql://user:pass@localhost:5432/db?schema=public";
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_DATABASE_URL ||
+  process.env.POSTGRES_URL_POSTGRES_URL ||
+  fallbackDatabaseUrl;
+
+const pool = globalForPrisma.pool ?? new Pool({ connectionString: databaseUrl });
+if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    adapter: new PrismaBetterSqlite3({ url: sqliteFileFromDatabaseUrl(process.env.DATABASE_URL || "file:./dev.db") }),
+    adapter: new PrismaPg(pool),
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

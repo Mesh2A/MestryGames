@@ -1,15 +1,26 @@
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
 type StripeCheckoutSession = {
   payment_status?: string;
+  currency?: string;
+  amount_total?: number;
   metadata?: {
     coins?: string;
+    packId?: string;
+    profileEmail?: string;
   };
 };
 
 export async function GET(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
+
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const sessionId = req.nextUrl.searchParams.get("session_id") || "";
   if (!sessionId) return NextResponse.json({ error: "missing_session_id" }, { status: 400 });
@@ -27,5 +38,76 @@ export async function GET(req: NextRequest) {
   const coins = Math.max(0, Math.floor(parseInt(coinsStr, 10) || 0));
   if (!coins) return NextResponse.json({ error: "invalid_coins" }, { status: 400 });
 
-  return NextResponse.json({ coins }, { status: 200 });
+  const packId = typeof data.metadata?.packId === "string" ? data.metadata.packId : "unknown";
+  const currency = typeof data.currency === "string" ? data.currency : "sar";
+  const unitAmount = typeof data.amount_total === "number" && Number.isFinite(data.amount_total) ? Math.max(0, Math.floor(data.amount_total)) : 0;
+
+  try {
+    const out = await prisma.$transaction(async (tx) => {
+      const existingPurchase = await tx.purchase.findUnique({ where: { stripeSessionId: sessionId } });
+      const existingProfile = await tx.gameProfile.findUnique({ where: { email } });
+      const existingState =
+        existingProfile && existingProfile.state && typeof existingProfile.state === "object" ? (existingProfile.state as Record<string, unknown>) : {};
+
+      const existingCoinsRaw = existingState.coins;
+      const existingCoins =
+        typeof existingCoinsRaw === "number" && Number.isFinite(existingCoinsRaw) ? Math.max(0, Math.floor(existingCoinsRaw)) : 0;
+
+      const processedRaw = existingState.processedSessions;
+      const processedSessions = Array.isArray(processedRaw) ? processedRaw.filter((x) => typeof x === "string") : [];
+
+      if (existingPurchase || processedSessions.includes(sessionId)) {
+        return { ok: true, coinsAdded: 0, totalCoins: existingCoins, alreadyProcessed: true };
+      }
+
+      if (!existingProfile) {
+        await tx.gameProfile.create({
+          data: {
+            email,
+            state: { coins: existingCoins, processedSessions, lastWriteAt: 0 },
+          },
+        });
+      }
+
+      try {
+        await tx.purchase.create({
+          data: {
+            profileEmail: email,
+            stripeSessionId: sessionId,
+            packId,
+            coins,
+            currency,
+            unitAmount,
+            status: "paid",
+          },
+        });
+      } catch (e) {
+        const code = (e as { code?: unknown }).code;
+        if (code === "P2002") {
+          return { ok: true, coinsAdded: 0, totalCoins: existingCoins, alreadyProcessed: true };
+        }
+        throw e;
+      }
+
+      const totalCoins = existingCoins + coins;
+      const nextProcessed = processedSessions.concat(sessionId).slice(-50);
+      const nextState = {
+        ...existingState,
+        coins: totalCoins,
+        processedSessions: nextProcessed,
+        lastWriteAt: Date.now(),
+      };
+
+      await tx.gameProfile.update({
+        where: { email },
+        data: { state: nextState },
+      });
+
+      return { ok: true, coinsAdded: coins, totalCoins, alreadyProcessed: false };
+    });
+
+    return NextResponse.json(out, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
 }

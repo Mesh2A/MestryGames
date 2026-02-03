@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model GameProfile {
@@ -12,4 +12,22 @@ model GameProfile {
   state     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  purchases Purchase[]
+}
+
+model Purchase {
+  id             String   @id @default(cuid())
+  profileEmail   String
+  stripeSessionId String  @unique
+  packId         String
+  coins          Int
+  currency       String
+  unitAmount     Int
+  status         String
+  createdAt      DateTime @default(now())
+
+  profile GameProfile @relation(fields: [profileEmail], references: [email], onDelete: Cascade)
+
+  @@index([profileEmail, createdAt])
 }

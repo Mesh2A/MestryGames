@@ -1,3 +1,5 @@
+import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
 type CreateCheckoutBody = {
@@ -11,6 +13,10 @@ type StripeCreateSessionResponse = {
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
+
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   let body: CreateCheckoutBody = {};
   try {
@@ -34,14 +40,17 @@ export async function POST(req: NextRequest) {
 
   const form = new URLSearchParams();
   form.set("mode", "payment");
-  form.set("success_url", `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
-  form.set("cancel_url", `${origin}/?checkout=cancelled`);
+  form.set("success_url", `${origin}/game/index.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
+  form.set("cancel_url", `${origin}/game/index.html?checkout=cancelled`);
   form.set("line_items[0][price_data][currency]", "sar");
   form.set("line_items[0][price_data][product_data][name]", `Coins pack ${pack.priceSar} SAR`);
   form.set("line_items[0][price_data][unit_amount]", String(pack.unitAmount));
   form.set("line_items[0][quantity]", "1");
+  form.set("customer_email", email);
+  form.set("client_reference_id", email);
   form.set("metadata[packId]", packId);
   form.set("metadata[coins]", String(pack.coins));
+  form.set("metadata[profileEmail]", email);
 
   const r = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
