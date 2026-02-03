@@ -1292,6 +1292,120 @@
       .kbd {
         display: none;
       }
+      .friendsPanel {
+        position: fixed;
+        top: 74px;
+        right: 16px;
+        width: min(380px, calc(100vw - 24px));
+        z-index: 999;
+        transform: translateY(-140%);
+        transition: transform 260ms ease;
+        pointer-events: none;
+      }
+      .friendsPanel.open {
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+      .friendsCard {
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.82);
+        backdrop-filter: blur(12px);
+        padding: 12px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      }
+      .friendsTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .friendsTitle {
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.2px;
+      }
+      .friendsClose {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        cursor: pointer;
+      }
+      .friendsMe {
+        margin-top: 10px;
+        display: grid;
+        gap: 2px;
+      }
+      .friendsMe .k {
+        opacity: 0.78;
+        font-size: 12px;
+      }
+      .friendsMe .v {
+        font-weight: 700;
+      }
+      .friendsAddRow {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .friendsList {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+        max-height: 260px;
+        overflow: auto;
+        padding: 2px;
+      }
+      .friendRow {
+        text-align: right;
+        width: 100%;
+        padding: 10px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        cursor: pointer;
+      }
+      .friendRow.active {
+        border-color: rgba(37, 99, 235, 0.7);
+        background: rgba(37, 99, 235, 0.15);
+      }
+      .friendMeta {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: baseline;
+      }
+      .friendMeta .name {
+        font-weight: 700;
+      }
+      .friendMeta .id {
+        opacity: 0.85;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+      }
+      .friendsActions {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .friendsActionRow {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .friendsTiny {
+        font-size: 11px;
+        opacity: 0.78;
+        line-height: 1.5;
+      }
       @media (max-width: 520px) {
         header .sub {
           display: none;
@@ -1316,121 +1430,6 @@
         }
         .pathInner {
           min-width: max(100%, 980px);
-        }
-
-        .friendsPanel {
-          position: fixed;
-          top: 74px;
-          right: 16px;
-          width: min(380px, calc(100vw - 24px));
-          z-index: 999;
-          transform: translateY(-140%);
-          transition: transform 260ms ease;
-          pointer-events: none;
-        }
-        .friendsPanel.open {
-          transform: translateY(0);
-          pointer-events: auto;
-        }
-        .friendsCard {
-          border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          background: rgba(13, 18, 34, 0.82);
-          backdrop-filter: blur(12px);
-          padding: 12px;
-          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        }
-        .friendsTop {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-        }
-        .friendsTitle {
-          font-weight: 800;
-          font-size: 14px;
-          letter-spacing: 0.2px;
-        }
-        .friendsClose {
-          width: 34px;
-          height: 34px;
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          background: rgba(255, 255, 255, 0.06);
-          color: #fff;
-          cursor: pointer;
-        }
-        .friendsMe {
-          margin-top: 10px;
-          display: grid;
-          gap: 2px;
-        }
-        .friendsMe .k {
-          opacity: 0.78;
-          font-size: 12px;
-        }
-        .friendsMe .v {
-          font-weight: 700;
-        }
-        .friendsAddRow {
-          margin-top: 10px;
-          display: flex;
-          gap: 8px;
-          align-items: center;
-        }
-        .friendsList {
-          margin-top: 10px;
-          display: grid;
-          gap: 8px;
-          max-height: 260px;
-          overflow: auto;
-          padding: 2px;
-        }
-        .friendRow {
-          text-align: right;
-          width: 100%;
-          padding: 10px 10px;
-          border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          background: rgba(255, 255, 255, 0.05);
-          color: #fff;
-          cursor: pointer;
-        }
-        .friendRow.active {
-          border-color: rgba(37, 99, 235, 0.7);
-          background: rgba(37, 99, 235, 0.15);
-        }
-        .friendMeta {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: baseline;
-        }
-        .friendMeta .name {
-          font-weight: 700;
-        }
-        .friendMeta .id {
-          opacity: 0.85;
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 0.6px;
-        }
-        .friendsActions {
-          margin-top: 10px;
-          display: grid;
-          gap: 8px;
-          padding-top: 10px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .friendsActionRow {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        .friendsTiny {
-          font-size: 11px;
-          opacity: 0.78;
-          line-height: 1.5;
         }
       }
     </style>

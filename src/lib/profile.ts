@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 
-const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 export function firstNameFromEmail(email: string) {
   const local = String(email || "").split("@")[0] || "";
@@ -9,8 +9,8 @@ export function firstNameFromEmail(email: string) {
   return token.slice(0, 1).toUpperCase() + token.slice(1);
 }
 
-export function generatePublicId(length = 8) {
-  const bytes = randomBytes(Math.max(8, length));
+export function generatePublicId(length = 11) {
+  const bytes = randomBytes(Math.max(16, length));
   let out = "";
   for (let i = 0; i < length; i++) out += alphabet[bytes[i] % alphabet.length];
   return out;
@@ -34,4 +34,3 @@ export function getProfileStats(state: unknown) {
 
   return { streak, wins, unlocked, completed };
 }
-

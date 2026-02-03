@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isAdminEmail } from "@/lib/admin";
 import { generatePublicId } from "@/lib/profile";
 
 export function readCoinsFromState(state: unknown) {
@@ -15,11 +16,12 @@ export function readCoinsFromState(state: unknown) {
 
 export async function ensureGameProfile(email: string) {
   return prisma.$transaction(async (tx) => {
+    const admin = isAdminEmail(email);
     let existing = await tx.gameProfile.findUnique({ where: { email } });
-    if (existing && existing.publicId) return existing;
+    if (existing?.publicId && (!admin || existing.publicId === "M1")) return existing;
 
     for (let attempt = 0; attempt < 7; attempt++) {
-      const publicId = generatePublicId(8);
+      const publicId = admin ? "M1" : generatePublicId(11);
       try {
         if (!existing) {
           return await tx.gameProfile.create({
@@ -34,6 +36,17 @@ export async function ensureGameProfile(email: string) {
       } catch (e) {
         const code = (e as { code?: unknown }).code;
         if (code === "P2002") {
+          if (admin) {
+            const owner = await tx.gameProfile.findUnique({ where: { publicId: "M1" } });
+            if (owner?.email === email) return owner;
+            if (owner) {
+              await tx.gameProfile.update({
+                where: { email: owner.email },
+                data: { publicId: generatePublicId(11) },
+              });
+            }
+            continue;
+          }
           existing = await tx.gameProfile.findUnique({ where: { email } });
           if (existing?.publicId) return existing;
           continue;
