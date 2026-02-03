@@ -3,6 +3,7 @@ import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -15,7 +16,7 @@ export async function POST() {
     await prisma.$transaction(async (tx) => {
       const row = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
       const state = row?.state && typeof row.state === "object" ? (row.state as Record<string, unknown>) : {};
-      const nextState = { ...state, lastSeenAt: now };
+      const nextState = { ...state, lastSeenAt: now } as Prisma.InputJsonValue;
       await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
     });
     return NextResponse.json({ ok: true }, { status: 200 });
@@ -23,4 +24,3 @@ export async function POST() {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

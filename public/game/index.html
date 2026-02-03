@@ -1342,7 +1342,7 @@
         top: 74px;
         left: 16px;
         right: auto;
-        width: min(920px, calc(100vw - 24px));
+        width: min(820px, calc(100vw - 24px));
         z-index: 999;
         transform: translateY(-140%);
         transition: transform 260ms ease;
@@ -1375,7 +1375,7 @@
         backdrop-filter: blur(12px);
         padding: 12px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        max-height: calc(100vh - 96px);
+        max-height: min(660px, calc(100vh - 96px));
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -1394,10 +1394,10 @@
       .chatLayout {
         margin-top: 10px;
         display: grid;
-        grid-template-columns: minmax(220px, 280px) 1fr;
+        grid-template-columns: minmax(210px, 250px) 1fr;
         gap: 10px;
-        min-height: 360px;
-        height: calc(100vh - 170px);
+        min-height: 300px;
+        height: 520px;
       }
       .chatLeft {
         border-radius: 14px;
@@ -1416,10 +1416,9 @@
         padding: 2px;
       }
       .chatFriendRow {
-        text-align: right;
         width: 100%;
-        padding: 10px 10px;
-        border-radius: 14px;
+        padding: 8px 10px;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(255, 255, 255, 0.05);
         color: #fff;
@@ -1454,6 +1453,79 @@
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         background: rgba(0, 0, 0, 0.14);
+      }
+      .chatMsgRow {
+        display: flex;
+        margin: 6px 0;
+      }
+      .chatMsgRow.me {
+        justify-content: flex-start;
+      }
+      html[dir="ltr"] .chatMsgRow.me {
+        justify-content: flex-end;
+      }
+      .chatMsgRow.them {
+        justify-content: flex-end;
+      }
+      html[dir="ltr"] .chatMsgRow.them {
+        justify-content: flex-start;
+      }
+      .chatBubble {
+        max-width: min(420px, 82%);
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.5;
+      }
+      .chatBubble.me {
+        border-color: rgba(37, 99, 235, 0.65);
+        background: rgba(37, 99, 235, 0.16);
+      }
+      .chatMetaLine {
+        margin-top: 4px;
+        font-size: 10px;
+        opacity: 0.72;
+      }
+      .friendLine {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-direction: row-reverse;
+      }
+      html[dir="ltr"] .friendLine {
+        flex-direction: row;
+      }
+      .avatarMini {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        flex: 0 0 auto;
+        font-weight: 800;
+        font-size: 12px;
+      }
+      .avatarMini img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .friendText {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+      .friendNameRow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
       }
       .chatComposer {
         display: flex;
@@ -1830,7 +1902,7 @@
         }
         .chatLayout {
           grid-template-columns: 1fr;
-          height: calc(100vh - 200px);
+          height: 520px;
         }
         .friendsAddRow {
           flex-wrap: wrap;
@@ -5309,8 +5381,10 @@
         peerName: document.getElementById("chatPeerName"),
         peerMeta: document.getElementById("chatPeerMeta"),
         messages: document.getElementById("chatMessages"),
+        input: document.getElementById("chatInput"),
+        sendBtn: document.getElementById("chatSendBtn"),
       };
-      const chatState = { open: false, selectedId: "", search: "" };
+      const chatState = { open: false, selectedId: "", search: "", threads: {}, lastInboxAt: 0, loading: false };
       const toastUI = { host: document.getElementById("toastHost") };
       const toastState = { busy: false, queue: [], lastInboxAt: 0, lastGiftAt: 0, lastReqEventAt: 0 };
       const avatarViewerUI = {
@@ -5368,6 +5442,117 @@
         const r = await fetch(url, init);
         const data = await r.json().catch(() => null);
         return { ok: r.ok, status: r.status, data };
+      }
+
+      async function chatJson(url, init) {
+        const r = await fetch(url, init);
+        const data = await r.json().catch(() => null);
+        return { ok: r.ok, status: r.status, data };
+      }
+
+      function readChatThread(id) {
+        const t = chatState.threads && typeof chatState.threads === "object" ? chatState.threads : {};
+        const raw = t[id];
+        return Array.isArray(raw) ? raw : [];
+      }
+
+      function writeChatThread(id, messages) {
+        if (!chatState.threads || typeof chatState.threads !== "object") chatState.threads = {};
+        chatState.threads[id] = Array.isArray(messages) ? messages.slice(-220) : [];
+      }
+
+      async function loadChatThread(id) {
+        if (!cloud.enabled) return;
+        const r = await chatJson(`/api/chat/thread?with=${encodeURIComponent(String(id || ""))}`, { method: "GET" });
+        if (!r.ok) return;
+        const messages = r.data && Array.isArray(r.data.messages) ? r.data.messages : [];
+        writeChatThread(id, messages);
+      }
+
+      function renderChatMessages() {
+        if (!chatUI.messages) return;
+        const myId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
+        const peerId = chatState.selectedId;
+        if (!peerId) {
+          chatUI.messages.innerHTML = `<div class="friendsTiny">اختر صديق لبدء المحادثة.</div>`;
+          return;
+        }
+        const msgs = readChatThread(peerId);
+        if (!msgs.length) {
+          chatUI.messages.innerHTML = `<div class="friendsTiny">لا توجد رسائل.</div>`;
+          return;
+        }
+        chatUI.messages.innerHTML = msgs
+          .map((m) => {
+            const fromId = m && typeof m.fromId === "string" ? m.fromId : "";
+            const text = m && typeof m.text === "string" ? m.text : "";
+            const createdAt = m && typeof m.createdAt === "number" ? m.createdAt : 0;
+            const mine = myId && fromId === myId;
+            return `<div class="chatMsgRow ${mine ? "me" : "them"}">
+              <div class="chatBubble ${mine ? "me" : ""}">
+                <div>${escapeHtml(text)}</div>
+                <div class="chatMetaLine">${escapeHtml(formatAgo(createdAt))}</div>
+              </div>
+            </div>`;
+          })
+          .join("");
+        chatUI.messages.scrollTop = chatUI.messages.scrollHeight;
+      }
+
+      async function sendChatMessage() {
+        const peerId = chatState.selectedId;
+        if (!peerId) return;
+        const input = chatUI.input;
+        const text = input && typeof input.value === "string" ? input.value.replace(/\s+/g, " ").trim() : "";
+        if (!text) return;
+        if (chatUI.sendBtn) chatUI.sendBtn.disabled = true;
+        if (chatUI.input) chatUI.input.disabled = true;
+        const r = await chatJson("/api/chat/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ toId: peerId, text }),
+        });
+        if (!r.ok) {
+          enqueueToast({ title: "فشل", body: (r.data && r.data.error) || "تعذر الإرسال.", autoMs: 2200 });
+        } else {
+          if (chatUI.input) chatUI.input.value = "";
+          const msg = r.data && r.data.msg ? r.data.msg : null;
+          if (msg) {
+            const current = readChatThread(peerId);
+            writeChatThread(peerId, [...current, msg]);
+            renderChatMessages();
+          } else {
+            loadChatThread(peerId)
+              .then(() => renderChatMessages())
+              .catch(() => {});
+          }
+        }
+        if (chatUI.sendBtn) chatUI.sendBtn.disabled = false;
+        if (chatUI.input) chatUI.input.disabled = false;
+        if (chatUI.input) chatUI.input.focus();
+      }
+
+      async function pollChatInbox() {
+        if (!cloud.enabled) return;
+        const since = chatState.lastInboxAt || 0;
+        const r = await chatJson(`/api/chat/inbox?since=${encodeURIComponent(String(since))}`, { method: "GET" });
+        if (!r.ok || !r.data || !Array.isArray(r.data.messages)) return;
+        const items = r.data.messages;
+        let maxAt = since;
+        for (const m of items) {
+          const createdAt = m && typeof m.createdAt === "number" ? m.createdAt : 0;
+          const fromId = m && typeof m.fromId === "string" ? m.fromId : "";
+          const toId = m && typeof m.toId === "string" ? m.toId : "";
+          if (createdAt > maxAt) maxAt = createdAt;
+          const peerId = fromId && fromId !== (friendsState.me && friendsState.me.id) ? fromId : toId;
+          if (!peerId) continue;
+          const current = readChatThread(peerId);
+          const exists = current.some((x) => x && typeof x === "object" && (x.id || "") === (m.id || ""));
+          if (exists) continue;
+          writeChatThread(peerId, [...current, m]);
+        }
+        chatState.lastInboxAt = maxAt;
+        if (chatState.open) renderChatMessages();
       }
 
       async function copyToClipboard(text) {
@@ -5760,6 +5945,7 @@
           pollFriendInbox().catch(() => {});
           pollFriendRequestEvents().catch(() => {});
           pollGiftEvents().catch(() => {});
+          pollChatInbox().catch(() => {});
           pollRemoteStateLight().catch(() => {});
           const now = Date.now();
           if (cloud.enabled && now - lastPresenceAt > 20000) {
@@ -5840,15 +6026,28 @@
             const lastSeenAt = typeof f.lastSeenAt === "number" ? f.lastSeenAt : Date.parse(String(f.updatedAt || "")) || 0;
             const online = typeof f.online === "boolean" ? f.online : isOnlineFromLastSeen(lastSeenAt);
             const dot = online ? "presenceDot on" : "presenceDot";
+            const letter = String(f.firstName || "P")
+              .trim()
+              .slice(0, 1)
+              .toUpperCase();
+            const photo = f && typeof f.photo === "string" && /^data:image\/(png|jpeg|webp);base64,/i.test(f.photo) ? f.photo : "";
+            const avatar = photo ? `<img alt="" loading="lazy" decoding="async" src="${escapeHtml(photo)}" />` : escapeHtml(letter || "P");
             return `<button type="button" class="friendRow${active}" data-id="${escapeHtml(f.id)}">
               <div class="friendMeta">
-                <div class="name"><span class="presenceLine"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></span></div>
+                <div class="name">
+                  <div class="friendLine">
+                    <div class="avatarMini">${avatar}</div>
+                    <div class="friendText">
+                      <div class="friendNameRow"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></div>
+                      <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
+                    </div>
+                  </div>
+                </div>
                 <div class="id idWithCopy">
                   <span>${escapeHtml(fid)}</span>
                   <span class="copyBtn copyBtnInline" data-copy="${escapeHtml(fid)}" title="نسخ">⧉</span>
                 </div>
               </div>
-              <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
             </button>`;
           })
           .join("");
@@ -5999,11 +6198,20 @@
               const lastSeenAt = typeof f.lastSeenAt === "number" ? f.lastSeenAt : Date.parse(String(f.updatedAt || "")) || 0;
               const online = typeof f.online === "boolean" ? f.online : isOnlineFromLastSeen(lastSeenAt);
               const dot = online ? "presenceDot on" : "presenceDot";
+              const letter = String(f.firstName || "P")
+                .trim()
+                .slice(0, 1)
+                .toUpperCase();
+              const photo = f && typeof f.photo === "string" && /^data:image\/(png|jpeg|webp);base64,/i.test(f.photo) ? f.photo : "";
+              const avatar = photo ? `<img alt="" loading="lazy" decoding="async" src="${escapeHtml(photo)}" />` : escapeHtml(letter || "P");
               return `<button type="button" class="chatFriendRow${active}" data-id="${escapeHtml(f.id)}">
-                <div class="friendMeta">
-                  <div class="name"><span class="presenceLine"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></span></div>
+                <div class="friendLine">
+                  <div class="avatarMini">${avatar}</div>
+                  <div class="friendText">
+                    <div class="friendNameRow"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></div>
+                    <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
+                  </div>
                 </div>
-                <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
               </button>`;
             })
             .join("");
@@ -6019,17 +6227,27 @@
             chatUI.peerMeta.textContent = online ? "متصل الآن" : `آخر ظهور: ${formatAgo(lastSeenAt)}`;
           }
         }
+        const hasPeer = !!sel;
+        if (chatUI.input) chatUI.input.disabled = !hasPeer;
+        if (chatUI.sendBtn) chatUI.sendBtn.disabled = !hasPeer;
+        renderChatMessages();
       }
 
       function openChat() {
         chatState.open = true;
-        if (chatUI.panel) chatUI.panel.classList.add("open");
+        if (chatUI.panel) {
+          chatUI.panel.classList.add("open");
+          chatUI.panel.setAttribute("aria-hidden", "false");
+        }
         loadFriendsData().catch(() => {});
         renderChat();
       }
       function closeChat() {
         chatState.open = false;
-        if (chatUI.panel) chatUI.panel.classList.remove("open");
+        if (chatUI.panel) {
+          chatUI.panel.classList.remove("open");
+          chatUI.panel.setAttribute("aria-hidden", "true");
+        }
       }
       function toggleChat() {
         if (chatState.open) closeChat();
@@ -6055,6 +6273,14 @@
         });
       }
       if (chatUI.close) chatUI.close.addEventListener("click", () => closeChat());
+      if (chatUI.sendBtn) chatUI.sendBtn.addEventListener("click", () => sendChatMessage().catch(() => {}));
+      if (chatUI.input) {
+        chatUI.input.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          sendChatMessage().catch(() => {});
+        });
+      }
       if (chatUI.searchInput) {
         chatUI.searchInput.addEventListener("input", (e) => {
           const v = e && e.target && typeof e.target.value === "string" ? e.target.value : "";
@@ -6068,7 +6294,15 @@
           if (!btn) return;
           const id = btn.getAttribute("data-id") || "";
           chatState.selectedId = id;
-          renderChat();
+          loadChatThread(id)
+            .then(() => {
+              renderChat();
+              renderChatMessages();
+              if (chatUI.input) chatUI.input.disabled = false;
+              if (chatUI.sendBtn) chatUI.sendBtn.disabled = false;
+              if (chatUI.input) chatUI.input.focus();
+            })
+            .catch(() => renderChat());
         });
       }
       if (friendsUI.meCopyIdBtn) {
