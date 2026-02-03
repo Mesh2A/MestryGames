@@ -1410,8 +1410,11 @@
         gap: 8px;
         flex-wrap: wrap;
       }
-      .friendsMeRow .avatarSquare {
+      .friendsMeLeft {
         margin-inline-start: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
       .friendsPhotoBtn {
         min-height: 32px;
@@ -1521,11 +1524,7 @@
         font-size: 12px;
         border-radius: 12px;
       }
-      .friendsGiftStack {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
+      .friendsFriendAvatar {
         margin-inline-start: auto;
       }
       .friendsTiny {
@@ -2022,12 +2021,14 @@
           <div class="friendsMeRow">
             <div class="friendsMeRight">
               <div id="friendsMeName" class="v">—</div>
+            </div>
+            <div class="friendsMeLeft">
               <label class="btn ghost friendsPhotoBtn">
                 تغيير الصورة
                 <input id="friendsPhotoInput" type="file" accept="image/*" style="display:none" />
               </label>
+              <div id="friendsMeAvatar" class="avatarSquare" aria-hidden="true"></div>
             </div>
-            <div id="friendsMeAvatar" class="avatarSquare" aria-hidden="true"></div>
           </div>
           <div class="k">ID: <span id="friendsMeId" class="v">—</span></div>
         </div>
@@ -5031,9 +5032,13 @@
 
       function setAvatarSquare(elm, photo, fallbackLetter) {
         if (!elm) return;
+        const p = typeof photo === "string" ? photo.trim() : "";
+        const letter = (fallbackLetter || "—").slice(0, 1).toUpperCase();
+        const key = p && /^data:image\/(png|jpeg|webp);base64,/i.test(p) ? `img:${p}` : `t:${letter}`;
+        if (elm.dataset && elm.dataset.avatarKey === key) return;
+        if (elm.dataset) elm.dataset.avatarKey = key;
         elm.textContent = "";
         while (elm.firstChild) elm.removeChild(elm.firstChild);
-        const p = typeof photo === "string" ? photo.trim() : "";
         if (p && /^data:image\/(png|jpeg|webp);base64,/i.test(p)) {
           const img = document.createElement("img");
           img.alt = "";
@@ -5043,7 +5048,7 @@
           elm.appendChild(img);
           return;
         }
-        elm.textContent = (fallbackLetter || "—").slice(0, 1).toUpperCase();
+        elm.textContent = letter;
       }
 
       function loadImageFromFile(file) {
@@ -5461,14 +5466,11 @@
             : `<div class="friendsTiny">اضغط تفاصيل اللاعب لعرض البيانات.</div>`;
 
         friendsUI.actions.innerHTML = `
-          <div class="friendsTiny" style="opacity:.92">اللاعب: ${escapeHtml(sel ? sel.firstName : "")} — ${escapeHtml(friendsState.selectedId)}</div>
           <div class="friendsActionRow">
+            <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>اهداء</button>
             <button id="friendsRemoveBtn" class="btn danger" type="button">حذف صديق</button>
             <button id="friendsDetailsBtn" class="btn" type="button">تفاصيل اللاعب</button>
-            <div class="friendsGiftStack">
-              <div class="avatarSquare">${friendAvatarHtml}</div>
-              <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>اهداء</button>
-            </div>
+            <div class="avatarSquare friendsFriendAvatar">${friendAvatarHtml}</div>
           </div>
           ${giftNote}
           ${detailsHtml}
@@ -5508,14 +5510,30 @@
         }
 
         const list = await friendsJson("/api/friends/list", { method: "GET" });
-        friendsState.friends = list.ok && list.data && Array.isArray(list.data.friends) ? list.data.friends : [];
         const gifts = await friendsJson("/api/friends/gifts", { method: "GET" });
-        friendsState.gifts = gifts.ok && gifts.data && Array.isArray(gifts.data.gifts) ? gifts.data.gifts : [];
-        if (friendsState.selectedId && !friendsState.friends.some((x) => x.id === friendsState.selectedId)) {
+        const nextFriends = list.ok && list.data && Array.isArray(list.data.friends) ? list.data.friends : [];
+        const nextGifts = gifts.ok && gifts.data && Array.isArray(gifts.data.gifts) ? gifts.data.gifts : [];
+
+        const nextFriendsSig = nextFriends
+          .map((f) => `${String(f.id || "")}:${String(f.photo || "").length}:${f.canGift ? 1 : 0}:${Math.floor(Number(f.giftAvailableAt || 0) || 0)}`)
+          .join("|");
+        const nextGiftsSig = nextGifts
+          .map((g) => `${Math.floor(Number(g.createdAt || 0) || 0)}:${String(g.fromId || "")}:${Math.floor(Number(g.coins || 0) || 0)}`)
+          .join("|");
+
+        const prevFriendsSig = friendsState.friendsSig || "";
+        const prevGiftsSig = friendsState.giftsSig || "";
+        friendsState.friendsSig = nextFriendsSig;
+        friendsState.giftsSig = nextGiftsSig;
+        friendsState.friends = nextFriends;
+        friendsState.gifts = nextGifts;
+
+        const selectedMissing = friendsState.selectedId && !friendsState.friends.some((x) => x.id === friendsState.selectedId);
+        if (selectedMissing) {
           friendsState.selectedId = "";
           friendsState.details = null;
         }
-        renderFriends();
+        if (selectedMissing || nextFriendsSig !== prevFriendsSig || nextGiftsSig !== prevGiftsSig) renderFriends();
       }
 
       function openFriends() {
