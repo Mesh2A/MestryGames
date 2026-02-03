@@ -10,7 +10,14 @@ export async function GET() {
 
   try {
     const row = await prisma.gameProfile.findUnique({ where: { email } });
-    return NextResponse.json({ state: row?.state ?? null }, { status: 200 });
+    if (row?.state && typeof row.state === "object") return NextResponse.json({ state: row.state }, { status: 200 });
+
+    if (!row) {
+      const created = await prisma.gameProfile.create({ data: { email, state: {} } });
+      return NextResponse.json({ state: created.state }, { status: 200 });
+    }
+
+    return NextResponse.json({ state: {} }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
