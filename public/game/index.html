@@ -481,6 +481,29 @@
         position: relative;
         overflow: hidden;
       }
+      .btn.twoLine {
+        display: grid;
+        place-items: center;
+        gap: 2px;
+        text-align: center;
+        line-height: 1.2;
+      }
+      .btn.twoLine .tiny {
+        font-size: 11px;
+        opacity: 0.8;
+      }
+      .discordBtn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+      .discordIcon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.92);
+      }
       html[data-reduce-motion="1"] .btn {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
@@ -2328,11 +2351,26 @@
               <div class="inner">
                 <h2 id="homeTitle" class="title">MestRyLocks</h2>
                 <div class="homeButtons">
+                  <button id="onlineBtn" class="btn twoLine" type="button" disabled>
+                    <span id="onlineBtnK">تحدي اونلاين</span>
+                    <span id="onlineBtnSub" class="tiny">يفتح عند مرحلة 45</span>
+                  </button>
                   <button id="startBtn" class="btn primary" type="button">ابدأ</button>
                   <button id="dailyBtn" class="btn" type="button">تحدي يومي</button>
                   <button id="howBtn" class="btn" type="button">طريقة اللعبه</button>
                   <button id="settingsBtn" class="btn" type="button">اعدادات</button>
                   <button id="logoutBtn" class="btn danger" type="button" style="display:none">تسجيل خروج</button>
+                  <button id="discordBtn" class="btn ghost discordBtn" type="button" style="display:none">
+                    <span class="discordIcon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          fill="currentColor"
+                          d="M20.3 4.8a16.6 16.6 0 0 0-4.1-1.3c-.2.3-.4.7-.6 1.1a15.7 15.7 0 0 0-4.6 0c-.2-.4-.4-.8-.6-1.1-1.4.2-2.8.6-4.1 1.3C.9 8.1.3 11.2.5 14.2c1.5 1.1 3.2 1.9 5 2.4.4-.6.7-1.2 1-1.8-.5-.2-1.1-.5-1.6-.8.1-.1.3-.2.4-.3 3.1 1.4 6.5 1.4 9.6 0 .1.1.3.2.4.3-.5.3-1 .6-1.6.8.3.6.6 1.2 1 1.8 1.8-.5 3.5-1.3 5-2.4.2-3-.4-6.1-1.9-9.4ZM8.3 13.3c-.6 0-1.1-.6-1.1-1.3 0-.7.5-1.3 1.1-1.3.6 0 1.1.6 1.1 1.3 0 .7-.5 1.3-1.1 1.3Zm7.4 0c-.6 0-1.1-.6-1.1-1.3 0-.7.5-1.3 1.1-1.3.6 0 1.1.6 1.1 1.3 0 .7-.5 1.3-1.1 1.3Z"
+                        />
+                      </svg>
+                    </span>
+                    <span id="discordBtnK">Discord</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -2589,6 +2627,13 @@
                   </div>
                   <div class="shopRow">
                     <div>
+                      <div id="pack1999K" class="t">19.99 ر.س</div>
+                      <div class="tiny"><span id="pack1999Sub">+400 🪙</span></div>
+                    </div>
+                    <button id="buyPack1999Btn" class="btn primary" type="button">Apple Pay</button>
+                  </div>
+                  <div class="shopRow">
+                    <div>
                       <div class="t">تغيير الاسم</div>
                       <div class="tiny">4.99 ر.س</div>
                     </div>
@@ -2787,6 +2832,7 @@
           items: { reveal1: 0, reveal2: 0 },
           processedSessions: [],
           dailyReward: { lastClaimAt: 0 },
+          missions: { resetAt: 0, solved: 0, noHint: 0, boss: 0, claimed: {} },
           stars: {},
           daily: { completed: [], hintsUsed: [], stars: {} },
           dailyChallenge: { id: 1, availableAt: 0, lastCompletedAt: 0 },
@@ -2851,6 +2897,22 @@
                 return Number.isFinite(ms) ? ms : 0;
               })();
         base.dailyReward = { lastClaimAt };
+        base.missions = s.missions && typeof s.missions === "object" ? s.missions : base.missions;
+        base.missions.resetAt =
+          typeof base.missions.resetAt === "number" && Number.isFinite(base.missions.resetAt) ? Math.max(0, Math.floor(base.missions.resetAt)) : 0;
+        base.missions.solved =
+          typeof base.missions.solved === "number" && Number.isFinite(base.missions.solved) ? Math.max(0, Math.floor(base.missions.solved)) : 0;
+        base.missions.noHint =
+          typeof base.missions.noHint === "number" && Number.isFinite(base.missions.noHint) ? Math.max(0, Math.floor(base.missions.noHint)) : 0;
+        base.missions.boss =
+          typeof base.missions.boss === "number" && Number.isFinite(base.missions.boss) ? Math.max(0, Math.floor(base.missions.boss)) : 0;
+        base.missions.claimed =
+          base.missions.claimed && typeof base.missions.claimed === "object" ? base.missions.claimed : {};
+        for (const k of Object.keys(base.missions.claimed)) {
+          const v = base.missions.claimed[k];
+          if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) delete base.missions.claimed[k];
+          else base.missions.claimed[k] = Math.floor(v);
+        }
         base.stars = s.stars && typeof s.stars === "object" ? s.stars : {};
 
         base.daily = s.daily && typeof s.daily === "object" ? s.daily : base.daily;
@@ -3301,10 +3363,15 @@
         modal: document.querySelector(".modal"),
         homeTitle: document.getElementById("homeTitle"),
         homeDesc: document.getElementById("homeDesc"),
+        onlineBtn: document.getElementById("onlineBtn"),
+        onlineBtnK: document.getElementById("onlineBtnK"),
+        onlineBtnSub: document.getElementById("onlineBtnSub"),
         startBtn: document.getElementById("startBtn"),
         dailyBtn: document.getElementById("dailyBtn"),
         howBtn: document.getElementById("howBtn"),
         logoutBtn: document.getElementById("logoutBtn"),
+        discordBtn: document.getElementById("discordBtn"),
+        discordBtnK: document.getElementById("discordBtnK"),
         progressK: document.getElementById("progressK"),
         helpK: document.getElementById("helpK"),
         helpText: document.getElementById("helpText"),
@@ -3388,6 +3455,9 @@
         pack999K: document.getElementById("pack999K"),
         pack999Sub: document.getElementById("pack999Sub"),
         buyPack999Btn: document.getElementById("buyPack999Btn"),
+        pack1999K: document.getElementById("pack1999K"),
+        pack1999Sub: document.getElementById("pack1999Sub"),
+        buyPack1999Btn: document.getElementById("buyPack1999Btn"),
         buyNameChangeBtn: document.getElementById("buyNameChangeBtn"),
         featuresTitle: document.getElementById("featuresTitle"),
         featuresSub: document.getElementById("featuresSub"),
@@ -3506,9 +3576,12 @@
           homeTitle: "MestRyLocks",
           missionsModalTitle: "المهام",
           profileModalTitle: "البروفايل",
+          onlineBtn: "تحدي اونلاين",
+          onlineBtnSub: "يفتح عند مرحلة 45",
           startBtn: "ابدأ",
           howBtn: "طريقة اللعبه",
           logoutBtn: "تسجيل خروج",
+          discordBtn: "Discord",
           assistBtn: "مساعدة",
           assistTitle: "مساعدة",
           assistIntro: "هذه 3 مساعدات للمرحلة. اضغط على المساعدة لاستخدامها.",
@@ -3676,9 +3749,12 @@
           homeTitle: "MestRyLocks",
           missionsModalTitle: "Tasks",
           profileModalTitle: "Profile",
+          onlineBtn: "Online challenge",
+          onlineBtnSub: "Unlocks at level 45",
           startBtn: "Start",
           howBtn: "How to play",
           logoutBtn: "Logout",
+          discordBtn: "Discord",
           assistBtn: "Help",
           assistTitle: "Help",
           assistIntro: "These are 3 assists for this level. Tap an assist to use it.",
@@ -3867,10 +3943,13 @@
         if (el.homeHeaderBtn) el.homeHeaderBtn.textContent = t("homeHeaderBtn");
         if (el.homeTitle) el.homeTitle.textContent = t("homeTitle");
         if (el.homeDesc) el.homeDesc.textContent = t("homeDesc");
+        if (el.onlineBtnK) el.onlineBtnK.textContent = t("onlineBtn");
+        if (el.onlineBtnSub) el.onlineBtnSub.textContent = t("onlineBtnSub");
         if (el.startBtn) el.startBtn.textContent = t("startBtn");
         if (el.dailyBtn) el.dailyBtn.textContent = t("dailyBtn");
         if (el.howBtn) el.howBtn.textContent = t("howBtn");
         if (el.logoutBtn) el.logoutBtn.textContent = t("logoutBtn");
+        if (el.discordBtnK) el.discordBtnK.textContent = t("discordBtn");
         if (el.assistBtn) el.assistBtn.textContent = t("assistBtn");
         if (el.progressK) el.progressK.textContent = t("progressK");
         if (el.helpK) el.helpK.textContent = t("helpK");
@@ -4473,10 +4552,13 @@
 
       function initMissions() {
         app.state.missions =
-          app.state.missions && typeof app.state.missions === "object" ? app.state.missions : { ymd: "", solved: 0, noHint: 0, boss: 0, claimed: {} };
-        const now = ymdNow();
-        if (app.state.missions.ymd !== now) {
-          app.state.missions = { ymd: now, solved: 0, noHint: 0, boss: 0, claimed: {} };
+          app.state.missions && typeof app.state.missions === "object"
+            ? app.state.missions
+            : { resetAt: 0, solved: 0, noHint: 0, boss: 0, claimed: {} };
+        const now = Date.now();
+        const resetAt = typeof app.state.missions.resetAt === "number" && Number.isFinite(app.state.missions.resetAt) ? app.state.missions.resetAt : 0;
+        if (resetAt && now >= resetAt) {
+          app.state.missions = { resetAt: 0, solved: 0, noHint: 0, boss: 0, claimed: {} };
           saveState(app.state);
         }
       }
@@ -4519,7 +4601,8 @@
         if (!done) return;
         if (missionClaimed(id)) return;
         app.state.missions.claimed = app.state.missions.claimed && typeof app.state.missions.claimed === "object" ? app.state.missions.claimed : {};
-        app.state.missions.claimed[id] = true;
+        app.state.missions.claimed[id] = Date.now();
+        app.state.missions.resetAt = Date.now() + 24 * 60 * 60 * 1000;
         saveState(app.state);
         awardCoins(def.reward);
         updateSettingsUI();
@@ -4644,7 +4727,20 @@
         }
       }
 
+      function onlineUnlocked() {
+        return Array.isArray(app.state.completed) && app.state.completed.includes(45);
+      }
+
+      function updateOnlineBtnUI() {
+        if (!el.onlineBtn) return;
+        const unlocked = onlineUnlocked();
+        el.onlineBtn.disabled = !unlocked;
+        el.onlineBtn.classList.toggle("primary", unlocked);
+        el.onlineBtn.classList.toggle("zero", !unlocked);
+      }
+
       function updateSettingsUI() {
+        updateOnlineBtnUI();
         if (el.settingsCoinsV) el.settingsCoinsV.textContent = String(app.state.coins || 0);
         if (el.hintTokensV) el.hintTokensV.textContent = String(app.state.hintTokens || 0);
         if (el.nameChangeSub || el.changeNameBtn) {
@@ -4726,6 +4822,7 @@
         if (el.buyPack299Btn) el.buyPack299Btn.textContent = t("applePayBtn");
         if (el.buyPack499Btn) el.buyPack499Btn.textContent = t("applePayBtn");
         if (el.buyPack999Btn) el.buyPack999Btn.textContent = t("applePayBtn");
+        if (el.buyPack1999Btn) el.buyPack1999Btn.textContent = t("applePayBtn");
         if (el.buyNameChangeBtn) el.buyNameChangeBtn.textContent = t("applePayBtn");
 
         const inLevel = el.level && el.level.classList.contains("active") && app.stage && !app.session.over;
@@ -5928,7 +6025,42 @@
         updateShopUI();
       }
 
+      function openDiscord() {
+        const userId = "632225768281341982";
+        const handle = "@977u";
+        const profileUrl = `https://discord.com/users/${userId}`;
+        try {
+          navigator.clipboard.writeText(profileUrl).catch(() => {});
+        } catch {}
+        enqueueToast({
+          title: "Discord",
+          body: `تم نسخ رابط حساب الدسكورد: ${handle}`,
+          autoMs: 3200,
+          actions: [
+            {
+              label: "فتح الحساب",
+              primary: true,
+              onClick: () => {
+                window.open(profileUrl, "_blank", "noopener,noreferrer");
+              },
+            },
+            {
+              label: "فتح Discord",
+              onClick: () => {
+                window.open("https://discord.com/app", "_blank", "noopener,noreferrer");
+              },
+            },
+          ],
+        });
+      }
+
       el.startBtn.addEventListener("click", () => goMap());
+      if (el.onlineBtn) {
+        updateOnlineBtnUI();
+        el.onlineBtn.addEventListener("click", () => {
+          enqueueToast({ title: t("onlineBtn"), body: "قريباً…", autoMs: 2400 });
+        });
+      }
       el.dailyBtn.addEventListener("click", () => openDaily());
       el.dailyBtn2.addEventListener("click", () => openDaily());
       el.howBtn.addEventListener("click", () => openHowTo());
@@ -5936,6 +6068,10 @@
       if (el.logoutBtn) {
         el.logoutBtn.style.display = "";
         el.logoutBtn.addEventListener("click", () => signOutFromGame());
+      }
+      if (el.discordBtn) {
+        el.discordBtn.style.display = "";
+        el.discordBtn.addEventListener("click", () => openDiscord());
       }
       el.backToMapBtn.addEventListener("click", () => goMap());
       el.mapBtn2.addEventListener("click", () => goMap());
@@ -5979,6 +6115,14 @@
           if (e.target === el.profileDropBackdrop) closeProfileDrop();
         });
       }
+
+      setInterval(() => {
+        const resetAt = app.state && app.state.missions && typeof app.state.missions.resetAt === "number" ? app.state.missions.resetAt : 0;
+        if (resetAt && Date.now() >= resetAt) {
+          initMissions();
+          updateSettingsUI();
+        }
+      }, 60_000);
 
       const friendsUI = {
         panel: document.getElementById("friendsPanel"),
@@ -7378,6 +7522,7 @@
       if (el.buyPack299Btn) el.buyPack299Btn.addEventListener("click", () => startCheckout("pack_299"));
       if (el.buyPack499Btn) el.buyPack499Btn.addEventListener("click", () => startCheckout("pack_499"));
       if (el.buyPack999Btn) el.buyPack999Btn.addEventListener("click", () => startCheckout("pack_999"));
+      if (el.buyPack1999Btn) el.buyPack1999Btn.addEventListener("click", () => startCheckout("pack_1999"));
       if (el.buyNameChangeBtn) el.buyNameChangeBtn.addEventListener("click", () => startCheckout("name_499"));
       if (el.buyHintTokenBtn) el.buyHintTokenBtn.addEventListener("click", () => buyHintToken());
       if (el.buyHintPack10Btn) el.buyHintPack10Btn.addEventListener("click", () => buyHintPack(10, 39));

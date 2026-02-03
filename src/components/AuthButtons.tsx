@@ -12,11 +12,30 @@ type Provider = {
 export default function AuthButtons() {
   const { data: session, status } = useSession();
   const [providers, setProviders] = useState<Record<string, Provider> | null>(null);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [regUsername, setRegUsername] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regRemember, setRegRemember] = useState(true);
+  const [regBusy, setRegBusy] = useState(false);
+  const [regError, setRegError] = useState<string | null>(null);
 
   useEffect(() => {
     getProviders()
       .then((p) => setProviders(p as Record<string, Provider> | null))
       .catch(() => setProviders(null));
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("lockgame_login_identifier_v1");
+      if (raw) setIdentifier(String(raw));
+    } catch {}
   }, []);
 
   const providerList = useMemo(() => {
@@ -28,46 +47,179 @@ export default function AuthButtons() {
 
   if (session) return null;
 
-  if (!providers) {
-    return (
-      <button
-        type="button"
-        onClick={() => signIn("google")}
-        className={`${styles.btn} ${styles.google}`}
-      >
-        تسجيل الدخول
-      </button>
-    );
-  }
-
-  if (providerList.length === 0) {
-    return (
-      <button
-        type="button"
-        disabled
-        className={styles.btn}
-      >
-        فعّل Google/Apple في .env
-      </button>
-    );
-  }
-
   return (
-    <div className={styles.stack}>
-      {providerList.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          onClick={() => signIn(p.id, { callbackUrl: "/play" })}
-          className={`${styles.btn} ${p.id === "apple" ? styles.apple : styles.google}`}
+    <>
+      <div className={styles.stack}>
+        <form
+          className={styles.form}
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (busy) return;
+            setError(null);
+            setBusy(true);
+            try {
+              if (remember) {
+                try {
+                  localStorage.setItem("lockgame_login_identifier_v1", identifier);
+                } catch {}
+              }
+              const res = await signIn("credentials", {
+                redirect: false,
+                identifier,
+                password,
+                callbackUrl: "/play",
+              });
+              if (!res || res.error) {
+                setError("بيانات الدخول غير صحيحة.");
+                return;
+              }
+              window.location.href = res.url || "/play";
+            } finally {
+              setBusy(false);
+            }
+          }}
         >
-          <span className={styles.icon} aria-hidden="true">
-            {p.id === "apple" ? <AppleIcon /> : <GoogleIcon />}
-          </span>
-          <span>{p.id === "apple" ? "تسجيل دخول Apple" : "تسجيل دخول Google"}</span>
-        </button>
-      ))}
-    </div>
+          <label className={styles.field}>
+            <span className={styles.label}>يوزرنيم أو ايميل</span>
+            <input
+              className={styles.input}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="username"
+              inputMode="email"
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.label}>باسوورد</span>
+            <input
+              className={styles.input}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              type="password"
+            />
+          </label>
+          <label className={styles.checkRow}>
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            <span>تذكرني</span>
+          </label>
+          {error ? <div className={styles.error}>{error}</div> : null}
+          <button type="submit" className={styles.btnPrimary} disabled={busy}>
+            تسجيل الدخول
+          </button>
+          <button type="button" className={styles.btnSecondary} onClick={() => setRegisterOpen(true)} disabled={busy}>
+            إنشاء حساب
+          </button>
+        </form>
+
+        {providers && providerList.length ? <div className={styles.fastLabel}>سجل اسرع:</div> : null}
+
+        {providers && providerList.length ? (
+          <div className={styles.stack}>
+            {providerList.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => signIn(p.id, { callbackUrl: "/play" })}
+                className={`${styles.btn} ${p.id === "apple" ? styles.apple : styles.google}`}
+              >
+                <span className={styles.icon} aria-hidden="true">
+                  {p.id === "apple" ? <AppleIcon /> : <GoogleIcon />}
+                </span>
+                <span>{p.id === "apple" ? "تسجيل دخول Apple" : "تسجيل دخول Google"}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {registerOpen ? (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <div className={styles.modalTitle}>إنشاء حساب</div>
+              <button type="button" className={styles.modalClose} onClick={() => setRegisterOpen(false)} disabled={regBusy}>
+                إغلاق
+              </button>
+            </div>
+            <form
+              className={styles.modalBody}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (regBusy) return;
+                setRegError(null);
+                setRegBusy(true);
+                try {
+                  const r = await fetch("/api/auth/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: regUsername, email: regEmail, password: regPassword }),
+                  });
+                  const data = (await r.json().catch(() => null)) as { error?: string } | null;
+                  if (!r.ok) {
+                    const code = data && typeof data.error === "string" ? data.error : "server_error";
+                    if (code === "username_taken") setRegError("اليوزرنيم مستخدم.");
+                    else if (code === "already_registered") setRegError("الحساب موجود مسبقاً.");
+                    else if (code === "bad_username") setRegError("اليوزرنيم لازم 3-18 (حروف/أرقام/_).");
+                    else if (code === "bad_email") setRegError("الإيميل غير صحيح.");
+                    else if (code === "bad_password") setRegError("الباسوورد لازم 8 أحرف أو أكثر.");
+                    else setRegError("تعذر إنشاء الحساب.");
+                    return;
+                  }
+
+                  if (regRemember) {
+                    try {
+                      localStorage.setItem("lockgame_login_identifier_v1", regUsername.trim());
+                    } catch {}
+                  }
+
+                  const res = await signIn("credentials", {
+                    redirect: false,
+                    identifier: regUsername.trim(),
+                    password: regPassword,
+                    callbackUrl: "/play",
+                  });
+                  if (!res || res.error) {
+                    setRegisterOpen(false);
+                    return;
+                  }
+                  window.location.href = res.url || "/play";
+                } finally {
+                  setRegBusy(false);
+                }
+              }}
+            >
+              <label className={styles.field}>
+                <span className={styles.label}>يوزرنيم</span>
+                <input className={styles.input} value={regUsername} onChange={(e) => setRegUsername(e.target.value)} autoComplete="username" />
+              </label>
+              <label className={styles.field}>
+                <span className={styles.label}>ايميل</span>
+                <input className={styles.input} value={regEmail} onChange={(e) => setRegEmail(e.target.value)} autoComplete="email" inputMode="email" />
+              </label>
+              <label className={styles.field}>
+                <span className={styles.label}>باسوورد</span>
+                <input
+                  className={styles.input}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  autoComplete="new-password"
+                  type="password"
+                />
+              </label>
+              <label className={styles.checkRow}>
+                <input type="checkbox" checked={regRemember} onChange={(e) => setRegRemember(e.target.checked)} />
+                <span>تذكرني</span>
+              </label>
+              {regError ? <div className={styles.error}>{regError}</div> : null}
+              <button type="submit" className={styles.btnPrimary} disabled={regBusy}>
+                إنشاء
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 

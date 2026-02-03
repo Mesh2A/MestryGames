@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     pack_299: { title: "Coins pack 2.99 SAR", priceSar: 2.99, unitAmount: 299, coins: 45, nameChangeCredits: 0 },
     pack_499: { title: "Coins pack 4.99 SAR", priceSar: 4.99, unitAmount: 499, coins: 80, nameChangeCredits: 0 },
     pack_999: { title: "Coins pack 9.99 SAR", priceSar: 9.99, unitAmount: 999, coins: 170, nameChangeCredits: 0 },
+    pack_1999: { title: "Coins pack 19.99 SAR", priceSar: 19.99, unitAmount: 1999, coins: 400, nameChangeCredits: 0 },
     name_499: { title: "Name change", priceSar: 4.99, unitAmount: 499, coins: 0, nameChangeCredits: 1 },
   };
 
