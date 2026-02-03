@@ -43,7 +43,11 @@ async function createCredentialsProfileTx(tx: Prisma.TransactionClient, args: { 
 }
 
 export async function POST(req: NextRequest) {
-  await ensureDbReady();
+  try {
+    await ensureDbReady();
+  } catch {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
   let body: unknown = null;
   try {
     body = await req.json();
@@ -86,6 +90,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
     const code = (e as { code?: unknown }).code;
+    if (code === "P1001") return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
     if (code === "P2002") return NextResponse.json({ error: "conflict" }, { status: 409 });
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }

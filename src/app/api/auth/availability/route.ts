@@ -10,7 +10,11 @@ function normalizeUsername(username: string) {
 }
 
 export async function GET(req: NextRequest) {
-  await ensureDbReady();
+  try {
+    await ensureDbReady();
+  } catch {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
   const { searchParams } = new URL(req.url);
   const usernameRaw = searchParams.get("username") || "";
   const emailRaw = searchParams.get("email") || "";

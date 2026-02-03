@@ -12,11 +12,9 @@ export async function ensureDbReady() {
   if (!globalForEnsure.ensuring) {
     globalForEnsure.ensuring = (async () => {
       await prisma.$executeRawUnsafe('ALTER TABLE "GameProfile" ADD COLUMN IF NOT EXISTS "contactEmail" TEXT');
-      try {
-        await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "GameProfile_contactEmail_key" ON "GameProfile"("contactEmail")');
-      } catch {}
-    })().finally(() => {
+      await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "GameProfile_contactEmail_key" ON "GameProfile"("contactEmail")');
       globalForEnsure.ensured = true;
+    })().finally(() => {
       globalForEnsure.ensuring = null;
     });
   }

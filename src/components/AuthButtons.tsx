@@ -200,6 +200,7 @@ export default function AuthButtons() {
                     else if (code === "bad_username") setRegError("اليوزرنيم لازم 3-18 (حروف/أرقام/_).");
                     else if (code === "bad_email") setRegError("الإيميل غير صحيح.");
                     else if (code === "bad_password") setRegError("الباسوورد لازم 8 أحرف أو أكثر.");
+                    else if (code === "storage_unavailable") setRegError("السيرفر مشغول الآن. حاول بعد قليل.");
                     else setRegError("تعذر إنشاء الحساب.");
                     return;
                   }

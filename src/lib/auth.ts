@@ -17,7 +17,11 @@ const providers: NextAuthOptions["providers"] = [
       password: { label: "Password", type: "password" },
     },
     async authorize(credentials) {
-      await ensureDbReady();
+      try {
+        await ensureDbReady();
+      } catch {
+        return null;
+      }
       const identifier = typeof credentials?.identifier === "string" ? credentials.identifier.trim() : "";
       const password = typeof credentials?.password === "string" ? credentials.password : "";
       if (!identifier || !password) return null;
