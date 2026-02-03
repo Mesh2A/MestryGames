@@ -2914,6 +2914,8 @@
           mode: "normal",
           paidHintType: "reveal",
           unlocks: { circle: false, square: false },
+          lastScreen: "home",
+          lastStage: null,
           seenCoach: [],
           createdAt: 0,
           lastWriteAt: 0,
@@ -2928,8 +2930,27 @@
         base.unlocked = typeof s.unlocked === "number" ? clamp(s.unlocked, 1, TOTAL_LEVELS) : 1;
         base.completed = Array.isArray(s.completed) ? s.completed.filter((n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_LEVELS) : [];
         base.hintsUsed = Array.isArray(s.hintsUsed) ? s.hintsUsed.filter((n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_LEVELS) : [];
-        base.theme = s.theme === "cream" || s.theme === "royal" || s.theme === "ocean" ? s.theme : s.theme === "dark" ? "ocean" : "ocean";
+        base.theme =
+          s.theme === "cream" || s.theme === "royal" || s.theme === "ocean" || s.theme === "crimson"
+            ? s.theme
+            : s.theme === "dark"
+            ? "ocean"
+            : "ocean";
         base.lang = s.lang === "en" ? "en" : "ar";
+        base.lastScreen = s.lastScreen === "map" || s.lastScreen === "level" ? s.lastScreen : "home";
+        if (
+          s.lastStage &&
+          typeof s.lastStage === "object" &&
+          ("kind" in s.lastStage || "id" in s.lastStage) &&
+          (s.lastStage.kind === "level" || s.lastStage.kind === "daily") &&
+          typeof s.lastStage.id === "number" &&
+          Number.isFinite(s.lastStage.id)
+        ) {
+          const id = Math.max(1, Math.floor(s.lastStage.id));
+          base.lastStage = { kind: s.lastStage.kind, id };
+        } else {
+          base.lastStage = null;
+        }
 
         base.coins = typeof s.coins === "number" && Number.isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : 0;
         base.coinsEarnedTotal =
@@ -4258,9 +4279,21 @@
         el.map.classList.remove("active");
         el.level.classList.remove("active");
         screen.classList.add("active");
-        if (screen === el.home) setScreen("home");
-        else if (screen === el.map) setScreen("map");
-        else if (screen === el.level) setScreen("level");
+        let name = "home";
+        if (screen === el.map) name = "map";
+        else if (screen === el.level) name = "level";
+        setScreen(name);
+        if (app && app.state) {
+          app.state.lastScreen = name;
+          if (name === "level" && app.stage && typeof app.stage === "object") {
+            const kind = app.stage.kind === "daily" ? "daily" : "level";
+            const id = typeof app.stage.id === "number" && Number.isFinite(app.stage.id) ? Math.max(1, Math.floor(app.stage.id)) : 1;
+            app.state.lastStage = { kind, id };
+          } else {
+            app.state.lastStage = null;
+          }
+          saveStateSilent(app.state);
+        }
       }
 
       function renderProgress() {
@@ -6976,46 +7009,73 @@
         const remote = await cloudGet();
         if (!remote) return;
 
-        let changed = false;
-        if (typeof remote.coins === "number" && remote.coins !== app.state.coins) {
-          app.state.coins = remote.coins;
-          changed = true;
-          updateCoinsUI();
-        }
-        if (typeof remote.hintTokens === "number" && remote.hintTokens !== app.state.hintTokens) {
-          app.state.hintTokens = remote.hintTokens;
-          changed = true;
-        }
-        if (typeof remote.displayName === "string" && remote.displayName !== app.state.displayName) {
-          app.state.displayName = remote.displayName;
-          changed = true;
-          updateUserCenter();
-        }
-        if (typeof remote.photo === "string" && remote.photo !== app.state.photo) {
-          app.state.photo = remote.photo;
-          changed = true;
-          if (friendsUI.meAvatar) {
-            const name = firstNameFromDisplayName(String(app.state.displayName || "")) || "P";
-            const a = String(name).trim().slice(0, 1).toUpperCase() || "P";
-            setAvatarSquare(friendsUI.meAvatar, app.state.photo, a);
+        const screen = document.body && document.body.dataset ? document.body.dataset.screen || "home" : "home";
+        if (screen === "level") {
+          let changed = false;
+          if (typeof remote.coins === "number" && remote.coins !== app.state.coins) {
+            app.state.coins = remote.coins;
+            changed = true;
+            updateCoinsUI();
           }
-        }
-        if (remote.nameChange && typeof remote.nameChange === "object") {
-          const rCredits = typeof remote.nameChange.credits === "number" ? Math.max(0, Math.floor(remote.nameChange.credits)) : 0;
-          const rFreeUsed = !!remote.nameChange.freeUsed;
-          app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
-          if (app.state.nameChange.credits !== rCredits || !!app.state.nameChange.freeUsed !== rFreeUsed) {
-            app.state.nameChange.credits = rCredits;
-            app.state.nameChange.freeUsed = rFreeUsed;
+          if (typeof remote.hintTokens === "number" && remote.hintTokens !== app.state.hintTokens) {
+            app.state.hintTokens = remote.hintTokens;
             changed = true;
           }
+          if (typeof remote.displayName === "string" && remote.displayName !== app.state.displayName) {
+            app.state.displayName = remote.displayName;
+            changed = true;
+            updateUserCenter();
+          }
+          if (typeof remote.photo === "string" && remote.photo !== app.state.photo) {
+            app.state.photo = remote.photo;
+            changed = true;
+            if (friendsUI.meAvatar) {
+              const name = firstNameFromDisplayName(String(app.state.displayName || "")) || "P";
+              const a = String(name).trim().slice(0, 1).toUpperCase() || "P";
+              setAvatarSquare(friendsUI.meAvatar, app.state.photo, a);
+            }
+          }
+          if (remote.nameChange && typeof remote.nameChange === "object") {
+            const rCredits = typeof remote.nameChange.credits === "number" ? Math.max(0, Math.floor(remote.nameChange.credits)) : 0;
+            const rFreeUsed = !!remote.nameChange.freeUsed;
+            app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
+            if (app.state.nameChange.credits !== rCredits || !!app.state.nameChange.freeUsed !== rFreeUsed) {
+              app.state.nameChange.credits = rCredits;
+              app.state.nameChange.freeUsed = rFreeUsed;
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            saveStateSilent(app.state);
+            updateSettingsUI();
+            updateShopUI();
+          }
+          return;
         }
 
-        if (changed) {
-          saveStateSilent(app.state);
-          updateSettingsUI();
-          updateShopUI();
-        }
+        const remoteTs = typeof remote.lastWriteAt === "number" && Number.isFinite(remote.lastWriteAt) ? remote.lastWriteAt : 0;
+        const localTs = typeof app.state.lastWriteAt === "number" && Number.isFinite(app.state.lastWriteAt) ? app.state.lastWriteAt : 0;
+        if (remoteTs && remoteTs <= localTs) return;
+
+        const keepTheme = app.state.theme;
+        const keepLang = app.state.lang;
+        const keepLastScreen = app.state.lastScreen;
+        const keepLastStage = app.state.lastStage;
+
+        app.state = remote;
+        app.state.theme = keepTheme;
+        app.state.lang = keepLang;
+        app.state.lastScreen = keepLastScreen;
+        app.state.lastStage = keepLastStage;
+
+        saveStateSilent(app.state);
+        updateCoinsUI();
+        updateUserCenter();
+        updateDailyUI();
+        updateSettingsUI();
+        updateShopUI();
+        renderMap();
       }
 
       let livePollId = null;
@@ -7798,8 +7858,25 @@
         enableMapControls();
         buildBgPattern();
         renderMap();
-        setScreen("home");
         consumeCheckoutReturn();
+        const initialScreen = app.state.lastScreen === "map" || app.state.lastScreen === "level" ? app.state.lastScreen : "home";
+        if (initialScreen === "level" && app.state.lastStage && typeof app.state.lastStage === "object") {
+          const kind = app.state.lastStage.kind === "daily" ? "daily" : "level";
+          const idRaw = typeof app.state.lastStage.id === "number" && Number.isFinite(app.state.lastStage.id) ? app.state.lastStage.id : 1;
+          const id = clamp(Math.floor(idRaw), 1, TOTAL_LEVELS);
+          if (kind === "level") {
+            if (id <= (app.state.unlocked || 1)) openStage({ kind, id });
+            else goMap();
+          } else {
+            const dailyIdRaw = app.state.dailyChallenge && typeof app.state.dailyChallenge.id === "number" ? app.state.dailyChallenge.id : id;
+            const dailyId = Math.max(1, Math.floor(dailyIdRaw));
+            openStage({ kind: "daily", id: dailyId });
+          }
+        } else if (initialScreen === "map") {
+          goMap();
+        } else {
+          goHome();
+        }
         updateDailyUI();
         setInterval(() => updateDailyUI(), 1000);
         startLivePolling();

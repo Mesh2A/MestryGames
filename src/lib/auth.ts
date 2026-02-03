@@ -6,6 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { ensureDbReady } from "@/lib/ensureDb";
 
+function normalizeIdentifier(input: string) {
+  const raw = String(input || "").trim();
+  const cleaned = raw.replace(/\s+/g, "");
+  const lower = cleaned.toLowerCase();
+  const isEmail = lower.includes("@");
+  return { isEmail, value: lower };
+}
+
 const maxAgeDays = Math.max(1, Math.floor(Number(process.env.AUTH_MAX_AGE_DAYS || 30)));
 const maxAgeSeconds = maxAgeDays * 24 * 60 * 60;
 
@@ -22,18 +30,17 @@ const providers: NextAuthOptions["providers"] = [
       } catch {
         return null;
       }
-      const identifier = typeof credentials?.identifier === "string" ? credentials.identifier.trim() : "";
+      const identifier = typeof credentials?.identifier === "string" ? credentials.identifier : "";
       const password = typeof credentials?.password === "string" ? credentials.password : "";
       if (!identifier || !password) return null;
 
-      const isEmail = identifier.includes("@");
-      const identifierLower = identifier.toLowerCase();
-      const where = isEmail
+      const normalized = normalizeIdentifier(identifier);
+      const where = normalized.isEmail
         ? {
-            OR: [{ email: identifierLower }, { contactEmail: identifierLower }],
+            OR: [{ email: normalized.value }, { contactEmail: normalized.value }],
             passwordHash: { not: null },
           }
-        : { username: identifierLower, passwordHash: { not: null } };
+        : { username: normalized.value, passwordHash: { not: null } };
 
       const profile = await prisma.gameProfile.findFirst({ where, orderBy: { createdAt: "desc" } });
       if (!profile?.passwordHash) return null;

@@ -94,14 +94,16 @@ export default function AuthButtons() {
             setError(null);
             setBusy(true);
             try {
+              const raw = String(identifier || "").trim();
+              const normalizedIdentifier = raw.replace(/\s+/g, "").toLowerCase();
               if (remember) {
                 try {
-                  localStorage.setItem("lockgame_login_identifier_v1", identifier);
+                  localStorage.setItem("lockgame_login_identifier_v1", normalizedIdentifier);
                 } catch {}
               }
               const res = await signIn("credentials", {
                 redirect: false,
-                identifier,
+                identifier: normalizedIdentifier,
                 password,
                 callbackUrl: "/play",
               });
