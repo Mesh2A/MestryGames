@@ -1,4 +1,3 @@
-import { isAdminEmail } from "@/lib/admin";
 import { hashPassword } from "@/lib/password";
 import { generatePublicId } from "@/lib/profile";
 import { prisma } from "@/lib/prisma";
@@ -12,47 +11,34 @@ function normalizeUsername(username: string) {
     .replace(/\s+/g, "");
 }
 
-async function ensureProfileTx(tx: Prisma.TransactionClient, email: string) {
-  const admin = isAdminEmail(email);
-  let existing = await tx.gameProfile.findUnique({ where: { email } });
-  if (existing?.publicId && (!admin || existing.publicId === "M1")) return existing;
+function credentialsEmailForUsername(username: string) {
+  return `${username}@mestry.local`;
+}
+
+async function createCredentialsProfileTx(tx: Prisma.TransactionClient, args: { username: string; contactEmail: string; passwordHash: string }) {
+  const email = credentialsEmailForUsername(args.username);
 
   for (let attempt = 0; attempt < 7; attempt++) {
-    const publicId = admin ? "M1" : generatePublicId(11);
+    const publicId = generatePublicId(11);
     try {
-      if (!existing) {
-        return await tx.gameProfile.create({
-          data: { email, publicId, state: {} },
-        });
-      }
-
-      return await tx.gameProfile.update({
-        where: { email },
-        data: { publicId },
+      return await tx.gameProfile.create({
+        data: {
+          email,
+          contactEmail: args.contactEmail,
+          username: args.username,
+          passwordHash: args.passwordHash,
+          publicId,
+          state: { displayName: args.username },
+        },
       });
     } catch (e) {
       const code = (e as { code?: unknown }).code;
-      if (code === "P2002") {
-        if (admin) {
-          const owner = await tx.gameProfile.findUnique({ where: { publicId: "M1" } });
-          if (owner?.email === email) return owner;
-          if (owner) {
-            await tx.gameProfile.update({
-              where: { email: owner.email },
-              data: { publicId: generatePublicId(11) },
-            });
-          }
-          continue;
-        }
-        existing = await tx.gameProfile.findUnique({ where: { email } });
-        if (existing?.publicId) return existing;
-        continue;
-      }
+      if (code === "P2002") continue;
       throw e;
     }
   }
 
-  throw new Error("public_id_unavailable");
+  throw new Error("create_profile_failed");
 }
 
 export async function POST(req: NextRequest) {
@@ -81,20 +67,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
-      const usernameOwner = await tx.gameProfile.findFirst({ where: { username }, select: { email: true } });
-      if (usernameOwner && usernameOwner.email !== email) return { ok: false as const, error: "username_taken" as const };
+      const usernameOwner = await tx.gameProfile.findFirst({ where: { username }, select: { id: true } });
+      if (usernameOwner) return { ok: false as const, error: "username_taken" as const };
 
-      const existing = await tx.gameProfile.findUnique({
-        where: { email },
-        select: { email: true, passwordHash: true, username: true },
-      });
-      if (existing?.passwordHash) return { ok: false as const, error: "already_registered" as const };
-
-      await ensureProfileTx(tx, email);
-      await tx.gameProfile.update({
-        where: { email },
-        data: { username, passwordHash },
-      });
+      await createCredentialsProfileTx(tx, { username, contactEmail: email, passwordHash });
       return { ok: true as const };
     });
 

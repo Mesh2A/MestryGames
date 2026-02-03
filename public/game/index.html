@@ -3075,7 +3075,8 @@
           const data = await r.json().catch(() => null);
           const email = data && data.user && typeof data.user.email === "string" ? data.user.email : "";
           if (!email) return null;
-          return { email };
+          const name = data && data.user && typeof data.user.name === "string" ? data.user.name : "";
+          return { email, name: String(name || "").trim() };
         } catch {
           return null;
         }
@@ -7630,6 +7631,10 @@
         }
 
         app.state = loadState();
+        if (u && u.name && !String(app.state.displayName || "").trim()) {
+          app.state.displayName = u.name;
+          saveStateSilent(app.state);
+        }
         updateUserCenter();
 
         const remote = await cloudGet();
@@ -7648,6 +7653,12 @@
           }
         } else if (cloud.enabled) {
           cloudPut(app.state).catch(() => {});
+        }
+
+        if (u && u.name && !String(app.state.displayName || "").trim()) {
+          app.state.displayName = u.name;
+          saveStateSilent(app.state);
+          if (cloud.enabled) cloudPut(app.state).catch(() => {});
         }
 
         if (!app.state.createdAt) {

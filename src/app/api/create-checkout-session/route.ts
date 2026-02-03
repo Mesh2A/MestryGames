@@ -1,4 +1,5 @@
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -17,6 +18,8 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const profile = await prisma.gameProfile.findUnique({ where: { email }, select: { contactEmail: true } });
+  const customerEmail = profile?.contactEmail || email;
 
   let body: CreateCheckoutBody = {};
   try {
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
   form.set("line_items[0][price_data][product_data][name]", pack.title || `Coins pack ${pack.priceSar} SAR`);
   form.set("line_items[0][price_data][unit_amount]", String(pack.unitAmount));
   form.set("line_items[0][quantity]", "1");
-  form.set("customer_email", email);
+  form.set("customer_email", customerEmail);
   form.set("client_reference_id", email);
   form.set("metadata[packId]", packId);
   form.set("metadata[coins]", String(pack.coins));

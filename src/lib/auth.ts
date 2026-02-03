@@ -21,11 +21,15 @@ const providers: NextAuthOptions["providers"] = [
       if (!identifier || !password) return null;
 
       const isEmail = identifier.includes("@");
+      const identifierLower = identifier.toLowerCase();
       const where = isEmail
-        ? { email: identifier.toLowerCase() }
-        : { username: identifier.toLowerCase() };
+        ? {
+            OR: [{ email: identifierLower }, { contactEmail: identifierLower }],
+            passwordHash: { not: null },
+          }
+        : { username: identifierLower, passwordHash: { not: null } };
 
-      const profile = await prisma.gameProfile.findFirst({ where });
+      const profile = await prisma.gameProfile.findFirst({ where, orderBy: { createdAt: "desc" } });
       if (!profile?.passwordHash) return null;
       if (!verifyPassword(password, profile.passwordHash)) return null;
 
