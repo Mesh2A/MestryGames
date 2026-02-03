@@ -9,7 +9,7 @@
     "vercel-build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "deploy:vercel": "npx vercel deploy --prod --yes --token \"$VERCEL_TOKEN\""
+    "deploy:vercel": "npx -y vercel@50.9.6 deploy --prod --yes --token \"$VERCEL_TOKEN\""
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.3.0",
