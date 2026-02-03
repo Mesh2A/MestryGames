@@ -5565,12 +5565,14 @@
           const data = await r.json().catch(() => ({}));
           const csrfToken = data && typeof data.csrfToken === "string" ? data.csrfToken : "";
           if (!csrfToken) {
-            window.location.href = "/";
+            if (window.top) window.top.location.href = "/";
+            else window.location.href = "/";
             return;
           }
           const form = document.createElement("form");
           form.method = "POST";
           form.action = "/api/auth/signout";
+          form.target = "_top";
           const csrf = document.createElement("input");
           csrf.type = "hidden";
           csrf.name = "csrfToken";
@@ -5584,7 +5586,8 @@
           document.body.appendChild(form);
           form.submit();
         } catch {
-          window.location.href = "/";
+          if (window.top) window.top.location.href = "/";
+          else window.location.href = "/";
         }
       }
 
