@@ -348,6 +348,51 @@
         font-size: 20px;
         font-weight: 900;
       }
+      .profileDropBackdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 160ms ease;
+      }
+      .profileDropBackdrop.show {
+        pointer-events: auto;
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .profileDrop {
+        position: absolute;
+        top: var(--pTop, 76px);
+        left: var(--pLeft, 12px);
+        width: min(560px, calc(100vw - 24px));
+        max-height: calc(100vh - var(--pTop, 76px) - 12px);
+        overflow: auto;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: linear-gradient(180deg, rgba(12, 16, 30, 0.92), rgba(12, 16, 30, 0.72));
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+        transform: translateY(-14px);
+        opacity: 0;
+        transition: transform 180ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 160ms ease;
+      }
+      .profileDropBackdrop.show .profileDrop {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      .profileDropHead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .profileDropBody {
+        padding: 14px;
+      }
       .userCenter {
         position: absolute;
         left: 50%;
@@ -2157,6 +2202,60 @@
           <button id="homeHeaderBtn" class="btn ghost" type="button">الرئيسية</button>
         </div>
       </header>
+      <div id="profileDropBackdrop" class="profileDropBackdrop" aria-hidden="true">
+        <div id="profileDrop" class="profileDrop" role="dialog" aria-label="Profile">
+          <div class="profileDropHead">
+            <div id="profileDropTitle" class="h">البروفايل</div>
+            <button id="profileDropClose" class="btn ghost" type="button">إغلاق</button>
+          </div>
+          <div class="profileDropBody">
+            <div class="profileWrap">
+              <div class="profileTop">
+                <div id="profileAvatar" class="profileAvatar">P</div>
+                <div class="profileMeta">
+                  <div class="profileNameRow">
+                    <div id="profileName" class="profileName">—</div>
+                    <div id="profileFlag" class="profileFlag" aria-hidden="true"></div>
+                  </div>
+                  <div class="profileLine"><span class="profileK">ID</span> <span id="profileId" class="profileV">—</span></div>
+                  <div class="profileLine"><span class="profileK">تاريخ الإنشاء</span> <span id="profileCreatedAt" class="profileV">—</span></div>
+                  <div class="profileLine"><span class="profileK">إجمالي العملات المكتسبة</span> <span id="profileCoinsEarned" class="profileV">0</span></div>
+                </div>
+              </div>
+              <div class="profileGrid">
+                <div class="profileCard">
+                  <div class="k">العملات الحالية</div>
+                  <div id="profileCoinsNow" class="v">0</div>
+                </div>
+                <div class="profileCard">
+                  <div class="k">المكتملة</div>
+                  <div id="profileSolved" class="v">0</div>
+                </div>
+                <div class="profileCard">
+                  <div class="k">متوسط المحاولات</div>
+                  <div id="profileAvg" class="v">0</div>
+                </div>
+                <div class="profileCard">
+                  <div class="k">أفضل سلسلة</div>
+                  <div id="profileBest" class="v">0</div>
+                </div>
+                <div class="profileCard">
+                  <div class="k">سلسلة بدون تلميح</div>
+                  <div id="profileStreak" class="v">0</div>
+                </div>
+                <div class="profileCard">
+                  <div class="k">تلميحات</div>
+                  <div id="profileHints" class="v">0</div>
+                </div>
+                <div class="profileCard">
+                  <div class="k">الإنجازات</div>
+                  <div id="profileAch" class="v">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <main>
         <div id="bgPattern" class="bgPattern" aria-hidden="true"></div>
 
@@ -2342,24 +2441,6 @@
                     <div class="t" id="settingsModeK">وضع اللعب</div>
                     <button id="modeBtn" class="btn" type="button">عادي</button>
                   </div>
-                  <div class="statsGrid">
-                    <div class="statCard">
-                      <div id="statSolvedK" class="k">المكتملة</div>
-                      <div id="statSolvedV" class="v">0</div>
-                    </div>
-                    <div class="statCard">
-                      <div id="statAvgK" class="k">متوسط المحاولات</div>
-                      <div id="statAvgV" class="v">0</div>
-                    </div>
-                    <div class="statCard">
-                      <div id="statStreakK" class="k">سلسلة بدون تلميح</div>
-                      <div id="statStreakV" class="v">0</div>
-                    </div>
-                    <div class="statCard">
-                      <div id="statBestK" class="k">أفضل سلسلة</div>
-                      <div id="statBestV" class="v">0</div>
-                    </div>
-                  </div>
                 </div>
               </div>
               <div id="missionsContent" style="display:none">
@@ -2380,52 +2461,6 @@
                 <div style="margin-top:12px">
                   <div id="achTitle" class="t">الإنجازات</div>
                   <div id="achList" class="shopList"></div>
-                </div>
-              </div>
-              <div id="profileContent" style="display:none">
-                <div class="profileWrap">
-                  <div class="profileTop">
-                    <div id="profileAvatar" class="profileAvatar">P</div>
-                    <div class="profileMeta">
-                      <div class="profileNameRow">
-                        <div id="profileName" class="profileName">—</div>
-                        <div id="profileFlag" class="profileFlag" aria-hidden="true"></div>
-                      </div>
-                      <div class="profileLine"><span class="profileK">ID</span> <span id="profileId" class="profileV">—</span></div>
-                      <div class="profileLine"><span class="profileK">تاريخ الإنشاء</span> <span id="profileCreatedAt" class="profileV">—</span></div>
-                      <div class="profileLine"><span class="profileK">إجمالي العملات المكتسبة</span> <span id="profileCoinsEarned" class="profileV">0</span></div>
-                    </div>
-                  </div>
-                  <div class="profileGrid">
-                    <div class="profileCard">
-                      <div class="k">العملات الحالية</div>
-                      <div id="profileCoinsNow" class="v">0</div>
-                    </div>
-                    <div class="profileCard">
-                      <div class="k">المكتملة</div>
-                      <div id="profileSolved" class="v">0</div>
-                    </div>
-                    <div class="profileCard">
-                      <div class="k">متوسط المحاولات</div>
-                      <div id="profileAvg" class="v">0</div>
-                    </div>
-                    <div class="profileCard">
-                      <div class="k">أفضل سلسلة</div>
-                      <div id="profileBest" class="v">0</div>
-                    </div>
-                    <div class="profileCard">
-                      <div class="k">سلسلة بدون تلميح</div>
-                      <div id="profileStreak" class="v">0</div>
-                    </div>
-                    <div class="profileCard">
-                      <div class="k">تلميحات</div>
-                      <div id="profileHints" class="v">0</div>
-                    </div>
-                    <div class="profileCard">
-                      <div class="k">الإنجازات</div>
-                      <div id="profileAch" class="v">0</div>
-                    </div>
-                  </div>
                 </div>
               </div>
               <div id="nameContent" style="display:none">
@@ -2950,6 +2985,64 @@
         return m ? String(m[1]).toUpperCase() : "";
       }
 
+      const geoCountry = { code: "", at: 0, pending: false };
+      const GEO_COUNTRY_KEY = "lockgame_country_v1";
+
+      function readCachedCountryCode() {
+        try {
+          const raw = localStorage.getItem(GEO_COUNTRY_KEY);
+          if (!raw) return "";
+          const p = JSON.parse(raw);
+          const code = p && typeof p.code === "string" ? p.code.trim().toUpperCase() : "";
+          const at = p && typeof p.at === "number" && Number.isFinite(p.at) ? p.at : 0;
+          if (!/^[A-Z]{2}$/.test(code)) return "";
+          if (!at || Date.now() - at > 1000 * 60 * 60 * 24 * 14) return "";
+          geoCountry.code = code;
+          geoCountry.at = at;
+          return code;
+        } catch {
+          return "";
+        }
+      }
+
+      function writeCachedCountryCode(code) {
+        const c = String(code || "")
+          .trim()
+          .toUpperCase();
+        if (!/^[A-Z]{2}$/.test(c)) return;
+        geoCountry.code = c;
+        geoCountry.at = Date.now();
+        try {
+          localStorage.setItem(GEO_COUNTRY_KEY, JSON.stringify({ code: c, at: geoCountry.at }));
+        } catch {
+        }
+      }
+
+      function getCountryCode() {
+        if (geoCountry.code) return geoCountry.code;
+        const cached = readCachedCountryCode();
+        if (cached) return cached;
+        return guessRegionCode();
+      }
+
+      async function ensureCountryCode() {
+        if (geoCountry.code || geoCountry.pending) return;
+        if (readCachedCountryCode()) return;
+        geoCountry.pending = true;
+        try {
+          const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+          const t = ctl ? setTimeout(() => ctl.abort(), 2500) : null;
+          const r = await fetch("https://ipapi.co/json/", { method: "GET", signal: ctl ? ctl.signal : undefined });
+          if (t) clearTimeout(t);
+          const data = await r.json().catch(() => null);
+          const code = data && typeof data.country_code === "string" ? data.country_code.trim().toUpperCase() : "";
+          if (r.ok && /^[A-Z]{2}$/.test(code)) writeCachedCountryCode(code);
+        } catch {
+        } finally {
+          geoCountry.pending = false;
+        }
+      }
+
       function formatProfileDate(ms) {
         const t = Number(ms || 0);
         if (!Number.isFinite(t) || t <= 0) return "—";
@@ -2962,12 +3055,12 @@
       }
 
       function updateProfileUI() {
-        const isVisible = el.modalBackdrop && el.modalBackdrop.classList.contains("show") && modalMode === "profile";
-        if (!isVisible && !el.profileName) return;
+        const isVisible = el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show");
+        if (!isVisible) return;
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
         const name = firstNameFromDisplayName(displayName) || cloud.firstName || "Player";
         if (el.profileName) el.profileName.textContent = name;
-        if (el.profileFlag) el.profileFlag.textContent = flagEmojiFromRegion(guessRegionCode());
+        if (el.profileFlag) el.profileFlag.textContent = flagEmojiFromRegion(getCountryCode());
         if (el.profileAvatar) {
           const letter = String(name || "P")
             .trim()
@@ -3177,7 +3270,10 @@
         howHintNote: document.getElementById("howHintNote"),
         settingsContent: document.getElementById("settingsContent"),
         missionsContent: document.getElementById("missionsContent"),
-        profileContent: document.getElementById("profileContent"),
+        profileDropBackdrop: document.getElementById("profileDropBackdrop"),
+        profileDrop: document.getElementById("profileDrop"),
+        profileDropTitle: document.getElementById("profileDropTitle"),
+        profileDropClose: document.getElementById("profileDropClose"),
         settingsDesc: document.getElementById("settingsDesc"),
         nameChangeSub: document.getElementById("nameChangeSub"),
         changeNameBtn: document.getElementById("changeNameBtn"),
@@ -3727,6 +3823,8 @@
         if (el.mapBtn2) el.mapBtn2.textContent = t("mapBtn2");
         if (el.shareBtn) el.shareBtn.textContent = t("shareBtn");
         if (el.closeModalBtn) el.closeModalBtn.textContent = t("closeModalBtn");
+        if (el.profileDropTitle) el.profileDropTitle.textContent = t("profileModalTitle");
+        if (el.profileDropClose) el.profileDropClose.textContent = t("closeModalBtn");
         if (el.howLine1) el.howLine1.textContent = t("howLine1");
         if (el.howOk) el.howOk.textContent = t("howOk");
         if (el.howOk2) el.howOk2.textContent = t("howOk2");
@@ -4910,16 +5008,13 @@
         modalMode = mode;
         lastFocusedEl = document.activeElement;
         el.modalBackdrop.dataset.mode = mode;
-        if (el.modal)
-          el.modal.classList.toggle("compact", mode === "settings" || mode === "missions" || mode === "profile" || mode === "math" || mode === "name");
+        if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "missions" || mode === "math" || mode === "name");
         if (el.modalTitle) {
           el.modalTitle.textContent =
             mode === "settings"
               ? t("settingsTitle")
               : mode === "missions"
               ? t("missionsModalTitle")
-              : mode === "profile"
-              ? t("profileModalTitle")
               : mode === "shop"
               ? t("shopModalTitle")
               : mode === "math"
@@ -4934,14 +5029,12 @@
         if (el.assistContent) el.assistContent.style.display = mode === "assist" ? "" : "none";
         if (el.settingsContent) el.settingsContent.style.display = mode === "settings" ? "" : "none";
         if (el.missionsContent) el.missionsContent.style.display = mode === "missions" ? "" : "none";
-        if (el.profileContent) el.profileContent.style.display = mode === "profile" ? "" : "none";
         if (el.nameContent) el.nameContent.style.display = mode === "name" ? "" : "none";
         if (el.shopContent) el.shopContent.style.display = mode === "shop" ? "" : "none";
         if (el.mathContent) el.mathContent.style.display = mode === "math" ? "" : "none";
         updateThemeBtn();
         if (mode === "settings") updateSettingsUI();
         if (mode === "missions") updateSettingsUI();
-        if (mode === "profile") updateProfileUI();
         if (mode === "shop") updateShopUI();
         if (mode === "assist") {
           updateLevelFeaturesUI();
@@ -4962,14 +5055,6 @@
         } else if (mode === "missions" && el.modal && el.tasksBtn) {
           requestAnimationFrame(() => {
             const br = el.tasksBtn.getBoundingClientRect();
-            const mr = el.modal.getBoundingClientRect();
-            const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
-            const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
-            el.modal.style.setProperty("--modal-origin", `${ox}px ${oy}px`);
-          });
-        } else if (mode === "profile" && el.modal && el.playerAvatar) {
-          requestAnimationFrame(() => {
-            const br = el.playerAvatar.getBoundingClientRect();
             const mr = el.modal.getBoundingClientRect();
             const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
             const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
@@ -5000,7 +5085,31 @@
       }
 
       function openProfile() {
-        openModal("profile");
+        if (!el.profileDropBackdrop || !el.profileDrop) return;
+        const open = el.profileDropBackdrop.classList.contains("show");
+        if (open) {
+          closeProfileDrop();
+          return;
+        }
+        openProfileDrop();
+      }
+
+      function updateProfileDropPosition() {
+        if (!el.profileDrop || !el.playerAvatar) return;
+        const br = el.playerAvatar.getBoundingClientRect();
+        const top = Math.max(8, Math.floor(br.bottom + 10));
+        const desiredW = Math.min(560, Math.max(300, window.innerWidth - 24));
+        const left = clamp(Math.floor(br.right - desiredW), 12, Math.max(12, window.innerWidth - desiredW - 12));
+        el.profileDrop.style.setProperty("--pTop", `${top}px`);
+        el.profileDrop.style.setProperty("--pLeft", `${left}px`);
+      }
+
+      function openProfileDrop() {
+        if (!el.profileDropBackdrop || !el.profileDrop) return;
+        updateProfileDropPosition();
+        el.profileDropBackdrop.classList.add("show");
+        el.profileDropBackdrop.setAttribute("aria-hidden", "false");
+        ensureCountryCode().then(() => updateProfileUI()).catch(() => updateProfileUI());
         ensureMeLoaded()
           .then((me) => {
             if (me && typeof me.createdAt === "string") {
@@ -5013,6 +5122,13 @@
             updateProfileUI();
           })
           .catch(() => updateProfileUI());
+        if (el.profileDropClose) el.profileDropClose.focus();
+      }
+
+      function closeProfileDrop() {
+        if (!el.profileDropBackdrop) return;
+        el.profileDropBackdrop.classList.remove("show");
+        el.profileDropBackdrop.setAttribute("aria-hidden", "true");
       }
 
       function closeHowTo() {
@@ -5739,6 +5855,12 @@
       if (el.chatBtn) el.chatBtn.addEventListener("click", () => toggleChat());
       el.homeHeaderBtn.addEventListener("click", () => goHome());
       if (el.playerAvatar) el.playerAvatar.addEventListener("click", () => openProfile());
+      if (el.profileDropClose) el.profileDropClose.addEventListener("click", () => closeProfileDrop());
+      if (el.profileDropBackdrop) {
+        el.profileDropBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.profileDropBackdrop) closeProfileDrop();
+        });
+      }
 
       const friendsUI = {
         panel: document.getElementById("friendsPanel"),
@@ -6870,6 +6992,10 @@
           closeAvatarViewer();
           return;
         }
+        if (e.key === "Escape" && el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show")) {
+          closeProfileDrop();
+          return;
+        }
         if (e.key === "Escape" && chatState.open) {
           closeChat();
           return;
@@ -7098,6 +7224,7 @@
       window.addEventListener("resize", () => {
         clearTimeout(bgResizeT);
         bgResizeT = setTimeout(() => buildBgPattern(), 180);
+        if (el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show")) updateProfileDropPosition();
       });
 
       (async function bootstrap() {
@@ -7159,6 +7286,7 @@
 
         applyTheme(initialTheme);
         applyLanguage(app.state.lang || "ar");
+        ensureCountryCode().catch(() => {});
         applyReduceMotion();
         applyLockShape();
         updateCoinsUI();
