@@ -4,6 +4,7 @@ import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthOptions } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
+import { ensureDbReady } from "@/lib/ensureDb";
 
 const maxAgeDays = Math.max(1, Math.floor(Number(process.env.AUTH_MAX_AGE_DAYS || 30)));
 const maxAgeSeconds = maxAgeDays * 24 * 60 * 60;
@@ -16,6 +17,7 @@ const providers: NextAuthOptions["providers"] = [
       password: { label: "Password", type: "password" },
     },
     async authorize(credentials) {
+      await ensureDbReady();
       const identifier = typeof credentials?.identifier === "string" ? credentials.identifier.trim() : "";
       const password = typeof credentials?.password === "string" ? credentials.password : "";
       if (!identifier || !password) return null;

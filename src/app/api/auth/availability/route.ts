@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { ensureDbReady } from "@/lib/ensureDb";
 import { NextRequest, NextResponse } from "next/server";
 
 function normalizeUsername(username: string) {
@@ -9,6 +10,7 @@ function normalizeUsername(username: string) {
 }
 
 export async function GET(req: NextRequest) {
+  await ensureDbReady();
   const { searchParams } = new URL(req.url);
   const usernameRaw = searchParams.get("username") || "";
   const emailRaw = searchParams.get("email") || "";

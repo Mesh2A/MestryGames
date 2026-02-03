@@ -1,5 +1,6 @@
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ensureDbReady } from "@/lib/ensureDb";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -12,6 +13,7 @@ type StripeCreateSessionResponse = {
 };
 
 export async function POST(req: NextRequest) {
+  await ensureDbReady();
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
 

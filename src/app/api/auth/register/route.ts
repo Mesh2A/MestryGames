@@ -1,6 +1,7 @@
 import { hashPassword } from "@/lib/password";
 import { generatePublicId } from "@/lib/profile";
 import { prisma } from "@/lib/prisma";
+import { ensureDbReady } from "@/lib/ensureDb";
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 
@@ -42,6 +43,7 @@ async function createCredentialsProfileTx(tx: Prisma.TransactionClient, args: { 
 }
 
 export async function POST(req: NextRequest) {
+  await ensureDbReady();
   let body: unknown = null;
   try {
     body = await req.json();
