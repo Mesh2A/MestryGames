@@ -234,6 +234,11 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      @media (max-width: 900px) {
+        .playerName {
+          max-width: 160px;
+        }
+      }
       #tasksBtn {
         position: relative;
       }
@@ -2149,7 +2154,39 @@
       }
       @media (max-width: 900px) {
         header {
-          padding: 14px 16px;
+          padding: 12px 12px;
+          flex-wrap: wrap;
+          align-items: flex-start;
+        }
+        header .brand {
+          width: 100%;
+          justify-content: space-between;
+        }
+        header .actions {
+          width: 100%;
+          justify-content: flex-start;
+          flex-wrap: nowrap;
+          gap: 10px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 2px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        header .actions::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+        }
+        header .actions > * {
+          flex: 0 0 auto;
+        }
+        header .actions .btn {
+          padding: 8px 12px;
+          font-size: 12px;
+        }
+        header .actions .badgeMini {
+          padding: 7px 10px;
         }
         .screen {
           padding: 16px;
@@ -2162,10 +2199,16 @@
           height: 70px;
         }
         .pathInner {
-          min-width: max(100%, 980px);
+          min-width: 100%;
         }
         .friendsPanel {
           top: 70px;
+        }
+      }
+
+      @media (min-width: 901px) {
+        .pathInner {
+          min-width: max(100%, 980px);
         }
       }
     </style>
