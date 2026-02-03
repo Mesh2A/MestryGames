@@ -3,9 +3,12 @@
 import { useMemo, useState } from "react";
 
 type AdminUser = {
+  id: string;
   email: string;
+  displayName: string;
   firstName: string;
   coins: number;
+  stats: { streak: number; wins: number; unlocked: number; completed: number };
   createdAt: string;
   updatedAt: string;
 };
@@ -131,7 +134,13 @@ export default function AdminUsersPanel() {
                 <div style={{ fontWeight: 600 }}>{u.firstName}</div>
                 <div style={{ opacity: 0.9, fontSize: 12 }}>{u.coins} كوينز</div>
               </div>
-              <div style={{ fontSize: 11, opacity: 0.78, marginTop: 4 }}>{u.email}</div>
+              <div style={{ fontSize: 11, opacity: 0.78, marginTop: 4 }}>
+                {u.email}
+                {u.id ? ` — ID: ${u.id}` : ""}
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.72, marginTop: 4 }}>
+                فتح: {u.stats?.unlocked ?? 1} — فوز: {u.stats?.wins ?? 0} — ستريك: {u.stats?.streak ?? 0}
+              </div>
             </button>
           ))
         ) : (
@@ -144,9 +153,22 @@ export default function AdminUsersPanel() {
 
         {selected ? (
           <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-            <div style={{ fontWeight: 700 }}>{selected.firstName}</div>
+            <div style={{ fontWeight: 700 }}>
+              {selected.firstName}
+              {selected.id ? ` — ${selected.id}` : ""}
+            </div>
             <div style={{ fontSize: 12, opacity: 0.85 }}>{selected.email}</div>
+            <div style={{ fontSize: 12, opacity: 0.85 }}>{selected.displayName ? `الاسم: ${selected.displayName}` : "الاسم: —"}</div>
+            <div style={{ fontSize: 12, opacity: 0.85 }}>
+              تسجيل أول مرة: {new Date(selected.createdAt).toLocaleString()}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.85 }}>
+              آخر تحديث: {new Date(selected.updatedAt).toLocaleString()}
+            </div>
             <div style={{ fontSize: 12, opacity: 0.85 }}>الكوينز الحالية: {selected.coins}</div>
+            <div style={{ fontSize: 12, opacity: 0.85 }}>
+              إحصائيات: فتح {selected.stats?.unlocked ?? 1} — مكتملة {selected.stats?.completed ?? 0} — فوز {selected.stats?.wins ?? 0} — ستريك {selected.stats?.streak ?? 0}
+            </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" onClick={() => setOp("add")} disabled={loading} style={chipStyle(op === "add")}>

@@ -3,9 +3,10 @@ import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
+import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -13,8 +14,12 @@ export async function GET() {
   try {
     await ensureGameProfile(email);
 
+    const sinceRaw = req.nextUrl.searchParams.get("since");
+    const sinceMs = Math.max(0, Math.floor(parseInt(String(sinceRaw || "0"), 10) || 0));
+    const since = sinceMs ? new Date(sinceMs) : null;
+
     const events = await prisma.friendGiftEvent.findMany({
-      where: { toEmail: email },
+      where: { toEmail: email, ...(since ? { createdAt: { gt: since } } : {}) },
       orderBy: { createdAt: "desc" },
       take: 80,
       select: { fromEmail: true, coins: true, createdAt: true },

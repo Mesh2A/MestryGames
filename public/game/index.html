@@ -1444,6 +1444,53 @@
         opacity: 0.78;
         line-height: 1.5;
       }
+      .toastHost {
+        position: fixed;
+        top: 70px;
+        left: 16px;
+        right: auto;
+        z-index: 1100;
+        display: grid;
+        gap: 10px;
+        pointer-events: none;
+        width: min(420px, calc(100vw - 24px));
+      }
+      html[dir="ltr"] .toastHost {
+        right: 16px;
+        left: auto;
+      }
+      .toastCard {
+        pointer-events: auto;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.86);
+        backdrop-filter: blur(12px);
+        padding: 12px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        transform: translateY(-10px);
+        opacity: 0;
+        transition: opacity 220ms ease, transform 220ms ease;
+      }
+      .toastCard.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      .toastTitle {
+        font-weight: 800;
+        font-size: 13px;
+      }
+      .toastBody {
+        margin-top: 6px;
+        font-size: 12px;
+        opacity: 0.85;
+        line-height: 1.5;
+      }
+      .toastActions {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
       @media (max-width: 520px) {
         header .sub {
           display: none;
@@ -1464,6 +1511,17 @@
         }
         .friendsAddRow {
           flex-wrap: wrap;
+        }
+        .toastHost {
+          top: 64px;
+          left: 12px;
+          right: 12px;
+          width: auto;
+        }
+        html[dir="ltr"] .toastHost {
+          left: 12px;
+          right: 12px;
+          width: auto;
         }
       }
       @media (max-width: 900px) {
@@ -1576,7 +1634,6 @@
                     <button id="retryBtn" class="btn" type="button">إعادة المحاولة</button>
                   </div>
                   <div class="right">
-                    <button id="friendsBtnLevel" class="btn ghost" type="button">الأصدقاء</button>
                     <button id="backToMapBtn" class="btn ghost" type="button">رجوع للخريطة</button>
                   </div>
                 </div>
@@ -1643,6 +1700,13 @@
               <div id="settingsContent" style="display:none">
                 <div id="settingsDesc" class="tiny">غيّر لون الشاشة لراحة العين.</div>
                 <div class="shopList">
+                  <div class="shopRow">
+                    <div>
+                      <div class="t">تغيير الاسم</div>
+                      <div id="nameChangeSub" class="tiny">مجانًا لأول مرة</div>
+                    </div>
+                    <button id="changeNameBtn" class="btn primary" type="button">تغيير</button>
+                  </div>
                   <div class="shopRow">
                     <div>
                       <div id="settingsCoinsK" class="t">العملات</div>
@@ -1758,6 +1822,13 @@
                     </div>
                     <button id="buyPack999Btn" class="btn primary" type="button">Apple Pay</button>
                   </div>
+                  <div class="shopRow">
+                    <div>
+                      <div class="t">تغيير الاسم</div>
+                      <div class="tiny">4.99 ر.س</div>
+                    </div>
+                    <button id="buyNameChangeBtn" class="btn primary" type="button">Apple Pay</button>
+                  </div>
                 </div>
                 <div class="shopList" style="margin-top:14px">
                   <div class="shopRow sectionTitle">
@@ -1870,6 +1941,8 @@
       </div>
     </div>
 
+    <div id="toastHost" class="toastHost" aria-hidden="true"></div>
+
     <script>
       const STORAGE_KEY = "lockgame_v1";
       const TOTAL_LEVELS = 1000;
@@ -1893,6 +1966,8 @@
           lang: "ar",
           coins: 0,
           hintTokens: 0,
+          displayName: "",
+          nameChange: { freeUsed: false, credits: 0 },
           items: { reveal1: 0, reveal2: 0 },
           processedSessions: [],
           dailyReward: { lastClaimAt: 0 },
@@ -1925,6 +2000,15 @@
 
         base.coins = typeof s.coins === "number" && Number.isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : 0;
         base.hintTokens = typeof s.hintTokens === "number" && Number.isFinite(s.hintTokens) ? Math.max(0, Math.floor(s.hintTokens)) : 0;
+        base.displayName = typeof s.displayName === "string" ? String(s.displayName).replace(/\s+/g, " ").trim().slice(0, 18) : "";
+        base.nameChange = s.nameChange && typeof s.nameChange === "object" ? s.nameChange : base.nameChange;
+        base.nameChange.freeUsed = !!base.nameChange.freeUsed;
+        base.nameChange.credits =
+          typeof base.nameChange.credits === "number"
+            ? Math.max(0, Math.floor(base.nameChange.credits))
+            : typeof base.nameChange.credits === "string"
+              ? Math.max(0, Math.floor(parseInt(base.nameChange.credits, 10) || 0))
+              : 0;
         base.items = s.items && typeof s.items === "object" ? s.items : base.items;
         base.items.reveal1 = typeof base.items.reveal1 === "number" && Number.isFinite(base.items.reveal1) ? Math.max(0, Math.floor(base.items.reveal1)) : 0;
         base.items.reveal2 = typeof base.items.reveal2 === "number" && Number.isFinite(base.items.reveal2) ? Math.max(0, Math.floor(base.items.reveal2)) : 0;
@@ -2110,11 +2194,13 @@
 
       function updateUserCenter() {
         if (!el.userCenter) return;
-        if (!cloud.firstName) {
+        const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
+        const name = firstNameFromDisplayName(displayName) || cloud.firstName || "";
+        if (!name) {
           el.userCenter.style.display = "none";
           return;
         }
-        el.userCenter.textContent = cloud.firstName;
+        el.userCenter.textContent = name;
         el.userCenter.style.display = "";
       }
 
@@ -2287,6 +2373,8 @@
         howHintNote: document.getElementById("howHintNote"),
         settingsContent: document.getElementById("settingsContent"),
         settingsDesc: document.getElementById("settingsDesc"),
+        nameChangeSub: document.getElementById("nameChangeSub"),
+        changeNameBtn: document.getElementById("changeNameBtn"),
         settingsCoinsK: document.getElementById("settingsCoinsK"),
         settingsCoinsV: document.getElementById("settingsCoinsV"),
         settingsHintsK: document.getElementById("settingsHintsK"),
@@ -2327,6 +2415,7 @@
         pack999K: document.getElementById("pack999K"),
         pack999Sub: document.getElementById("pack999Sub"),
         buyPack999Btn: document.getElementById("buyPack999Btn"),
+        buyNameChangeBtn: document.getElementById("buyNameChangeBtn"),
         featuresTitle: document.getElementById("featuresTitle"),
         featuresSub: document.getElementById("featuresSub"),
         featReveal1K: document.getElementById("featReveal1K"),
@@ -3510,6 +3599,22 @@
       function updateSettingsUI() {
         if (el.settingsCoinsV) el.settingsCoinsV.textContent = String(app.state.coins || 0);
         if (el.hintTokensV) el.hintTokensV.textContent = String(app.state.hintTokens || 0);
+        if (el.nameChangeSub || el.changeNameBtn) {
+          if (!cloud.enabled) {
+            if (el.nameChangeSub) el.nameChangeSub.textContent = "سجّل دخولك لتغيير الاسم.";
+            if (el.changeNameBtn) el.changeNameBtn.disabled = true;
+          } else {
+            app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
+            const freeUsed = !!app.state.nameChange.freeUsed;
+            const credits = typeof app.state.nameChange.credits === "number" ? Math.max(0, Math.floor(app.state.nameChange.credits)) : 0;
+            if (el.nameChangeSub) {
+              if (!freeUsed) el.nameChangeSub.textContent = "مجانًا لأول مرة";
+              else if (credits > 0) el.nameChangeSub.textContent = `متاح (${credits})`;
+              else el.nameChangeSub.textContent = "يتطلب شراء (4.99 ر.س)";
+            }
+            if (el.changeNameBtn) el.changeNameBtn.disabled = false;
+          }
+        }
 
         if (el.motionBtn) el.motionBtn.textContent = t("motionBtn", { on: !!app.state.reduceMotion });
         if (el.modeBtn) el.modeBtn.textContent = t("modeBtn", { mode: app.state.mode || "normal" });
@@ -3569,6 +3674,7 @@
         if (el.buyPack299Btn) el.buyPack299Btn.textContent = t("applePayBtn");
         if (el.buyPack499Btn) el.buyPack499Btn.textContent = t("applePayBtn");
         if (el.buyPack999Btn) el.buyPack999Btn.textContent = t("applePayBtn");
+        if (el.buyNameChangeBtn) el.buyNameChangeBtn.textContent = t("applePayBtn");
 
         const inLevel = el.level && el.level.classList.contains("active") && app.stage && !app.session.over;
         const n1 = app.state.items && app.state.items.reveal1 ? app.state.items.reveal1 : 0;
@@ -4367,6 +4473,50 @@
         openModal("shop");
       }
 
+      async function changeNameFlow() {
+        if (!cloud.enabled) {
+          enqueueToast({ title: "تغيير الاسم", body: "سجّل دخولك أولاً.", autoMs: 2400 });
+          return;
+        }
+        try {
+          const info = await friendsJson("/api/profile/name", { method: "GET" });
+          if (!info.ok || !info.data) {
+            enqueueToast({ title: "فشل", body: "فشل تحميل حالة تغيير الاسم.", autoMs: 2400 });
+            return;
+          }
+          const current = (info.data && typeof info.data.displayName === "string" ? info.data.displayName : app.state.displayName || "").trim();
+          const next = window.prompt("اكتب اسمك الجديد (2-18 حرف)", current || "");
+          if (!next) return;
+          const r = await friendsJson("/api/profile/name", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ displayName: String(next) }),
+          });
+          if (!r.ok) {
+            if (r.status === 402) {
+              enqueueToast({
+                title: "تغيير الاسم",
+                body: "يتطلب شراء تغيير الاسم.",
+                actions: [{ label: "المشتريات", primary: true, onClick: async () => openShop() }],
+              });
+              return;
+            }
+            enqueueToast({ title: "فشل", body: (r.data && r.data.error) || "فشل تغيير الاسم.", autoMs: 2400 });
+            return;
+          }
+          if (r.data && typeof r.data.displayName === "string") app.state.displayName = r.data.displayName;
+          app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
+          if (r.data && typeof r.data.freeUsed === "boolean") app.state.nameChange.freeUsed = r.data.freeUsed;
+          if (r.data && typeof r.data.credits === "number") app.state.nameChange.credits = Math.max(0, Math.floor(r.data.credits));
+          saveState(app.state);
+          updateUserCenter();
+          updateSettingsUI();
+          enqueueToast({ title: "تم", body: "تم تغيير الاسم.", autoMs: 1800 });
+        } catch {
+          enqueueToast({ title: "فشل", body: "فشل تغيير الاسم.", autoMs: 2400 });
+        }
+      }
+
       function ensureItems() {
         if (!app.state.items || typeof app.state.items !== "object") app.state.items = { reveal1: 0, reveal2: 0 };
         if (!Number.isFinite(app.state.items.reveal1)) app.state.items.reveal1 = 0;
@@ -4435,12 +4585,19 @@
           app.state.processedSessions = app.state.processedSessions.slice(-50);
           const totalCoins = typeof data.totalCoins === "number" && Number.isFinite(data.totalCoins) ? Math.max(0, Math.floor(data.totalCoins)) : null;
           if (totalCoins !== null) app.state.coins = totalCoins;
+          if (data && typeof data.totalNameChangeCredits === "number" && Number.isFinite(data.totalNameChangeCredits)) {
+            app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
+            app.state.nameChange.credits = Math.max(0, Math.floor(data.totalNameChangeCredits));
+          }
           saveState(app.state);
 
           const added = Math.max(0, Math.floor(data.coinsAdded));
+          const nameAdded = Math.max(0, Math.floor(typeof data.nameChangeCreditsAdded === "number" ? data.nameChangeCreditsAdded : 0));
           if (added) {
             if (totalCoins === null) awardCoins(added);
             el.msg.textContent = t("paymentApplied", { coins: added });
+          } else if (nameAdded) {
+            el.msg.textContent = "تم شراء تغيير الاسم.";
           }
           updateShopUI();
         } catch {
@@ -4665,7 +4822,6 @@
         panel: document.getElementById("friendsPanel"),
         close: document.getElementById("friendsCloseBtn"),
         btn: document.getElementById("friendsBtn"),
-        btnLevel: document.getElementById("friendsBtnLevel"),
         meName: document.getElementById("friendsMeName"),
         meId: document.getElementById("friendsMeId"),
         tabFriendsBtn: document.getElementById("friendsTabFriendsBtn"),
@@ -4683,6 +4839,8 @@
         actions: document.getElementById("friendsActions"),
       };
       const friendsState = { open: false, tab: "friends", me: null, friends: [], gifts: [], selectedId: "", details: null };
+      const toastUI = { host: document.getElementById("toastHost") };
+      const toastState = { busy: false, queue: [], lastInboxAt: 0, lastGiftAt: 0, lastReqEventAt: 0 };
 
       function escapeHtml(s) {
         return String(s || "")
@@ -4702,6 +4860,246 @@
         const r = await fetch(url, init);
         const data = await r.json().catch(() => null);
         return { ok: r.ok, status: r.status, data };
+      }
+
+      function toastOnce(key, ttlMs) {
+        const k = `${storageKey}:toast:${key}`;
+        const now = Date.now();
+        const last = Math.max(0, Math.floor(parseInt(String(localStorage.getItem(k) || "0"), 10) || 0));
+        if (last && now - last < ttlMs) return false;
+        localStorage.setItem(k, String(now));
+        return true;
+      }
+
+      function enqueueToast(item) {
+        toastState.queue.push(item);
+        if (!toastState.busy) showNextToast();
+      }
+
+      function showNextToast() {
+        if (!toastUI.host) return;
+        if (toastState.busy) return;
+        const next = toastState.queue.shift();
+        if (!next) return;
+        toastState.busy = true;
+
+        const card = document.createElement("div");
+        card.className = "toastCard";
+        const title = document.createElement("div");
+        title.className = "toastTitle";
+        title.textContent = next.title || "";
+        const body = document.createElement("div");
+        body.className = "toastBody";
+        body.textContent = next.body || "";
+        const actions = document.createElement("div");
+        actions.className = "toastActions";
+
+        const closeBtn = document.createElement("button");
+        closeBtn.className = "btn";
+        closeBtn.type = "button";
+        closeBtn.textContent = "إغلاق";
+        closeBtn.addEventListener("click", () => {
+          card.remove();
+          toastState.busy = false;
+          showNextToast();
+        });
+
+        if (Array.isArray(next.actions) && next.actions.length) {
+          for (const a of next.actions) {
+            const b = document.createElement("button");
+            b.className = a.primary ? "btn primary" : a.danger ? "btn danger" : "btn";
+            b.type = "button";
+            b.textContent = a.label || "";
+            b.disabled = !!a.disabled;
+            b.addEventListener("click", async () => {
+              try {
+                if (typeof a.onClick === "function") await a.onClick();
+              } finally {
+                card.remove();
+                toastState.busy = false;
+                showNextToast();
+              }
+            });
+            actions.appendChild(b);
+          }
+        }
+        actions.appendChild(closeBtn);
+
+        card.appendChild(title);
+        card.appendChild(body);
+        card.appendChild(actions);
+        toastUI.host.appendChild(card);
+        requestAnimationFrame(() => card.classList.add("show"));
+
+        const autoMs = next.autoMs && Number.isFinite(next.autoMs) ? Math.max(1200, Math.floor(next.autoMs)) : 0;
+        if (autoMs && (!next.actions || !next.actions.length)) {
+          setTimeout(() => {
+            if (!card.isConnected) return;
+            card.remove();
+            toastState.busy = false;
+            showNextToast();
+          }, autoMs);
+        }
+      }
+
+      async function pollFriendInbox() {
+        if (!cloud.enabled) return;
+        const since = toastState.lastInboxAt || 0;
+        const r = await friendsJson(`/api/friends/requests/inbox?since=${encodeURIComponent(String(since))}`, { method: "GET" });
+        if (!r.ok || !r.data || !Array.isArray(r.data.requests)) return;
+        const items = r.data.requests;
+        let maxAt = since;
+        for (const req of items) {
+          const requestId = req && typeof req.requestId === "string" ? req.requestId : "";
+          const fromName = req && typeof req.fromName === "string" ? req.fromName : "Player";
+          const fromId = req && typeof req.fromId === "string" ? req.fromId : "";
+          const createdAt = req && typeof req.createdAt === "number" ? req.createdAt : 0;
+          if (createdAt > maxAt) maxAt = createdAt;
+          if (!requestId) continue;
+          if (!toastOnce(`fr_inbox:${requestId}`, 6 * 60 * 60 * 1000)) continue;
+
+          enqueueToast({
+            title: "طلب صداقة",
+            body: `${fromName}${fromId ? ` (${fromId})` : ""} ضافك.`,
+            actions: [
+              {
+                label: "قبول",
+                primary: true,
+                onClick: async () => {
+                  const rr = await friendsJson("/api/friends/requests/respond", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ requestId, action: "accept" }),
+                  });
+                  if (!rr.ok) {
+                    enqueueToast({ title: "فشل", body: (rr.data && rr.data.error) || "فشل قبول الطلب.", autoMs: 2200 });
+                    return;
+                  }
+                  enqueueToast({ title: "تم", body: "تم قبول الطلب.", autoMs: 1800 });
+                  await loadFriendsData();
+                },
+              },
+              {
+                label: "رفض",
+                danger: true,
+                onClick: async () => {
+                  const rr = await friendsJson("/api/friends/requests/respond", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ requestId, action: "decline" }),
+                  });
+                  if (!rr.ok) {
+                    enqueueToast({ title: "فشل", body: (rr.data && rr.data.error) || "فشل رفض الطلب.", autoMs: 2200 });
+                    return;
+                  }
+                  enqueueToast({ title: "تم", body: "تم رفض الطلب.", autoMs: 1800 });
+                  await loadFriendsData();
+                },
+              },
+            ],
+          });
+        }
+        toastState.lastInboxAt = maxAt;
+      }
+
+      async function pollFriendRequestEvents() {
+        if (!cloud.enabled) return;
+        const since = toastState.lastReqEventAt || 0;
+        const r = await friendsJson(`/api/friends/requests/events?since=${encodeURIComponent(String(since))}`, { method: "GET" });
+        if (!r.ok || !r.data || !Array.isArray(r.data.events)) return;
+        const items = r.data.events;
+        let maxAt = since;
+        for (const ev of items) {
+          const action = ev && typeof ev.action === "string" ? ev.action : "";
+          const fromName = ev && typeof ev.fromName === "string" ? ev.fromName : "Player";
+          const fromId = ev && typeof ev.fromId === "string" ? ev.fromId : "";
+          const createdAt = ev && typeof ev.createdAt === "number" ? ev.createdAt : 0;
+          if (createdAt > maxAt) maxAt = createdAt;
+          const key = `fr_evt:${createdAt}:${action}:${fromId || fromName}`;
+          if (!action) continue;
+          if (!toastOnce(key, 6 * 60 * 60 * 1000)) continue;
+
+          if (action === "accepted") {
+            enqueueToast({ title: "تم قبول طلبك", body: `${fromName}${fromId ? ` (${fromId})` : ""} قبل طلب الصداقة.`, autoMs: 2400 });
+            loadFriendsData().catch(() => {});
+          } else if (action === "declined") {
+            enqueueToast({ title: "تم رفض طلبك", body: `${fromName}${fromId ? ` (${fromId})` : ""} رفض طلب الصداقة.`, autoMs: 2400 });
+          }
+        }
+        toastState.lastReqEventAt = maxAt;
+      }
+
+      async function pollGiftEvents() {
+        if (!cloud.enabled) return;
+        const since = toastState.lastGiftAt || 0;
+        const r = await friendsJson(`/api/friends/gifts?since=${encodeURIComponent(String(since))}`, { method: "GET" });
+        if (!r.ok || !r.data || !Array.isArray(r.data.gifts)) return;
+        const items = r.data.gifts;
+        let maxAt = since;
+        for (const g of items) {
+          const fromName = g && typeof g.fromName === "string" ? g.fromName : "Player";
+          const fromId = g && typeof g.fromId === "string" ? g.fromId : "";
+          const coins = g && typeof g.coins === "number" ? g.coins : 0;
+          const createdAt = g && typeof g.createdAt === "string" ? Date.parse(g.createdAt) : 0;
+          if (createdAt > maxAt) maxAt = createdAt;
+          const key = `gift:${createdAt}:${fromId || fromName}:${coins}`;
+          if (!toastOnce(key, 6 * 60 * 60 * 1000)) continue;
+          enqueueToast({
+            title: "وصلك إهداء",
+            body: `${fromName}${fromId ? ` (${fromId})` : ""} أهدى لك +${coins}🪙`,
+            autoMs: 2600,
+          });
+        }
+        toastState.lastGiftAt = maxAt;
+      }
+
+      async function pollRemoteStateLight() {
+        if (!cloud.enabled) return;
+        const remote = await cloudGet();
+        if (!remote) return;
+
+        let changed = false;
+        if (typeof remote.coins === "number" && remote.coins !== app.state.coins) {
+          app.state.coins = remote.coins;
+          changed = true;
+          updateCoinsUI();
+        }
+        if (typeof remote.hintTokens === "number" && remote.hintTokens !== app.state.hintTokens) {
+          app.state.hintTokens = remote.hintTokens;
+          changed = true;
+        }
+        if (typeof remote.displayName === "string" && remote.displayName !== app.state.displayName) {
+          app.state.displayName = remote.displayName;
+          changed = true;
+          updateUserCenter();
+        }
+        if (remote.nameChange && typeof remote.nameChange === "object") {
+          const rCredits = typeof remote.nameChange.credits === "number" ? Math.max(0, Math.floor(remote.nameChange.credits)) : 0;
+          const rFreeUsed = !!remote.nameChange.freeUsed;
+          app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
+          if (app.state.nameChange.credits !== rCredits || !!app.state.nameChange.freeUsed !== rFreeUsed) {
+            app.state.nameChange.credits = rCredits;
+            app.state.nameChange.freeUsed = rFreeUsed;
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          saveStateSilent(app.state);
+          updateSettingsUI();
+          updateShopUI();
+        }
+      }
+
+      let livePollId = null;
+      function startLivePolling() {
+        if (livePollId) return;
+        livePollId = setInterval(() => {
+          pollFriendInbox().catch(() => {});
+          pollFriendRequestEvents().catch(() => {});
+          pollGiftEvents().catch(() => {});
+          pollRemoteStateLight().catch(() => {});
+        }, 3000);
       }
 
       function setTab(next) {
@@ -4777,6 +5175,12 @@
 
         const sel = list.find((x) => x.id === friendsState.selectedId);
         const details = friendsState.details;
+        const canGift = !!(sel && sel.canGift);
+        const giftAvailableAt = sel && sel.giftAvailableAt ? Number(sel.giftAvailableAt) : 0;
+        const giftNote =
+          !canGift && giftAvailableAt
+            ? `<div class="friendsTiny">الإهداء متاح بعد: ${escapeHtml(new Date(giftAvailableAt).toLocaleString())}</div>`
+            : "";
         const detailsHtml =
           details && details.id === friendsState.selectedId
             ? `<div class="friendsTiny">ستريك: ${escapeHtml(details.stats?.streak ?? 0)} | فوز: ${escapeHtml(details.stats?.wins ?? 0)} | فتح: ${escapeHtml(details.stats?.unlocked ?? 1)}</div>
@@ -4786,10 +5190,11 @@
         friendsUI.actions.innerHTML = `
           <div class="friendsTiny" style="opacity:.92">اللاعب: ${escapeHtml(sel ? sel.firstName : "")} — ${escapeHtml(friendsState.selectedId)}</div>
           <div class="friendsActionRow">
-            <button id="friendsGiftBtn" class="btn primary" type="button">اهداء</button>
+            <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>اهداء</button>
             <button id="friendsRemoveBtn" class="btn danger" type="button">حذف صديق</button>
             <button id="friendsDetailsBtn" class="btn" type="button">تفاصيل اللاعب</button>
           </div>
+          ${giftNote}
           ${detailsHtml}
         `;
         friendsUI.actions.style.display = "";
@@ -4848,7 +5253,6 @@
       }
 
       if (friendsUI.btn) friendsUI.btn.addEventListener("click", () => toggleFriends());
-      if (friendsUI.btnLevel) friendsUI.btnLevel.addEventListener("click", () => toggleFriends());
       if (friendsUI.close) friendsUI.close.addEventListener("click", () => closeFriends());
       if (friendsUI.tabFriendsBtn) friendsUI.tabFriendsBtn.addEventListener("click", () => {
         friendsState.tab = "friends";
@@ -4912,6 +5316,13 @@
             });
             if (r.ok) {
               setFriendsMsg("تم الإهداء. تقدر تهدي مرة ثانية بعد 24 ساعة.");
+              if (r.data && r.data.nextAvailableAt) {
+                const nextAt = Math.max(0, Math.floor(parseInt(String(r.data.nextAvailableAt), 10) || 0));
+                friendsState.friends = Array.isArray(friendsState.friends)
+                  ? friendsState.friends.map((f) => (f.id === id ? { ...f, canGift: false, giftAvailableAt: nextAt } : f))
+                  : friendsState.friends;
+                renderFriends();
+              }
               await loadFriendsData();
               return;
             }
@@ -4933,24 +5344,27 @@
           const id = String(friendsUI.addInput.value || "").trim().toUpperCase();
           if (!id) return;
           setFriendsMsg("");
-          const r = await friendsJson("/api/friends/add", {
+          const r = await friendsJson("/api/friends/request", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id }),
           });
           if (!r.ok) {
-            setFriendsMsg((r.data && r.data.error) || "فشل إضافة الصديق.");
+            setFriendsMsg((r.data && r.data.error) || "فشل إرسال الطلب.");
             return;
           }
           friendsUI.addInput.value = "";
           await loadFriendsData();
-          setFriendsMsg("تمت الإضافة.");
+          if (r.data && r.data.accepted) setFriendsMsg("تم قبول الطلب وأصبحتوا أصدقاء.");
+          else if (r.data && r.data.alreadyFriends) setFriendsMsg("أنت بالفعل صديق.");
+          else setFriendsMsg("تم إرسال طلب الصداقة.");
         });
       }
 
       el.motionBtn.addEventListener("click", () => toggleMotion());
       el.shapeBtn.addEventListener("click", () => cycleShape());
       el.modeBtn.addEventListener("click", () => cycleMode());
+      if (el.changeNameBtn) el.changeNameBtn.addEventListener("click", () => changeNameFlow());
       if (el.coinsBadge) el.coinsBadge.addEventListener("click", () => openShop());
       if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.addEventListener("click", () => useOwnedFeatureOrOpenShop("reveal1"));
       if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.addEventListener("click", () => useOwnedFeatureOrOpenShop("reveal2"));
@@ -4960,6 +5374,7 @@
       if (el.buyPack299Btn) el.buyPack299Btn.addEventListener("click", () => startCheckout("pack_299"));
       if (el.buyPack499Btn) el.buyPack499Btn.addEventListener("click", () => startCheckout("pack_499"));
       if (el.buyPack999Btn) el.buyPack999Btn.addEventListener("click", () => startCheckout("pack_999"));
+      if (el.buyNameChangeBtn) el.buyNameChangeBtn.addEventListener("click", () => startCheckout("name_499"));
       if (el.buyHintTokenBtn) el.buyHintTokenBtn.addEventListener("click", () => buyHintToken());
       if (el.buyHintPack10Btn) el.buyHintPack10Btn.addEventListener("click", () => buyHintPack(10, 39));
       if (el.buyHintPack25Btn) el.buyHintPack25Btn.addEventListener("click", () => buyHintPack(25, 89));
@@ -5109,6 +5524,7 @@
         consumeCheckoutReturn();
         updateDailyUI();
         setInterval(() => updateDailyUI(), 1000);
+        startLivePolling();
       })();
     </script>
   </body>

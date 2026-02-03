@@ -1,6 +1,7 @@
 import { isAdminEmail } from "@/lib/admin";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -24,6 +25,12 @@ function firstNameFromEmail(email: string) {
   return token.slice(0, 1).toUpperCase() + token.slice(1);
 }
 
+function readDisplayNameFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).displayName;
+  return typeof v === "string" ? v.trim() : "";
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const adminEmail = session?.user?.email;
@@ -39,16 +46,23 @@ export async function GET(req: NextRequest) {
       where: q ? { email: { contains: q, mode: "insensitive" } } : undefined,
       orderBy: { updatedAt: "desc" },
       take,
-      select: { email: true, createdAt: true, updatedAt: true, state: true },
+      select: { email: true, publicId: true, createdAt: true, updatedAt: true, state: true },
     });
 
-    const users = rows.map((r) => ({
-      email: r.email,
-      firstName: firstNameFromEmail(r.email),
-      coins: readCoinsFromState(r.state),
-      createdAt: r.createdAt.toISOString(),
-      updatedAt: r.updatedAt.toISOString(),
-    }));
+    const users = rows.map((r) => {
+      const displayName = readDisplayNameFromState(r.state);
+      const firstName = displayName ? displayName.split(/\s+/).filter(Boolean)[0] || firstNameFromEmail(r.email) : firstNameFromEmail(r.email);
+      return {
+        email: r.email,
+        id: r.publicId || "",
+        displayName,
+        firstName,
+        coins: readCoinsFromState(r.state),
+        stats: getProfileStats(r.state),
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      };
+    });
 
     return NextResponse.json({ users }, { status: 200 });
   } catch {
@@ -75,4 +89,3 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

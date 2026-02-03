@@ -16,6 +16,7 @@ type StripeCheckoutSession = {
   amount_total?: number;
   metadata?: {
     coins?: string;
+    nameChangeCredits?: string;
     packId?: string;
     profileEmail?: string;
   };
@@ -98,7 +99,9 @@ export async function POST(req: NextRequest) {
 
   const coinsStr = typeof session.metadata?.coins === "string" ? session.metadata.coins : "0";
   const coins = Math.max(0, Math.floor(parseInt(coinsStr, 10) || 0));
-  if (!coins) return NextResponse.json({ error: "invalid_coins" }, { status: 400 });
+  const nameCreditsStr = typeof session.metadata?.nameChangeCredits === "string" ? session.metadata.nameChangeCredits : "0";
+  const nameChangeCredits = Math.max(0, Math.floor(parseInt(nameCreditsStr, 10) || 0));
+  if (!coins && !nameChangeCredits) return NextResponse.json({ error: "invalid_purchase" }, { status: 400 });
 
   const profileEmail =
     (typeof session.metadata?.profileEmail === "string" && session.metadata.profileEmail) ||
@@ -160,10 +163,31 @@ export async function POST(req: NextRequest) {
 
       const totalCoins = existingCoins + coins;
       const nextProcessed = processedSessions.concat(sessionId).slice(-50);
+
+      const existingNameChangeRaw = existingState.nameChange;
+      const existingNameChange =
+        existingNameChangeRaw && typeof existingNameChangeRaw === "object" ? (existingNameChangeRaw as Record<string, unknown>) : {};
+      const existingCreditsRaw = existingNameChange.credits;
+      const existingCredits =
+        typeof existingCreditsRaw === "number" && Number.isFinite(existingCreditsRaw)
+          ? Math.max(0, Math.floor(existingCreditsRaw))
+          : typeof existingCreditsRaw === "string"
+            ? Math.max(0, Math.floor(parseInt(existingCreditsRaw, 10) || 0))
+            : 0;
+      const freeUsed = !!existingNameChange.freeUsed;
+
+      const nextNameChange =
+        nameChangeCredits > 0
+          ? { freeUsed, credits: existingCredits + nameChangeCredits }
+          : existingNameChangeRaw && typeof existingNameChangeRaw === "object"
+            ? existingNameChangeRaw
+            : { freeUsed, credits: existingCredits };
+
       const nextState = {
         ...existingState,
         coins: totalCoins,
         processedSessions: nextProcessed,
+        nameChange: nextNameChange,
         lastWriteAt: Date.now(),
       };
 
@@ -180,4 +204,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

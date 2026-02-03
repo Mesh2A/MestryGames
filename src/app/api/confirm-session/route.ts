@@ -9,6 +9,7 @@ type StripeCheckoutSession = {
   amount_total?: number;
   metadata?: {
     coins?: string;
+    nameChangeCredits?: string;
     packId?: string;
     profileEmail?: string;
   };
@@ -36,7 +37,9 @@ export async function GET(req: NextRequest) {
 
   const coinsStr = typeof data.metadata?.coins === "string" ? data.metadata.coins : "0";
   const coins = Math.max(0, Math.floor(parseInt(coinsStr, 10) || 0));
-  if (!coins) return NextResponse.json({ error: "invalid_coins" }, { status: 400 });
+  const creditsStr = typeof data.metadata?.nameChangeCredits === "string" ? data.metadata.nameChangeCredits : "0";
+  const nameChangeCredits = Math.max(0, Math.floor(parseInt(creditsStr, 10) || 0));
+  if (!coins && !nameChangeCredits) return NextResponse.json({ error: "invalid_purchase" }, { status: 400 });
 
   const packId = typeof data.metadata?.packId === "string" ? data.metadata.packId : "unknown";
   const currency = typeof data.currency === "string" ? data.currency : "sar";
@@ -91,10 +94,31 @@ export async function GET(req: NextRequest) {
 
       const totalCoins = existingCoins + coins;
       const nextProcessed = processedSessions.concat(sessionId).slice(-50);
+
+      const existingNameChangeRaw = existingState.nameChange;
+      const existingNameChange =
+        existingNameChangeRaw && typeof existingNameChangeRaw === "object" ? (existingNameChangeRaw as Record<string, unknown>) : {};
+      const existingCreditsRaw = existingNameChange.credits;
+      const existingCredits =
+        typeof existingCreditsRaw === "number" && Number.isFinite(existingCreditsRaw)
+          ? Math.max(0, Math.floor(existingCreditsRaw))
+          : typeof existingCreditsRaw === "string"
+            ? Math.max(0, Math.floor(parseInt(existingCreditsRaw, 10) || 0))
+            : 0;
+      const freeUsed = !!existingNameChange.freeUsed;
+
+      const nextNameChange =
+        nameChangeCredits > 0
+          ? { freeUsed, credits: existingCredits + nameChangeCredits }
+          : existingNameChangeRaw && typeof existingNameChangeRaw === "object"
+            ? existingNameChangeRaw
+            : { freeUsed, credits: existingCredits };
+
       const nextState = {
         ...existingState,
         coins: totalCoins,
         processedSessions: nextProcessed,
+        nameChange: nextNameChange,
         lastWriteAt: Date.now(),
       };
 
@@ -103,7 +127,14 @@ export async function GET(req: NextRequest) {
         data: { state: nextState },
       });
 
-      return { ok: true, coinsAdded: coins, totalCoins, alreadyProcessed: false };
+      return {
+        ok: true,
+        coinsAdded: coins,
+        nameChangeCreditsAdded: nameChangeCredits,
+        totalCoins,
+        totalNameChangeCredits: nameChangeCredits ? existingCredits + nameChangeCredits : existingCredits,
+        alreadyProcessed: false,
+      };
     });
 
     return NextResponse.json(out, { status: 200 });

@@ -17,6 +17,10 @@ model GameProfile {
   purchases Purchase[]
   friendshipsA Friendship[] @relation("FriendshipA")
   friendshipsB Friendship[] @relation("FriendshipB")
+  friendRequestsSent FriendRequest[] @relation("FriendRequestFrom")
+  friendRequestsReceived FriendRequest[] @relation("FriendRequestTo")
+  friendRequestEventsSent FriendRequestEvent[] @relation("FriendRequestEventFrom")
+  friendRequestEventsReceived FriendRequestEvent[] @relation("FriendRequestEventTo")
   giftsSent FriendGift[] @relation("GiftFrom")
   giftsReceived FriendGift[] @relation("GiftTo")
   giftEventsSent FriendGiftEvent[] @relation("GiftEventFrom")
@@ -52,6 +56,34 @@ model Friendship {
   @@unique([aEmail, bEmail])
   @@index([aEmail, updatedAt])
   @@index([bEmail, updatedAt])
+}
+
+model FriendRequest {
+  id        String   @id @default(cuid())
+  fromEmail String
+  toEmail   String
+  createdAt DateTime @default(now())
+
+  from GameProfile @relation("FriendRequestFrom", fields: [fromEmail], references: [email], onDelete: Cascade)
+  to   GameProfile @relation("FriendRequestTo", fields: [toEmail], references: [email], onDelete: Cascade)
+
+  @@unique([fromEmail, toEmail])
+  @@index([toEmail, createdAt])
+  @@index([fromEmail, createdAt])
+}
+
+model FriendRequestEvent {
+  id        String   @id @default(cuid())
+  fromEmail String
+  toEmail   String
+  action    String
+  createdAt DateTime @default(now())
+
+  from GameProfile @relation("FriendRequestEventFrom", fields: [fromEmail], references: [email], onDelete: Cascade)
+  to   GameProfile @relation("FriendRequestEventTo", fields: [toEmail], references: [email], onDelete: Cascade)
+
+  @@index([toEmail, createdAt])
+  @@index([fromEmail, createdAt])
 }
 
 model FriendGift {
