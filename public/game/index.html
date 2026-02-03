@@ -2413,6 +2413,18 @@
                       <div class="k">أفضل سلسلة</div>
                       <div id="profileBest" class="v">0</div>
                     </div>
+                    <div class="profileCard">
+                      <div class="k">سلسلة بدون تلميح</div>
+                      <div id="profileStreak" class="v">0</div>
+                    </div>
+                    <div class="profileCard">
+                      <div class="k">تلميحات</div>
+                      <div id="profileHints" class="v">0</div>
+                    </div>
+                    <div class="profileCard">
+                      <div class="k">الإنجازات</div>
+                      <div id="profileAch" class="v">0</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2987,6 +2999,9 @@
         if (el.profileSolved) el.profileSolved.textContent = String(app.state.completed.length);
         if (el.profileAvg) el.profileAvg.textContent = String(avg);
         if (el.profileBest) el.profileBest.textContent = String(app.state.stats && app.state.stats.bestNoHint ? app.state.stats.bestNoHint : 0);
+        if (el.profileStreak) el.profileStreak.textContent = String(app.state.stats && app.state.stats.streakNoHint ? app.state.stats.streakNoHint : 0);
+        if (el.profileHints) el.profileHints.textContent = String(app.state.hintTokens || 0);
+        if (el.profileAch) el.profileAch.textContent = String(Array.isArray(app.state.achievements) ? app.state.achievements.length : 0);
       }
 
       function setStorageKeyForEmail(email) {
@@ -3262,6 +3277,9 @@
         profileSolved: document.getElementById("profileSolved"),
         profileAvg: document.getElementById("profileAvg"),
         profileBest: document.getElementById("profileBest"),
+        profileStreak: document.getElementById("profileStreak"),
+        profileHints: document.getElementById("profileHints"),
+        profileAch: document.getElementById("profileAch"),
         progressText: document.getElementById("progressText"),
         pathInner: document.getElementById("pathInner"),
         mapPrevBtn: document.getElementById("mapPrevBtn"),
