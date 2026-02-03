@@ -1,11 +1,12 @@
 import { authOptions } from "@/lib/auth";
-import AuthButtons from "@/components/AuthButtons";
 import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
 
 export default async function PlayPage() {
   const session = await getServerSession(authOptions);
+  if (!session) redirect("/");
 
-  const name = session?.user?.name || "";
+  const name = session.user?.name || "";
   const firstName = String(name).trim().split(/\s+/).filter(Boolean)[0] || "";
   const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 8) || "dev";
   const src = firstName
@@ -22,34 +23,7 @@ export default async function PlayPage() {
         position: "relative",
       }}
     >
-      {!session ? (
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: 16,
-            transform: "translateX(-50%)",
-            padding: "10px 12px",
-            borderRadius: 14,
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(13, 18, 34, 0.65)",
-            color: "#fff",
-            fontSize: 12,
-            lineHeight: 1.6,
-            maxWidth: "min(520px, 90vw)",
-            pointerEvents: "auto",
-            zIndex: 5,
-            display: "grid",
-            gap: 10,
-            textAlign: "center",
-          }}
-        >
-          <div>سجّل دخولك لحفظ تقدمك وعمليات الشراء على حسابك.</div>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <AuthButtons />
-          </div>
-        </div>
-      ) : firstName ? (
+      {firstName ? (
         <div
           style={{
             position: "absolute",
