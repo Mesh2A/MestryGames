@@ -217,6 +217,7 @@
         font-weight: 900;
         font-size: 13px;
         flex: 0 0 auto;
+        cursor: pointer;
       }
       .playerAvatar img {
         width: 100%;
@@ -232,6 +233,120 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+      #tasksBtn {
+        position: relative;
+      }
+      #tasksBtn.hasNotifyDot::after {
+        content: "";
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(239, 68, 68, 0.95);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+      }
+      html[dir="ltr"] #tasksBtn.hasNotifyDot::after {
+        left: 6px;
+        right: auto;
+      }
+      .profileWrap {
+        display: grid;
+        gap: 14px;
+      }
+      .profileTop {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-direction: row-reverse;
+      }
+      html[dir="ltr"] .profileTop {
+        flex-direction: row;
+      }
+      .profileAvatar {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        font-weight: 900;
+        font-size: 16px;
+        flex: 0 0 auto;
+      }
+      .profileAvatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .profileMeta {
+        display: grid;
+        gap: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .profileNameRow {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-direction: row-reverse;
+      }
+      html[dir="ltr"] .profileNameRow {
+        flex-direction: row;
+      }
+      .profileName {
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        font-size: 16px;
+        max-width: 360px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .profileFlag {
+        font-size: 12px;
+        line-height: 1;
+        opacity: 0.95;
+      }
+      .profileLine {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.86);
+      }
+      .profileK {
+        opacity: 0.7;
+      }
+      .profileV {
+        font-weight: 700;
+      }
+      .profileGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .profileCard {
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 12px;
+        display: grid;
+        gap: 6px;
+      }
+      .profileCard .k {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .profileCard .v {
+        font-size: 20px;
+        font-weight: 900;
       }
       .userCenter {
         position: absolute;
@@ -2245,19 +2360,19 @@
                       <div id="statBestV" class="v">0</div>
                     </div>
                   </div>
-                  <div>
-                    <div id="dailyRewardTitle" class="t">مكافأة اليوم</div>
-                    <div class="shopRow" style="margin-top:10px">
-                      <div>
-                        <div id="dailyRewardSub" class="tiny">سلسلتك: 0 يوم</div>
-                        <div id="dailyRewardStatus" class="tiny" style="margin-top:4px">جاهز</div>
-                      </div>
-                      <button id="claimDailyRewardBtn" class="btn primary" type="button">استلام</button>
-                    </div>
-                  </div>
                 </div>
               </div>
               <div id="missionsContent" style="display:none">
+                <div>
+                  <div id="dailyRewardTitle" class="t">مكافأة اليوم</div>
+                  <div class="shopRow" style="margin-top:10px">
+                    <div>
+                      <div id="dailyRewardSub" class="tiny">سلسلتك: 0 يوم</div>
+                      <div id="dailyRewardStatus" class="tiny" style="margin-top:4px">جاهز</div>
+                    </div>
+                    <button id="claimDailyRewardBtn" class="btn primary" type="button">استلام</button>
+                  </div>
+                </div>
                 <div>
                   <div id="missionsTitle" class="t">مهام اليوم</div>
                   <div id="missionsList" class="shopList"></div>
@@ -2265,6 +2380,40 @@
                 <div style="margin-top:12px">
                   <div id="achTitle" class="t">الإنجازات</div>
                   <div id="achList" class="shopList"></div>
+                </div>
+              </div>
+              <div id="profileContent" style="display:none">
+                <div class="profileWrap">
+                  <div class="profileTop">
+                    <div id="profileAvatar" class="profileAvatar">P</div>
+                    <div class="profileMeta">
+                      <div class="profileNameRow">
+                        <div id="profileName" class="profileName">—</div>
+                        <div id="profileFlag" class="profileFlag" aria-hidden="true"></div>
+                      </div>
+                      <div class="profileLine"><span class="profileK">ID</span> <span id="profileId" class="profileV">—</span></div>
+                      <div class="profileLine"><span class="profileK">تاريخ الإنشاء</span> <span id="profileCreatedAt" class="profileV">—</span></div>
+                      <div class="profileLine"><span class="profileK">إجمالي العملات المكتسبة</span> <span id="profileCoinsEarned" class="profileV">0</span></div>
+                    </div>
+                  </div>
+                  <div class="profileGrid">
+                    <div class="profileCard">
+                      <div class="k">العملات الحالية</div>
+                      <div id="profileCoinsNow" class="v">0</div>
+                    </div>
+                    <div class="profileCard">
+                      <div class="k">المكتملة</div>
+                      <div id="profileSolved" class="v">0</div>
+                    </div>
+                    <div class="profileCard">
+                      <div class="k">متوسط المحاولات</div>
+                      <div id="profileAvg" class="v">0</div>
+                    </div>
+                    <div class="profileCard">
+                      <div class="k">أفضل سلسلة</div>
+                      <div id="profileBest" class="v">0</div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div id="nameContent" style="display:none">
@@ -2516,6 +2665,7 @@
           theme: "ocean",
           lang: "ar",
           coins: 0,
+          coinsEarnedTotal: 0,
           hintTokens: 0,
           displayName: "",
           photo: "",
@@ -2536,6 +2686,7 @@
           paidHintType: "reveal",
           unlocks: { circle: false, square: false },
           seenCoach: [],
+          createdAt: 0,
           lastWriteAt: 0,
           lastSeenAt: 0,
         };
@@ -2552,6 +2703,8 @@
         base.lang = s.lang === "en" ? "en" : "ar";
 
         base.coins = typeof s.coins === "number" && Number.isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : 0;
+        base.coinsEarnedTotal =
+          typeof s.coinsEarnedTotal === "number" && Number.isFinite(s.coinsEarnedTotal) ? Math.max(0, Math.floor(s.coinsEarnedTotal)) : 0;
         base.hintTokens = typeof s.hintTokens === "number" && Number.isFinite(s.hintTokens) ? Math.max(0, Math.floor(s.hintTokens)) : 0;
         base.displayName = typeof s.displayName === "string" ? String(s.displayName).replace(/\s+/g, " ").trim().slice(0, 18) : "";
         base.photo =
@@ -2626,6 +2779,12 @@
         base.seenCoach = Array.isArray(s.seenCoach) ? s.seenCoach.filter((x) => typeof x === "string") : [];
         base.lastWriteAt = typeof s.lastWriteAt === "number" && Number.isFinite(s.lastWriteAt) ? Math.max(0, Math.floor(s.lastWriteAt)) : 0;
         base.lastSeenAt = typeof s.lastSeenAt === "number" && Number.isFinite(s.lastSeenAt) ? Math.max(0, Math.floor(s.lastSeenAt)) : 0;
+        base.createdAt =
+          typeof s.createdAt === "number" && Number.isFinite(s.createdAt)
+            ? Math.max(0, Math.floor(s.createdAt))
+            : typeof s.createdAt === "string"
+              ? Math.max(0, Math.floor(Date.parse(s.createdAt) || 0))
+              : 0;
 
         base.completed.sort((a, b) => a - b);
         base.hintsUsed.sort((a, b) => a - b);
@@ -2761,6 +2920,73 @@
           setAvatarSquare(el.playerAvatar, photo, letter || "P");
         }
         if (el.userCenter) el.userCenter.style.display = "none";
+      }
+
+      function flagEmojiFromRegion(region) {
+        const code = String(region || "")
+          .trim()
+          .toUpperCase();
+        if (!/^[A-Z]{2}$/.test(code)) return "";
+        const a = code.charCodeAt(0) - 65 + 127462;
+        const b = code.charCodeAt(1) - 65 + 127462;
+        return String.fromCodePoint(a, b);
+      }
+
+      function guessRegionCode() {
+        const lang = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+        const m = String(lang).match(/-([A-Za-z]{2})\b/);
+        return m ? String(m[1]).toUpperCase() : "";
+      }
+
+      function formatProfileDate(ms) {
+        const t = Number(ms || 0);
+        if (!Number.isFinite(t) || t <= 0) return "—";
+        try {
+          const locale = app.state.lang === "en" ? "en-GB" : "ar-SA";
+          return new Date(t).toLocaleDateString(locale, { year: "numeric", month: "short", day: "2-digit" });
+        } catch {
+          return new Date(t).toLocaleDateString();
+        }
+      }
+
+      function updateProfileUI() {
+        const isVisible = el.modalBackdrop && el.modalBackdrop.classList.contains("show") && modalMode === "profile";
+        if (!isVisible && !el.profileName) return;
+        const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
+        const name = firstNameFromDisplayName(displayName) || cloud.firstName || "Player";
+        if (el.profileName) el.profileName.textContent = name;
+        if (el.profileFlag) el.profileFlag.textContent = flagEmojiFromRegion(guessRegionCode());
+        if (el.profileAvatar) {
+          const letter = String(name || "P")
+            .trim()
+            .slice(0, 1)
+            .toUpperCase();
+          const photo = app && app.state && typeof app.state.photo === "string" ? app.state.photo : "";
+          setAvatarSquare(el.profileAvatar, photo, letter || "P");
+        }
+
+        const meId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
+        if (el.profileId) el.profileId.textContent = meId || "—";
+
+        const createdAtMs = (() => {
+          if (friendsState.me && typeof friendsState.me.createdAt === "string") {
+            const ms = Date.parse(friendsState.me.createdAt);
+            if (Number.isFinite(ms) && ms > 0) return ms;
+          }
+          return app && app.state && typeof app.state.createdAt === "number" ? app.state.createdAt : 0;
+        })();
+        if (el.profileCreatedAt) el.profileCreatedAt.textContent = formatProfileDate(createdAtMs);
+
+        const earned = typeof app.state.coinsEarnedTotal === "number" ? Math.max(0, Math.floor(app.state.coinsEarnedTotal)) : 0;
+        if (el.profileCoinsEarned) el.profileCoinsEarned.textContent = String(earned);
+        if (el.profileCoinsNow) el.profileCoinsNow.textContent = String(app.state.coins || 0);
+
+        const wins = app.state.stats && app.state.stats.wins ? app.state.stats.wins : 0;
+        const attempts = app.state.stats && app.state.stats.attempts ? app.state.stats.attempts : 0;
+        const avg = wins ? (attempts / wins).toFixed(1) : "0";
+        if (el.profileSolved) el.profileSolved.textContent = String(app.state.completed.length);
+        if (el.profileAvg) el.profileAvg.textContent = String(avg);
+        if (el.profileBest) el.profileBest.textContent = String(app.state.stats && app.state.stats.bestNoHint ? app.state.stats.bestNoHint : 0);
       }
 
       function setStorageKeyForEmail(email) {
@@ -2936,6 +3162,7 @@
         howHintNote: document.getElementById("howHintNote"),
         settingsContent: document.getElementById("settingsContent"),
         missionsContent: document.getElementById("missionsContent"),
+        profileContent: document.getElementById("profileContent"),
         settingsDesc: document.getElementById("settingsDesc"),
         nameChangeSub: document.getElementById("nameChangeSub"),
         changeNameBtn: document.getElementById("changeNameBtn"),
@@ -3025,6 +3252,16 @@
         missionsList: document.getElementById("missionsList"),
         achTitle: document.getElementById("achTitle"),
         achList: document.getElementById("achList"),
+        profileAvatar: document.getElementById("profileAvatar"),
+        profileName: document.getElementById("profileName"),
+        profileFlag: document.getElementById("profileFlag"),
+        profileId: document.getElementById("profileId"),
+        profileCreatedAt: document.getElementById("profileCreatedAt"),
+        profileCoinsEarned: document.getElementById("profileCoinsEarned"),
+        profileCoinsNow: document.getElementById("profileCoinsNow"),
+        profileSolved: document.getElementById("profileSolved"),
+        profileAvg: document.getElementById("profileAvg"),
+        profileBest: document.getElementById("profileBest"),
         progressText: document.getElementById("progressText"),
         pathInner: document.getElementById("pathInner"),
         mapPrevBtn: document.getElementById("mapPrevBtn"),
@@ -3089,6 +3326,7 @@
           homeHeaderBtn: "الرئيسية",
           homeTitle: "MestRyLocks",
           missionsModalTitle: "المهام",
+          profileModalTitle: "البروفايل",
           startBtn: "ابدأ",
           howBtn: "طريقة اللعبه",
           logoutBtn: "تسجيل خروج",
@@ -3257,6 +3495,7 @@
           homeHeaderBtn: "Home",
           homeTitle: "MestRyLocks",
           missionsModalTitle: "Tasks",
+          profileModalTitle: "Profile",
           startBtn: "Start",
           howBtn: "How to play",
           logoutBtn: "Logout",
@@ -3991,6 +4230,7 @@
         const n = Math.max(0, Math.floor(amount || 0));
         if (!n) return;
         app.state.coins = (app.state.coins || 0) + n;
+        app.state.coinsEarnedTotal = (app.state.coinsEarnedTotal || 0) + n;
         saveState(app.state);
         updateCoinsUI();
         updateSettingsUI();
@@ -4232,6 +4472,8 @@
         renderMissions();
 
         renderAchievements();
+        updateTasksBadge();
+        updateProfileUI();
       }
 
       function updateShopUI() {
@@ -4650,13 +4892,16 @@
         modalMode = mode;
         lastFocusedEl = document.activeElement;
         el.modalBackdrop.dataset.mode = mode;
-        if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "missions" || mode === "math" || mode === "name");
+        if (el.modal)
+          el.modal.classList.toggle("compact", mode === "settings" || mode === "missions" || mode === "profile" || mode === "math" || mode === "name");
         if (el.modalTitle) {
           el.modalTitle.textContent =
             mode === "settings"
               ? t("settingsTitle")
               : mode === "missions"
               ? t("missionsModalTitle")
+              : mode === "profile"
+              ? t("profileModalTitle")
               : mode === "shop"
               ? t("shopModalTitle")
               : mode === "math"
@@ -4671,12 +4916,14 @@
         if (el.assistContent) el.assistContent.style.display = mode === "assist" ? "" : "none";
         if (el.settingsContent) el.settingsContent.style.display = mode === "settings" ? "" : "none";
         if (el.missionsContent) el.missionsContent.style.display = mode === "missions" ? "" : "none";
+        if (el.profileContent) el.profileContent.style.display = mode === "profile" ? "" : "none";
         if (el.nameContent) el.nameContent.style.display = mode === "name" ? "" : "none";
         if (el.shopContent) el.shopContent.style.display = mode === "shop" ? "" : "none";
         if (el.mathContent) el.mathContent.style.display = mode === "math" ? "" : "none";
         updateThemeBtn();
         if (mode === "settings") updateSettingsUI();
         if (mode === "missions") updateSettingsUI();
+        if (mode === "profile") updateProfileUI();
         if (mode === "shop") updateShopUI();
         if (mode === "assist") {
           updateLevelFeaturesUI();
@@ -4697,6 +4944,14 @@
         } else if (mode === "missions" && el.modal && el.tasksBtn) {
           requestAnimationFrame(() => {
             const br = el.tasksBtn.getBoundingClientRect();
+            const mr = el.modal.getBoundingClientRect();
+            const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
+            const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
+            el.modal.style.setProperty("--modal-origin", `${ox}px ${oy}px`);
+          });
+        } else if (mode === "profile" && el.modal && el.playerAvatar) {
+          requestAnimationFrame(() => {
+            const br = el.playerAvatar.getBoundingClientRect();
             const mr = el.modal.getBoundingClientRect();
             const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
             const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
@@ -4724,6 +4979,22 @@
 
       function openMissions() {
         openModal("missions");
+      }
+
+      function openProfile() {
+        openModal("profile");
+        ensureMeLoaded()
+          .then((me) => {
+            if (me && typeof me.createdAt === "string") {
+              const ms = Date.parse(me.createdAt);
+              if (!app.state.createdAt && Number.isFinite(ms) && ms > 0) {
+                app.state.createdAt = ms;
+                saveStateSilent(app.state);
+              }
+            }
+            updateProfileUI();
+          })
+          .catch(() => updateProfileUI());
       }
 
       function closeHowTo() {
@@ -5219,10 +5490,10 @@
             app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
             app.state.nameChange.credits = Math.max(0, Math.floor(data.totalNameChangeCredits));
           }
-          saveState(app.state);
-
           const added = Math.max(0, Math.floor(data.coinsAdded));
           const nameAdded = Math.max(0, Math.floor(typeof data.nameChangeCreditsAdded === "number" ? data.nameChangeCreditsAdded : 0));
+          if (added && totalCoins !== null) app.state.coinsEarnedTotal = (app.state.coinsEarnedTotal || 0) + added;
+          saveState(app.state);
           if (added) {
             if (totalCoins === null) awardCoins(added);
             el.msg.textContent = t("paymentApplied", { coins: added });
@@ -5449,6 +5720,7 @@
       if (el.tasksBtn) el.tasksBtn.addEventListener("click", () => openMissions());
       if (el.chatBtn) el.chatBtn.addEventListener("click", () => toggleChat());
       el.homeHeaderBtn.addEventListener("click", () => goHome());
+      if (el.playerAvatar) el.playerAvatar.addEventListener("click", () => openProfile());
 
       const friendsUI = {
         panel: document.getElementById("friendsPanel"),
@@ -5591,12 +5863,35 @@
         el.chatBtn.classList.toggle("hasNotifyDot", has);
       }
 
+      function hasClaimableMissions() {
+        initMissions();
+        for (const def of missionDefs()) {
+          const done = missionProgress(def.id) >= def.target;
+          const claimed = missionClaimed(def.id);
+          if (done && !claimed) return true;
+        }
+        return false;
+      }
+
+      function updateTasksBadge() {
+        if (!el.tasksBtn) return;
+        const has = canClaimDailyReward() || hasClaimableMissions();
+        el.tasksBtn.classList.toggle("hasNotifyDot", has);
+      }
+
       async function ensureMeLoaded() {
         if (friendsState.me && typeof friendsState.me.id === "string") return friendsState.me;
         if (!cloud.enabled) return null;
         const me = await friendsJson("/api/me", { method: "GET" });
         if (!me.ok || !me.data) return null;
         friendsState.me = me.data;
+        if (!app.state.createdAt && friendsState.me && typeof friendsState.me.createdAt === "string") {
+          const ms = Date.parse(friendsState.me.createdAt);
+          if (Number.isFinite(ms) && ms > 0) {
+            app.state.createdAt = ms;
+            saveStateSilent(app.state);
+          }
+        }
         return friendsState.me;
       }
 
@@ -6168,6 +6463,8 @@
             lastFriendsPullAt = now;
             loadFriendsData().catch(() => {});
           }
+          updateTasksBadge();
+          updateProfileUI();
         }, 3000);
       }
 
@@ -6825,6 +7122,15 @@
           }
         } else if (cloud.enabled) {
           cloudPut(app.state).catch(() => {});
+        }
+
+        if (!app.state.createdAt) {
+          app.state.createdAt = app.state.lastWriteAt || Date.now();
+          saveStateSilent(app.state);
+        }
+        if (!app.state.coinsEarnedTotal && (app.state.coins || 0) > 0) {
+          app.state.coinsEarnedTotal = app.state.coins || 0;
+          saveStateSilent(app.state);
         }
 
         const initialTheme = normalizeTheme(app.state.theme || "ocean");
