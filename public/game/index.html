@@ -5878,6 +5878,8 @@
         friendsSig: "",
         giftsSig: "",
         search: "",
+        loadPromise: null,
+        lastLoadAt: 0,
       };
       const chatUI = {
         panel: document.getElementById("chatPanel"),
@@ -5908,6 +5910,50 @@
         box: document.getElementById("avatarViewerBox"),
       };
       const avatarViewerState = { open: false };
+
+      function friendsCacheKey() {
+        const email = cloud && typeof cloud.email === "string" ? cloud.email : "";
+        return email ? `lockgame_friends_cache_v1:${email}` : `lockgame_friends_cache_v1:guest`;
+      }
+
+      function loadFriendsCache() {
+        try {
+          const raw = localStorage.getItem(friendsCacheKey());
+          if (!raw) return false;
+          const p = JSON.parse(raw);
+          const at = p && typeof p.at === "number" ? p.at : 0;
+          if (!at || Date.now() - at > 1000 * 60 * 60 * 6) return false;
+          const friends = p && Array.isArray(p.friends) ? p.friends : [];
+          const gifts = p && Array.isArray(p.gifts) ? p.gifts : [];
+          const me = p && p.me && typeof p.me === "object" ? p.me : null;
+          if (!friends.length && !gifts.length && !me) return false;
+          if (!friendsState.friends.length && friends.length) friendsState.friends = friends;
+          if (!friendsState.gifts.length && gifts.length) friendsState.gifts = gifts;
+          if (!friendsState.me && me) friendsState.me = me;
+          friendsState.friendsSig = typeof p.friendsSig === "string" ? p.friendsSig : friendsState.friendsSig || "";
+          friendsState.giftsSig = typeof p.giftsSig === "string" ? p.giftsSig : friendsState.giftsSig || "";
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      function saveFriendsCache() {
+        if (!cloud.enabled) return;
+        try {
+          localStorage.setItem(
+            friendsCacheKey(),
+            JSON.stringify({
+              at: Date.now(),
+              me: friendsState.me,
+              friends: friendsState.friends,
+              gifts: friendsState.gifts,
+              friendsSig: friendsState.friendsSig,
+              giftsSig: friendsState.giftsSig,
+            }),
+          );
+        } catch {}
+      }
 
       function escapeHtml(s) {
         return String(s || "")
@@ -6425,7 +6471,7 @@
                     return;
                   }
                   enqueueToast({ title: "تم", body: "تم قبول الطلب.", autoMs: 1800 });
-                  await loadFriendsData();
+                  await loadFriendsData(true);
                 },
               },
               {
@@ -6442,7 +6488,7 @@
                     return;
                   }
                   enqueueToast({ title: "تم", body: "تم رفض الطلب.", autoMs: 1800 });
-                  await loadFriendsData();
+                  await loadFriendsData(true);
                 },
               },
             ],
@@ -6485,6 +6531,7 @@
         if (!r.ok || !r.data || !Array.isArray(r.data.gifts)) return;
         const items = r.data.gifts;
         let maxAt = since;
+        let touched = false;
         for (const g of items) {
           const fromName = g && typeof g.fromName === "string" ? g.fromName : "Player";
           const fromId = g && typeof g.fromId === "string" ? g.fromId : "";
@@ -6493,6 +6540,7 @@
           if (createdAt > maxAt) maxAt = createdAt;
           const key = `gift:${createdAt}:${fromId || fromName}:${coins}`;
           if (!toastOnce(key, 6 * 60 * 60 * 1000)) continue;
+          touched = true;
           enqueueToast({
             title: "وصلك إهداء",
             body: `${fromName}${fromId ? ` (${fromId})` : ""} أهدى لك +${coins}🪙`,
@@ -6500,6 +6548,30 @@
           });
         }
         toastState.lastGiftAt = maxAt;
+        if (touched) {
+          const existing = Array.isArray(friendsState.gifts) ? friendsState.gifts : [];
+          const seen = new Set(existing.map((x) => `${String(x.createdAt || "")}:${String(x.fromId || "")}:${Number(x.coins || 0)}`));
+          const next = existing.slice();
+          for (const g of items) {
+            const k = `${String(g.createdAt || "")}:${String(g.fromId || "")}:${Number(g.coins || 0)}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            next.unshift(g);
+          }
+          friendsState.gifts = next.slice(0, 120);
+          friendsState.giftsSig = friendsState.gifts
+            .map((g) => {
+              const createdAtRaw =
+                g && typeof g.createdAt === "string" ? Date.parse(g.createdAt) : Number(g && g.createdAt ? g.createdAt : 0);
+              const createdAt = Math.floor(Number.isFinite(createdAtRaw) ? createdAtRaw : 0);
+              const fromName = String(g.fromName || "");
+              const coins = Math.floor(Number(g.coins || 0) || 0);
+              return `${createdAt}:${fromName}:${coins}`;
+            })
+            .join("|");
+          saveFriendsCache();
+          if (friendsState.open && friendsState.tab === "gifts") renderFriends();
+        }
       }
 
       async function pollRemoteStateLight() {
@@ -6587,6 +6659,29 @@
           updateTasksBadge();
           updateProfileUI();
         }, 3000);
+      }
+
+      let fastSyncT = null;
+      let lastFastSyncAt = 0;
+      function kickFastSync() {
+        if (!cloud.enabled) return;
+        const now = Date.now();
+        if (now - lastFastSyncAt < 800) return;
+        lastFastSyncAt = now;
+        clearTimeout(fastSyncT);
+        fastSyncT = setTimeout(() => {
+          pollChatInbox().catch(() => {});
+          pollGiftEvents().catch(() => {});
+          pollFriendInbox().catch(() => {});
+          pollFriendRequestEvents().catch(() => {});
+          pollRemoteStateLight().catch(() => {});
+          if (friendsState.open || chatState.open) loadFriendsData(true).catch(() => {});
+          if (chatState.open && chatState.selectedId) {
+            loadChatThread(chatState.selectedId)
+              .then(() => renderChatMessages())
+              .catch(() => {});
+          }
+        }, 50);
       }
 
       function setTab(next) {
@@ -6718,39 +6813,51 @@
         friendsUI.actions.style.display = "";
       }
 
-      async function loadFriendsData() {
-        if (!cloud.enabled) {
-          setFriendsMsg("سجّل دخولك أولاً.");
-          friendsState.me = null;
-          friendsState.friends = [];
-          friendsState.gifts = [];
-          friendsState.selectedId = "";
-          friendsState.details = null;
-          renderFriends();
-          return;
-        }
+      async function loadFriendsData(force) {
+        const now = Date.now();
+        if (!force && friendsState.lastLoadAt && now - friendsState.lastLoadAt < 1200) return;
+        if (friendsState.loadPromise) return friendsState.loadPromise;
+        friendsState.lastLoadAt = now;
 
-        const me = await friendsJson("/api/me", { method: "GET" });
-        if (!me.ok) {
-          setFriendsMsg("سجّل دخولك أولاً.");
-          friendsState.me = null;
-          friendsState.friends = [];
-          friendsState.selectedId = "";
-          friendsState.details = null;
-          renderFriends();
-          return;
-        }
-        friendsState.me = me.data;
-        if (friendsUI.meName) friendsUI.meName.textContent = friendsState.me.firstName || "—";
-        if (friendsUI.meId) friendsUI.meId.textContent = friendsState.me.id || "—";
-        if (friendsUI.meAvatar) {
-          const a = String(friendsState.me.firstName || "P").trim().slice(0, 1).toUpperCase() || "P";
-          const p = friendsState.me && typeof friendsState.me.photo === "string" ? friendsState.me.photo : app.state.photo || "";
-          setAvatarSquare(friendsUI.meAvatar, p, a);
-        }
+        const p = (async () => {
+          if (!cloud.enabled) {
+            setFriendsMsg("سجّل دخولك أولاً.");
+            friendsState.me = null;
+            friendsState.friends = [];
+            friendsState.gifts = [];
+            friendsState.selectedId = "";
+            friendsState.details = null;
+            renderFriends();
+            return;
+          }
 
-        const list = await friendsJson("/api/friends/list", { method: "GET" });
-        const gifts = await friendsJson("/api/friends/gifts", { method: "GET" });
+          if (!friendsState.friends.length && friendsState.open) setFriendsMsg("جاري التحديث...");
+
+          const meData = await ensureMeLoaded().catch(() => null);
+          if (!meData) {
+            setFriendsMsg("سجّل دخولك أولاً.");
+            friendsState.me = null;
+            friendsState.friends = [];
+            friendsState.gifts = [];
+            friendsState.selectedId = "";
+            friendsState.details = null;
+            renderFriends();
+            return;
+          }
+
+          friendsState.me = meData;
+          if (friendsUI.meName) friendsUI.meName.textContent = friendsState.me.firstName || "—";
+          if (friendsUI.meId) friendsUI.meId.textContent = friendsState.me.id || "—";
+          if (friendsUI.meAvatar) {
+            const a = String(friendsState.me.firstName || "P").trim().slice(0, 1).toUpperCase() || "P";
+            const p = friendsState.me && typeof friendsState.me.photo === "string" ? friendsState.me.photo : app.state.photo || "";
+            setAvatarSquare(friendsUI.meAvatar, p, a);
+          }
+
+          const [list, gifts] = await Promise.all([
+            friendsJson("/api/friends/list", { method: "GET" }),
+            friendsJson("/api/friends/gifts", { method: "GET" }),
+          ]);
         const nextFriends = list.ok && list.data && Array.isArray(list.data.friends) ? list.data.friends : [];
         const nextGifts = gifts.ok && gifts.data && Array.isArray(gifts.data.gifts) ? gifts.data.gifts : [];
 
@@ -6768,7 +6875,8 @@
           .join("|");
         const nextGiftsSig = nextGifts
           .map((g) => {
-            const createdAt = Math.floor(Number(g.createdAt || 0) || 0);
+            const createdAtRaw = g && typeof g.createdAt === "string" ? Date.parse(g.createdAt) : Number(g && g.createdAt ? g.createdAt : 0);
+            const createdAt = Math.floor(Number.isFinite(createdAtRaw) ? createdAtRaw : 0);
             const fromName = String(g.fromName || "");
             const coins = Math.floor(Number(g.coins || 0) || 0);
             return `${createdAt}:${fromName}:${coins}`;
@@ -6790,13 +6898,25 @@
         const shouldRerender = selectedMissing || nextFriendsSig !== prevFriendsSig || nextGiftsSig !== prevGiftsSig;
         if (shouldRerender) renderFriends();
         if (chatState.open && shouldRerender) renderChat();
+          if (friendsState.open) setFriendsMsg("");
+          saveFriendsCache();
+        })();
+
+        friendsState.loadPromise = p;
+        try {
+          await p;
+        } finally {
+          friendsState.loadPromise = null;
+        }
       }
 
       function openFriends() {
         friendsState.open = true;
         friendsState.tab = friendsState.tab || "friends";
         if (friendsUI.panel) friendsUI.panel.classList.add("open");
-        loadFriendsData().catch(() => {});
+        loadFriendsCache();
+        renderFriends();
+        loadFriendsData(true).catch(() => {});
       }
       function closeFriends() {
         friendsState.open = false;
@@ -6871,7 +6991,9 @@
         }
         ensureMeLoaded().catch(() => {});
         updateChatBadge();
-        loadFriendsData().catch(() => {});
+        loadFriendsCache();
+        pollChatInbox().catch(() => {});
+        loadFriendsData(true).catch(() => {});
         renderChat();
       }
       function closeChat() {
@@ -6926,16 +7048,17 @@
           if (!btn) return;
           const id = btn.getAttribute("data-id") || "";
           chatState.selectedId = id;
+          renderChat();
+          renderChatMessages();
+          if (chatUI.input) chatUI.input.disabled = false;
+          if (chatUI.sendBtn) chatUI.sendBtn.disabled = false;
           loadChatThread(id)
             .then(() => {
-              renderChat();
               renderChatMessages();
               markChatRead(id).catch(() => {});
-              if (chatUI.input) chatUI.input.disabled = false;
-              if (chatUI.sendBtn) chatUI.sendBtn.disabled = false;
               if (chatUI.input) chatUI.input.focus();
             })
-            .catch(() => renderChat());
+            .catch(() => {});
         });
       }
       if (friendsUI.meCopyIdBtn) {
@@ -7207,6 +7330,10 @@
         bgResizeT = setTimeout(() => buildBgPattern(), 180);
         if (el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show")) updateProfileDropPosition();
       });
+      window.addEventListener("focus", () => kickFastSync());
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") kickFastSync();
+      });
 
       (async function bootstrap() {
         const u = await fetchSessionUser();
@@ -7214,6 +7341,7 @@
           cloud.enabled = true;
           cloud.email = u.email;
           setStorageKeyForEmail(u.email);
+          loadFriendsCache();
         }
 
         app.state = loadState();
@@ -7267,6 +7395,8 @@
         updateDailyUI();
         setInterval(() => updateDailyUI(), 1000);
         startLivePolling();
+        kickFastSync();
+        if (cloud.enabled) setTimeout(() => loadFriendsData(true).catch(() => {}), 400);
       })();
     </script>
   </body>
