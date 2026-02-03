@@ -11,7 +11,7 @@ export default async function AdminCoinsPage() {
   if (!session) {
     return (
       <div style={pageStyle}>
-        <h1 style={h1Style}>لوحة الإدارة</h1>
+        <h1 style={h1Style}>MestRyPanel</h1>
         <div style={cardStyle}>سجّل دخولك للوصول للوحة الإدارة.</div>
         <AuthButtons />
       </div>
@@ -21,7 +21,7 @@ export default async function AdminCoinsPage() {
   if (!isAdminEmail(email)) {
     return (
       <div style={pageStyle}>
-        <h1 style={h1Style}>لوحة الإدارة</h1>
+        <h1 style={h1Style}>MestRyPanel</h1>
         <div style={cardStyle}>غير مصرح.</div>
       </div>
     );
@@ -29,8 +29,7 @@ export default async function AdminCoinsPage() {
 
   return (
     <div style={pageStyle}>
-      <h1 style={h1Style}>لوحة الإدارة</h1>
-      <div style={cardStyle}>اضف ADMIN_EMAIL في Vercel واكتب ايميلك فقط.</div>
+      <h1 style={h1Style}>MestRyPanel</h1>
       <AdminUsersPanel />
     </div>
   );
@@ -42,7 +41,7 @@ const pageStyle: React.CSSProperties = {
   background: "#0b1020",
   color: "#fff",
   display: "grid",
-  alignContent: "start",
+  alignContent: "center",
   justifyItems: "center",
   gap: 12,
 };
