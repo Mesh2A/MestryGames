@@ -1,0 +1,51 @@
+import { authOptions } from "@/lib/auth";
+import { ensureGameProfile } from "@/lib/gameProfile";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
+
+function sortPair(a: string, b: string) {
+  return a < b ? [a, b] : [b, a];
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  let body: unknown = null;
+  try {
+    body = await req.json();
+  } catch {
+    body = null;
+  }
+
+  const id =
+    body && typeof body === "object" && "id" in body && typeof (body as { id?: unknown }).id === "string"
+      ? (body as { id: string }).id.trim().toUpperCase()
+      : "";
+  if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
+
+  try {
+    const me = await ensureGameProfile(email);
+    if (me.publicId && me.publicId.toUpperCase() === id) return NextResponse.json({ error: "cannot_add_self" }, { status: 400 });
+
+    const target = await prisma.gameProfile.findUnique({ where: { publicId: id } });
+    if (!target) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+    const targetEnsured = target.publicId ? target : await ensureGameProfile(target.email);
+    const [aEmail, bEmail] = sortPair(email, targetEnsured.email);
+
+    try {
+      await prisma.friendship.create({ data: { aEmail, bEmail } });
+    } catch (e) {
+      const code = (e as { code?: unknown }).code;
+      if (code !== "P2002") throw e;
+    }
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
+}
+

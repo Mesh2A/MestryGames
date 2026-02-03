@@ -8,12 +8,17 @@ datasource db {
 
 model GameProfile {
   id        String   @id @default(cuid())
+  publicId  String?  @unique
   email     String   @unique
   state     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   purchases Purchase[]
+  friendshipsA Friendship[] @relation("FriendshipA")
+  friendshipsB Friendship[] @relation("FriendshipB")
+  giftsSent FriendGift[] @relation("GiftFrom")
+  giftsReceived FriendGift[] @relation("GiftTo")
 }
 
 model Purchase {
@@ -30,4 +35,35 @@ model Purchase {
   profile GameProfile @relation(fields: [profileEmail], references: [email], onDelete: Cascade)
 
   @@index([profileEmail, createdAt])
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  aEmail    String
+  bEmail    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  a GameProfile @relation("FriendshipA", fields: [aEmail], references: [email], onDelete: Cascade)
+  b GameProfile @relation("FriendshipB", fields: [bEmail], references: [email], onDelete: Cascade)
+
+  @@unique([aEmail, bEmail])
+  @@index([aEmail, updatedAt])
+  @@index([bEmail, updatedAt])
+}
+
+model FriendGift {
+  id         String   @id @default(cuid())
+  fromEmail  String
+  toEmail    String
+  lastGiftAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  from GameProfile @relation("GiftFrom", fields: [fromEmail], references: [email], onDelete: Cascade)
+  to   GameProfile @relation("GiftTo", fields: [toEmail], references: [email], onDelete: Cascade)
+
+  @@unique([fromEmail, toEmail])
+  @@index([toEmail, updatedAt])
+  @@index([fromEmail, updatedAt])
 }
