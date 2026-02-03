@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
       const fromName = firstNameFromDisplayNameOrEmail(readDisplayNameFromState(fromState), fromRow.email);
 
-      const msg = { id, fromId: fromRow.publicId, toId: toRow.publicId, fromName, text, createdAt: now };
+      const msg = { id, fromId: fromRow.publicId, toId: toRow.publicId, fromName, text, createdAt: now, deliveredAt: now, readAt: 0 };
 
       const fromThreads = { ...readThreads(fromState) };
       const fromThreadRaw = fromThreads[toRow.publicId];
