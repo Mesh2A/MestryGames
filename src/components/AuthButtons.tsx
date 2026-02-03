@@ -223,7 +223,7 @@ export default function AuthButtons() {
                     setRegError("تم إنشاء الحساب لكن تعذر تسجيل الدخول. حاول تسجيل الدخول.");
                     return;
                   }
-                  window.location.href = res.url || "/";
+                  window.location.href = "/";
                 } finally {
                   setRegBusy(false);
                 }

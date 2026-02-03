@@ -2416,6 +2416,7 @@
                     <div id="profileFlag" class="profileFlag" aria-hidden="true"></div>
                   </div>
                   <div class="profileLine"><span class="profileK">ID</span> <span id="profileId" class="profileV">—</span></div>
+                  <div class="profileLine"><span class="profileK">الإيميل</span> <span id="profileEmail" class="profileV">—</span></div>
                   <div class="profileLine"><span class="profileK">تاريخ الإنشاء</span> <span id="profileCreatedAt" class="profileV">—</span></div>
                   <div class="profileLine"><span class="profileK">إجمالي العملات المكتسبة</span> <span id="profileCoinsEarned" class="profileV">0</span></div>
                 </div>
@@ -3355,6 +3356,8 @@
 
         const meId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
         if (el.profileId) el.profileId.textContent = meId || "—";
+        const meEmail = friendsState.me && typeof friendsState.me.email === "string" ? friendsState.me.email : "";
+        if (el.profileEmail) el.profileEmail.textContent = meEmail || "—";
 
         const createdAtMs = (() => {
           if (friendsState.me && typeof friendsState.me.createdAt === "string") {
@@ -3685,6 +3688,7 @@
         profileName: document.getElementById("profileName"),
         profileFlag: document.getElementById("profileFlag"),
         profileId: document.getElementById("profileId"),
+        profileEmail: document.getElementById("profileEmail"),
         profileCreatedAt: document.getElementById("profileCreatedAt"),
         profileCoinsEarned: document.getElementById("profileCoinsEarned"),
         profileCoinsNow: document.getElementById("profileCoinsNow"),

@@ -31,15 +31,18 @@ export async function GET() {
 
   try {
     const profile = await ensureGameProfile(email);
+    const displayEmail = profile.contactEmail || profile.email;
     const displayName = readDisplayNameFromState(profile.state);
     const photo = readPhotoFromState(profile.state);
     return NextResponse.json(
       {
-        email: profile.email,
+        email: displayEmail,
+        loginEmail: profile.email,
+        contactEmail: profile.contactEmail,
         id: profile.publicId,
         displayName,
         photo,
-        firstName: firstNameFromDisplayNameOrEmail(displayName, profile.email),
+        firstName: firstNameFromDisplayNameOrEmail(displayName, displayEmail),
         createdAt: profile.createdAt.toISOString(),
         stats: getProfileStats(profile.state),
       },
