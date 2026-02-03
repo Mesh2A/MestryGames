@@ -1,0 +1,47 @@
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  try {
+    const row = await prisma.gameProfile.findUnique({ where: { email } });
+    return NextResponse.json({ state: row?.state ?? null }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  let body: unknown = null;
+  try {
+    body = await req.json();
+  } catch {
+    body = null;
+  }
+
+  const state =
+    body && typeof body === "object" && "state" in body
+      ? (body as { state?: unknown }).state ?? null
+      : null;
+  if (!state || typeof state !== "object") return NextResponse.json({ error: "bad_request" }, { status: 400 });
+
+  try {
+    await prisma.gameProfile.upsert({
+      where: { email },
+      create: { email, state },
+      update: { state },
+    });
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
+}

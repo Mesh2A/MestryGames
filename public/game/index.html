@@ -157,6 +157,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        position: relative;
       }
       header .brand {
         display: flex;
@@ -187,6 +188,42 @@
         display: flex;
         gap: 10px;
         align-items: center;
+      }
+      .userCenter {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: rgba(255, 255, 255, 0.94);
+        font-size: 12px;
+        max-width: min(360px, 54vw);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: none;
+        pointer-events: none;
+      }
+      html[data-mobile="0"] .userCenter {
+        background-image: radial-gradient(260px 140px at 30% 0%, var(--shine), transparent 70%),
+          radial-gradient(320px 160px at 85% 0%, var(--glow-a), transparent 76%);
+      }
+      @media (max-width: 520px) {
+        .userCenter {
+          font-size: 11px;
+          padding: 7px 10px;
+          max-width: min(300px, 62vw);
+        }
+      }
+      .btn:disabled,
+      .badgeMini:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        filter: none !important;
+        transform: none !important;
       }
       .badgeMini {
         display: inline-flex;
@@ -260,6 +297,16 @@
         border-color: var(--btn-primary-border-hover);
         box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--glow-a) inset;
       }
+      .btn.zero {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
+      }
+      .btn.zero:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.16);
+      }
       html[data-mobile="0"] .btn::before {
         content: "";
         position: absolute;
@@ -275,6 +322,12 @@
         background: radial-gradient(150px 90px at 28% 18%, var(--shine), transparent 62%),
           radial-gradient(220px 130px at 75% 0%, var(--glow-b), transparent 72%);
         opacity: 0.9;
+      }
+      html[data-mobile="0"] .btn.zero::before {
+        background: radial-gradient(140px 80px at 30% 15%, rgba(255, 255, 255, 0.06), transparent 65%),
+          radial-gradient(160px 120px at 70% 0%, rgba(255, 255, 255, 0.04), transparent 70%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+        opacity: 0.55;
       }
       .btn.danger {
         background: linear-gradient(135deg, rgba(239, 68, 68, 0.75), rgba(190, 24, 93, 0.25));
@@ -1002,11 +1055,18 @@
         background: rgba(0, 0, 0, 0.03);
       }
       .historyGuess {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        justify-content: flex-start;
         font-weight: 900;
-        letter-spacing: 1px;
-        direction: ltr;
-        unicode-bidi: plaintext;
+        letter-spacing: 0.2px;
         font-variant-numeric: tabular-nums;
+        direction: rtl;
+      }
+      .historyGuess .d {
+        min-width: 12px;
+        text-align: center;
       }
       .historyDots {
         display: flex;
@@ -1267,6 +1327,7 @@
           <h1 id="brandTitle">لعبة القفل</h1>
           <div id="brandSub" class="sub">تصميم مودرن — افتح الأقفال وارتقِ</div>
         </div>
+        <div id="userCenter" class="userCenter" aria-hidden="true"></div>
         <div class="actions">
           <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
           <button id="settingsBtn" class="btn ghost" type="button">اعدادات</button>
@@ -1424,11 +1485,11 @@
                   <div class="shopRow">
                     <div>
                       <div id="syncK" class="t">نقل البيانات</div>
-                      <div id="syncSub" class="tiny">انسخ الكود من جهاز، والصقه في الجهاز الثاني.</div>
+                      <div id="syncSub" class="tiny">غير متاح حالياً.</div>
                     </div>
                     <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
-                      <button id="exportBtn" class="btn" type="button">نسخ كود</button>
-                      <button id="importBtn" class="btn primary" type="button">استيراد</button>
+                      <button id="exportBtn" class="btn" type="button" disabled>نسخ كود</button>
+                      <button id="importBtn" class="btn primary" type="button" disabled>استيراد</button>
                     </div>
                   </div>
                   <div class="shopRow">
@@ -1602,6 +1663,8 @@
     <script>
       const STORAGE_KEY = "lockgame_v1";
       const TOTAL_LEVELS = 1000;
+      let storageKey = STORAGE_KEY;
+      const cloud = { enabled: false, email: "", name: "", firstName: "", debounceId: null, mute: false };
 
       function clamp(n, a, b) {
         return Math.min(b, Math.max(a, n));
@@ -1616,12 +1679,13 @@
           unlocked: 1,
           completed: [],
           hintsUsed: [],
-          theme: "dark",
+          theme: "ocean",
           lang: "ar",
           coins: 0,
           hintTokens: 0,
           items: { reveal1: 0, reveal2: 0 },
           processedSessions: [],
+          dailyReward: { lastClaimAt: 0 },
           stars: {},
           daily: { completed: [], hintsUsed: [], stars: {} },
           dailyChallenge: { id: 1, availableAt: 0, lastCompletedAt: 0 },
@@ -1635,6 +1699,7 @@
           paidHintType: "reveal",
           unlocks: { circle: false, square: false },
           seenCoach: [],
+          lastWriteAt: 0,
         };
       }
 
@@ -1645,7 +1710,7 @@
         base.unlocked = typeof s.unlocked === "number" ? clamp(s.unlocked, 1, TOTAL_LEVELS) : 1;
         base.completed = Array.isArray(s.completed) ? s.completed.filter((n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_LEVELS) : [];
         base.hintsUsed = Array.isArray(s.hintsUsed) ? s.hintsUsed.filter((n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_LEVELS) : [];
-        base.theme = s.theme === "cream" ? "cream" : "dark";
+        base.theme = s.theme === "cream" || s.theme === "royal" || s.theme === "ocean" ? s.theme : s.theme === "dark" ? "ocean" : "ocean";
         base.lang = s.lang === "en" ? "en" : "ar";
 
         base.coins = typeof s.coins === "number" && Number.isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : 0;
@@ -1656,6 +1721,20 @@
         if (typeof base.items.math === "number" && Number.isFinite(base.items.math)) base.items.reveal2 += Math.max(0, Math.floor(base.items.math));
         delete base.items.math;
         base.processedSessions = Array.isArray(s.processedSessions) ? s.processedSessions.filter((x) => typeof x === "string").slice(-50) : [];
+        base.dailyReward = s.dailyReward && typeof s.dailyReward === "object" ? s.dailyReward : base.dailyReward;
+        const lastClaimAtRaw =
+          base.dailyReward && typeof base.dailyReward === "object" && "lastClaimAt" in base.dailyReward ? (base.dailyReward as { lastClaimAt?: unknown }).lastClaimAt : 0;
+        const lastClaimAt =
+          typeof lastClaimAtRaw === "number" && Number.isFinite(lastClaimAtRaw)
+            ? Math.max(0, Math.floor(lastClaimAtRaw))
+            : (() => {
+                const ymd =
+                  base.dailyReward && typeof base.dailyReward === "object" && "claimedYmd" in base.dailyReward ? (base.dailyReward as { claimedYmd?: unknown }).claimedYmd : "";
+                const y = typeof ymd === "string" ? ymd : "";
+                const ms = y ? Date.parse(`${y}T00:00:00Z`) : 0;
+                return Number.isFinite(ms) ? ms : 0;
+              })();
+        base.dailyReward = { lastClaimAt };
         base.stars = s.stars && typeof s.stars === "object" ? s.stars : {};
 
         base.daily = s.daily && typeof s.daily === "object" ? s.daily : base.daily;
@@ -1696,6 +1775,7 @@
         base.dailyFreeHints = s.dailyFreeHints && typeof s.dailyFreeHints === "object" ? s.dailyFreeHints : {};
 
         base.seenCoach = Array.isArray(s.seenCoach) ? s.seenCoach.filter((x) => typeof x === "string") : [];
+        base.lastWriteAt = typeof s.lastWriteAt === "number" && Number.isFinite(s.lastWriteAt) ? Math.max(0, Math.floor(s.lastWriteAt)) : 0;
 
         base.completed.sort((a, b) => a - b);
         base.hintsUsed.sort((a, b) => a - b);
@@ -1714,7 +1794,7 @@
 
       function loadState() {
         try {
-          const raw = localStorage.getItem(STORAGE_KEY);
+          const raw = localStorage.getItem(storageKey);
           if (!raw) return defaultState();
           return normalizeState(JSON.parse(raw));
         } catch {
@@ -1723,7 +1803,83 @@
       }
 
       function saveState(state) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        state.lastWriteAt = Date.now();
+        localStorage.setItem(storageKey, JSON.stringify(state));
+        queueCloudSave();
+      }
+
+      function saveStateSilent(state) {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+      }
+
+      function firstNameFromDisplayName(name) {
+        const s = String(name || "").trim();
+        if (!s) return "";
+        const parts = s.split(/\s+/).filter(Boolean);
+        return parts[0] || "";
+      }
+
+      async function fetchSessionUser() {
+        try {
+          const r = await fetch("/api/auth/session", { method: "GET", credentials: "include" });
+          const data = await r.json().catch(() => null);
+          const email = data && data.user && typeof data.user.email === "string" ? data.user.email : "";
+          const name = data && data.user && typeof data.user.name === "string" ? data.user.name : "";
+          if (!email) return null;
+          const firstName = firstNameFromDisplayName(name) || String(email).split("@")[0] || "";
+          return { email, name, firstName };
+        } catch {
+          return null;
+        }
+      }
+
+      function updateUserCenter() {
+        if (!el.userCenter) return;
+        if (!cloud.firstName) {
+          el.userCenter.style.display = "none";
+          return;
+        }
+        el.userCenter.textContent = cloud.firstName;
+        el.userCenter.style.display = "";
+      }
+
+      function setStorageKeyForEmail(email) {
+        storageKey = email ? `${STORAGE_KEY}:${email}` : STORAGE_KEY;
+      }
+
+      async function cloudGet() {
+        if (!cloud.enabled) return null;
+        try {
+          const r = await fetch("/api/game-state", { method: "GET" });
+          const data = await r.json().catch(() => null);
+          if (!r.ok) return null;
+          if (!data || !data.state || typeof data.state !== "object") return null;
+          return normalizeState(data.state);
+        } catch {
+          return null;
+        }
+      }
+
+      async function cloudPut(state) {
+        if (!cloud.enabled) return false;
+        try {
+          const r = await fetch("/api/game-state", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state }),
+          });
+          return r.ok;
+        } catch {
+          return false;
+        }
+      }
+
+      function queueCloudSave() {
+        if (!cloud.enabled || cloud.mute) return;
+        clearTimeout(cloud.debounceId);
+        cloud.debounceId = setTimeout(() => {
+          cloudPut(app.state).catch(() => {});
+        }, 900);
       }
 
       function toB64Unicode(str) {
@@ -1815,6 +1971,7 @@
         homeHeaderBtn: document.getElementById("homeHeaderBtn"),
         brandTitle: document.getElementById("brandTitle"),
         brandSub: document.getElementById("brandSub"),
+        userCenter: document.getElementById("userCenter"),
         home: document.getElementById("homeScreen"),
         map: document.getElementById("mapScreen"),
         level: document.getElementById("levelScreen"),
@@ -1965,13 +2122,13 @@
       };
 
       const app = {
-        state: loadState(),
+        state: defaultState(),
         stage: { kind: "level", id: 1 },
         attempts: 0,
         inputs: [],
         hints: [],
         history: [],
-        session: { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false },
+        session: { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false, autoClearId: null },
         mapCenter: null,
       };
       (function () {
@@ -2032,7 +2189,7 @@
           howHintNote: "في كل مرحلة عندك تلميح واحد فقط.",
           settingsDesc: "غيّر لون الشاشة لراحة العين.",
           syncK: "نقل البيانات",
-          syncSub: "انسخ الكود من جهاز، والصقه في الجهاز الثاني.",
+          syncSub: "غير متاح حالياً.",
           exportBtn: "نسخ كود",
           importBtn: "استيراد",
           importPrompt: "الصق كود النقل هنا:",
@@ -2136,9 +2293,10 @@
           statStreakK: "سلسلة بدون تلميح",
           statBestK: "أفضل سلسلة",
           dailyRewardTitle: "مكافأة اليوم",
-          dailyRewardSub: ({ n }) => `سلسلتك: ${n} يوم`,
+          dailyRewardSub: "كل 24 ساعة (+2🪙)",
           dailyRewardReady: ({ coins }) => `جاهز — +${coins}🪙`,
-          dailyRewardClaimed: "تم الاستلام اليوم.",
+          dailyRewardNext: ({ hms }) => `يرجع بعد ${hms}`,
+          dailyRewardClaimed: "تم الاستلام.",
           dailyRewardBtn: "استلام",
           missionsTitle: "مهام اليوم",
           missionSolvedTitle: "حل مراحل",
@@ -2196,7 +2354,7 @@
           howHintNote: "You only get one hint per level.",
           settingsDesc: "Choose a screen color for comfort.",
           syncK: "Transfer data",
-          syncSub: "Copy the code from one device and paste it into another.",
+          syncSub: "Unavailable for now.",
           exportBtn: "Copy code",
           importBtn: "Import",
           importPrompt: "Paste the transfer code here:",
@@ -2300,9 +2458,10 @@
           statStreakK: "No-hint streak",
           statBestK: "Best streak",
           dailyRewardTitle: "Daily reward",
-          dailyRewardSub: ({ n }) => `Streak: ${n} days`,
+          dailyRewardSub: "Every 24 hours (+2🪙)",
           dailyRewardReady: ({ coins }) => `Ready — +${coins}🪙`,
-          dailyRewardClaimed: "Already claimed today.",
+          dailyRewardNext: ({ hms }) => `Back in ${hms}`,
+          dailyRewardClaimed: "Claimed.",
           dailyRewardBtn: "Claim",
           missionsTitle: "Daily missions",
           missionSolvedTitle: "Solve levels",
@@ -2903,49 +3062,43 @@
         return `${y}-${m}-${day}`;
       }
 
-      function dailyRewardCoins(streak) {
-        const s = clamp(Math.floor(streak || 0), 0, 30);
-        if (s <= 1) return 1;
-        if (s <= 3) return 2;
-        if (s <= 6) return 3;
-        if (s <= 10) return 4;
-        return 5;
-      }
-
       function initDailyReward() {
         app.state.dailyReward =
           app.state.dailyReward && typeof app.state.dailyReward === "object"
             ? app.state.dailyReward
-            : { lastYmd: "", streak: 0, claimedYmd: "" };
-        const now = ymdNow();
-        const last = typeof app.state.dailyReward.lastYmd === "string" ? app.state.dailyReward.lastYmd : "";
-        if (last !== now) {
-          const lastMs = last ? Date.parse(`${last}T00:00:00Z`) : 0;
-          const nowMs = Date.parse(`${now}T00:00:00Z`);
-          const diffDays = lastMs ? Math.round((nowMs - lastMs) / (24 * 60 * 60 * 1000)) : 0;
-          if (diffDays === 1) app.state.dailyReward.streak = (app.state.dailyReward.streak || 0) + 1;
-          else app.state.dailyReward.streak = 1;
-          app.state.dailyReward.lastYmd = now;
-          saveState(app.state);
-        }
+            : { lastClaimAt: 0 };
+        const last =
+          app.state.dailyReward && typeof app.state.dailyReward === "object" && "lastClaimAt" in app.state.dailyReward
+            ? (app.state.dailyReward as { lastClaimAt?: unknown }).lastClaimAt
+            : 0;
+        const n = typeof last === "number" && Number.isFinite(last) ? Math.max(0, Math.floor(last)) : 0;
+        app.state.dailyReward = { lastClaimAt: n };
+      }
+
+      function dailyRewardAmount() {
+        return 2;
+      }
+
+      function dailyRewardRemainingMs() {
+        initDailyReward();
+        const last = app.state.dailyReward.lastClaimAt || 0;
+        return Math.max(0, dailyCooldownMs() - (Date.now() - last));
       }
 
       function canClaimDailyReward() {
-        initDailyReward();
-        const now = ymdNow();
-        return app.state.dailyReward && app.state.dailyReward.claimedYmd !== now;
+        return dailyRewardRemainingMs() === 0;
       }
 
       function claimDailyReward() {
         initDailyReward();
-        const now = ymdNow();
-        if (app.state.dailyReward.claimedYmd === now) {
-          el.msg.textContent = t("dailyRewardClaimed");
+        const ms = dailyRewardRemainingMs();
+        if (ms > 0) {
+          el.msg.textContent = t("dailyRewardNext", { hms: formatHMS(ms) });
           updateSettingsUI();
           return;
         }
-        const coins = dailyRewardCoins(app.state.dailyReward.streak || 0);
-        app.state.dailyReward.claimedYmd = now;
+        const coins = dailyRewardAmount();
+        app.state.dailyReward.lastClaimAt = Date.now();
         saveState(app.state);
         awardCoins(coins);
         el.msg.textContent = t("dailyRewardReady", { coins });
@@ -3107,10 +3260,11 @@
 
         if (el.dailyRewardTitle) el.dailyRewardTitle.textContent = t("dailyRewardTitle");
         initDailyReward();
-        if (el.dailyRewardSub) el.dailyRewardSub.textContent = t("dailyRewardSub", { n: app.state.dailyReward.streak || 0 });
-        const ready = canClaimDailyReward();
-        const coins = dailyRewardCoins(app.state.dailyReward.streak || 0);
-        if (el.dailyRewardStatus) el.dailyRewardStatus.textContent = ready ? t("dailyRewardReady", { coins }) : t("dailyRewardClaimed");
+        const coins = dailyRewardAmount();
+        const ms = dailyRewardRemainingMs();
+        const ready = ms === 0;
+        if (el.dailyRewardSub) el.dailyRewardSub.textContent = t("dailyRewardSub");
+        if (el.dailyRewardStatus) el.dailyRewardStatus.textContent = ready ? t("dailyRewardReady", { coins }) : t("dailyRewardNext", { hms: formatHMS(ms) });
         if (el.claimDailyRewardBtn) {
           el.claimDailyRewardBtn.textContent = t("dailyRewardBtn");
           el.claimDailyRewardBtn.disabled = !ready;
@@ -3158,12 +3312,29 @@
 
       function updateLevelFeaturesUI() {
         ensureItems();
-        const n1 = app.state.items.reveal1 || 0;
-        const n2 = app.state.items.reveal2 || 0;
+        const hintPaid = Math.max(0, Math.floor(app.state.hintTokens || 0));
+        const hintFree = Math.max(0, freeHintLimit() - freeHintUsedCount(app.stage));
+        const hintLeft = hintFree + hintPaid;
+        const n1 = Math.max(0, Math.floor(app.state.items.reveal1 || 0));
+        const n2 = Math.max(0, Math.floor(app.state.items.reveal2 || 0));
+        if (el.hintBtn) {
+          el.hintBtn.textContent = t("hintBtn", { left: hintLeft });
+          el.hintBtn.classList.toggle("primary", hintLeft > 0);
+          el.hintBtn.classList.toggle("zero", hintLeft <= 0);
+          el.hintBtn.disabled = app.session && app.session.over;
+        }
         if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.textContent = t("inLevelFeatureBtn", { name: t("featReveal1K"), n: n1 });
         if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.textContent = t("inLevelFeatureBtn", { name: t("featReveal2K"), n: n2 });
-        if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.disabled = app.session && app.session.over;
-        if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.disabled = app.session && app.session.over;
+        if (el.levelFeatReveal1Btn) {
+          el.levelFeatReveal1Btn.classList.toggle("primary", n1 > 0);
+          el.levelFeatReveal1Btn.classList.toggle("zero", n1 <= 0);
+          el.levelFeatReveal1Btn.disabled = app.session && app.session.over;
+        }
+        if (el.levelFeatReveal2Btn) {
+          el.levelFeatReveal2Btn.classList.toggle("primary", n2 > 0);
+          el.levelFeatReveal2Btn.classList.toggle("zero", n2 <= 0);
+          el.levelFeatReveal2Btn.disabled = app.session && app.session.over;
+        }
       }
 
       const ACHS = [
@@ -3241,7 +3412,11 @@
           const row = document.createElement("div");
           row.className = "historyItem";
           const dots = item.result.map((s) => `<span class="dot ${s}"></span>`).join("");
-          row.innerHTML = `<div class="historyGuess"><span dir="ltr">${item.guess}</span></div><div class="historyDots">${dots}</div>`;
+          const digits = String(item.guess || "")
+            .split("")
+            .map((d) => `<span class="d">${d}</span>`)
+            .join("");
+          row.innerHTML = `<div class="historyGuess" dir="rtl">${digits}</div><div class="historyDots">${dots}</div>`;
           frag.appendChild(row);
         }
         el.history.appendChild(frag);
@@ -3286,7 +3461,16 @@
       function resetSession() {
         if (app.session.timerId) clearInterval(app.session.timerId);
         if (app.session.autoClearId) clearTimeout(app.session.autoClearId);
-        app.session = { over: false, timerId: null, timeLeft: 0, attemptLimit: 0, usedPaidHint: false, usedAnyHint: false, autoClearId: null };
+        app.session = {
+          over: false,
+          timerId: null,
+          timeLeft: 0,
+          attemptLimit: 0,
+          usedPaidHint: false,
+          usedAnyHint: false,
+          autoClearId: null,
+          shownHintDigits: [],
+        };
         if (el.timerBadge) el.timerBadge.style.display = "none";
       }
 
@@ -3363,8 +3547,6 @@
         renderSlotsForStage(stage);
         clearSlots();
         resetSession();
-        el.hintBtn.textContent = t("hintBtn", { left: Math.max(0, freeHintLimit() - freeHintUsedCount(stage)) });
-        el.hintBtn.disabled = false;
         el.checkBtn.disabled = false;
         app.session.usedAnyHint = false;
         app.session.usedPaidHint = false;
@@ -3658,17 +3840,40 @@
         return answer[idx];
       }
 
+      function paidHintDigit(stage) {
+        const answer = generateAnswerForStage(stage).split("");
+        const shown = app.session && Array.isArray(app.session.shownHintDigits) ? app.session.shownHintDigits : [];
+        for (const d of answer) {
+          if (!shown.includes(d)) {
+            shown.push(d);
+            if (app.session) app.session.shownHintDigits = shown;
+            return d;
+          }
+        }
+        const d = answer[Math.floor(Math.random() * Math.max(1, answer.length))] || "0";
+        shown.push(d);
+        if (app.session) app.session.shownHintDigits = shown;
+        return d;
+      }
+
       function spendHintToken() {
         const cur = app.state.hintTokens || 0;
         if (cur <= 0) return false;
         app.state.hintTokens = cur - 1;
         saveState(app.state);
         updateSettingsUI();
+        updateHintBtnLabel();
+        updateLevelFeaturesUI();
         return true;
       }
 
       function updateHintBtnLabel() {
-        el.hintBtn.textContent = t("hintBtn", { left: Math.max(0, freeHintLimit() - freeHintUsedCount(app.stage)) });
+        const hintPaid = Math.max(0, Math.floor(app.state.hintTokens || 0));
+        const hintFree = Math.max(0, freeHintLimit() - freeHintUsedCount(app.stage));
+        const hintLeft = hintFree + hintPaid;
+        el.hintBtn.textContent = t("hintBtn", { left: hintLeft });
+        el.hintBtn.classList.toggle("primary", hintLeft > 0);
+        el.hintBtn.classList.toggle("zero", hintLeft <= 0);
       }
 
       function paidHintReveal(stage) {
@@ -3737,14 +3942,9 @@
 
         app.session.usedAnyHint = true;
         app.session.usedPaidHint = true;
-        const type = app.state.paidHintType || "reveal";
-        const ok =
-          type === "eliminate"
-            ? paidHintEliminate(app.stage)
-            : type === "count"
-              ? paidHintCount(app.stage)
-              : paidHintReveal(app.stage);
-        if (!ok) el.msg.textContent = t("hintFailed");
+        const digit = paidHintDigit(app.stage);
+        el.msg.textContent = t("hintMsg", { digit });
+        updateHintBtnLabel();
       }
 
       function shareResult() {
@@ -3845,6 +4045,7 @@
         saveState(app.state);
         updateSettingsUI();
         updateShopUI();
+        updateLevelFeaturesUI();
         el.msg.textContent = t("bought");
       }
 
@@ -3857,6 +4058,7 @@
         saveState(app.state);
         updateSettingsUI();
         updateShopUI();
+        updateLevelFeaturesUI();
         el.msg.textContent = t("bought");
       }
 
@@ -3988,6 +4190,7 @@
         el.msg.textContent = t("bought");
 
         updateShopUI();
+        updateLevelFeaturesUI();
       }
 
       function mathSeedFromString(s) {
@@ -4230,7 +4433,7 @@
         applyLanguage(currentLang() === "en" ? "ar" : "en");
       });
 
-      if (el.exportBtn) {
+      if (el.exportBtn && !el.exportBtn.disabled) {
         el.exportBtn.addEventListener("click", async () => {
           const code = exportTransferCode();
           try {
@@ -4243,7 +4446,7 @@
           }
         });
       }
-      if (el.importBtn) {
+      if (el.importBtn && !el.importBtn.disabled) {
         el.importBtn.addEventListener("click", () => {
           const code = window.prompt(t("importPrompt"), "");
           if (!code) return;
@@ -4267,24 +4470,64 @@
         bgResizeT = setTimeout(() => buildBgPattern(), 180);
       });
 
-      const initialTheme = normalizeTheme(app.state.theme || "ocean");
-      if (app.state.theme !== initialTheme) {
-        app.state.theme = initialTheme;
-        saveState(app.state);
-      }
-      applyTheme(initialTheme);
-      applyLanguage(app.state.lang || "ar");
-      applyReduceMotion();
-      applyLockShape();
-      updateCoinsUI();
-      updateSettingsUI();
-      enableMapControls();
-      buildBgPattern();
-      renderMap();
-      setScreen("home");
-      consumeCheckoutReturn();
-      updateDailyUI();
-      setInterval(() => updateDailyUI(), 1000);
+      (async function bootstrap() {
+        let qsFirstName = "";
+        try {
+          qsFirstName = String(new URLSearchParams(window.location.search).get("fn") || "").trim();
+        } catch {
+          qsFirstName = "";
+        }
+        if (qsFirstName) {
+          cloud.firstName = qsFirstName;
+          updateUserCenter();
+        }
+
+        const u = await fetchSessionUser();
+        if (u) {
+          cloud.enabled = true;
+          cloud.email = u.email;
+          cloud.name = u.name;
+          cloud.firstName = u.firstName;
+          setStorageKeyForEmail(u.email);
+        }
+
+        app.state = loadState();
+        updateUserCenter();
+
+        const remote = await cloudGet();
+        if (remote) {
+          const localTs = app.state.lastWriteAt || 0;
+          const remoteTs = remote.lastWriteAt || 0;
+          if (remoteTs > localTs) {
+            app.state = remote;
+            saveStateSilent(app.state);
+          } else {
+            cloudPut(app.state).catch(() => {});
+          }
+        } else if (cloud.enabled) {
+          cloudPut(app.state).catch(() => {});
+        }
+
+        const initialTheme = normalizeTheme(app.state.theme || "ocean");
+        if (app.state.theme !== initialTheme) {
+          app.state.theme = initialTheme;
+          saveStateSilent(app.state);
+        }
+
+        applyTheme(initialTheme);
+        applyLanguage(app.state.lang || "ar");
+        applyReduceMotion();
+        applyLockShape();
+        updateCoinsUI();
+        updateSettingsUI();
+        enableMapControls();
+        buildBgPattern();
+        renderMap();
+        setScreen("home");
+        consumeCheckoutReturn();
+        updateDailyUI();
+        setInterval(() => updateDailyUI(), 1000);
+      })();
     </script>
   </body>
 </html>
