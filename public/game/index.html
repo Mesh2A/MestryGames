@@ -5551,10 +5551,9 @@
             .map((g) => {
               const when = g.createdAt ? new Date(g.createdAt).toLocaleString() : "";
               const coins = typeof g.coins === "number" ? g.coins : 0;
-              const id = g.fromId ? `(${escapeHtml(g.fromId)})` : "";
               return `<div class="giftRow">
                 <div class="friendMeta">
-                  <div class="name">${escapeHtml(g.fromName || "Player")} ${id}</div>
+                  <div class="name">${escapeHtml(g.fromName || "Player")}</div>
                   <div class="id">+${escapeHtml(coins)}🪙</div>
                 </div>
                 <div class="friendsTiny" style="margin-top:4px">${escapeHtml(when)}</div>
@@ -5667,10 +5666,22 @@
         const nextGifts = gifts.ok && gifts.data && Array.isArray(gifts.data.gifts) ? gifts.data.gifts : [];
 
         const nextFriendsSig = nextFriends
-          .map((f) => `${String(f.id || "")}:${String(f.photo || "").length}:${f.canGift ? 1 : 0}:${Math.floor(Number(f.giftAvailableAt || 0) || 0)}`)
+          .map((f) => {
+            const id = String(f.id || "");
+            const name = String(f.firstName || "");
+            const photoLen = String(f.photo || "").length;
+            const canGift = f.canGift ? 1 : 0;
+            const availAt = Math.floor(Number(f.giftAvailableAt || 0) || 0);
+            return `${id}:${name}:${photoLen}:${canGift}:${availAt}`;
+          })
           .join("|");
         const nextGiftsSig = nextGifts
-          .map((g) => `${Math.floor(Number(g.createdAt || 0) || 0)}:${String(g.fromId || "")}:${Math.floor(Number(g.coins || 0) || 0)}`)
+          .map((g) => {
+            const createdAt = Math.floor(Number(g.createdAt || 0) || 0);
+            const fromName = String(g.fromName || "");
+            const coins = Math.floor(Number(g.coins || 0) || 0);
+            return `${createdAt}:${fromName}:${coins}`;
+          })
           .join("|");
 
         const prevFriendsSig = friendsState.friendsSig || "";
