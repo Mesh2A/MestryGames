@@ -108,6 +108,38 @@
         --pattern-color: rgba(0, 0, 0, 0.12);
         --sea-opacity: 0.55;
       }
+      html[data-theme="crimson"] {
+        --bg-0: #07070a;
+        --sea-0: #200608;
+        --sea-1: #5f0a12;
+        --sea-2: #ef4444;
+        --glass: rgba(255, 255, 255, 0.1);
+        --glass-2: rgba(255, 255, 255, 0.16);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.68);
+        --shadow: rgba(0, 0, 0, 0.52);
+        --shine: rgba(255, 255, 255, 0.22);
+        --glow-a: rgba(239, 68, 68, 0.26);
+        --glow-b: rgba(244, 63, 94, 0.18);
+        --glow-c: rgba(251, 113, 133, 0.12);
+        --bg-grad-a: radial-gradient(1200px 720px at 18% 0%, rgba(239, 68, 68, 0.18), transparent 64%);
+        --bg-grad-b: radial-gradient(1100px 760px at 84% 10%, rgba(244, 63, 94, 0.12), transparent 68%),
+          radial-gradient(900px 620px at 52% 110%, rgba(251, 113, 133, 0.08), transparent 60%);
+        --bg-grad-c: linear-gradient(180deg, #040405, var(--bg-0) 55%, #020203);
+        --btn-border: rgba(255, 255, 255, 0.2);
+        --btn-bg: rgba(255, 255, 255, 0.1);
+        --btn-hover-bg: rgba(255, 255, 255, 0.15);
+        --btn-hover-border: rgba(255, 255, 255, 0.3);
+        --btn-primary-grad: linear-gradient(135deg, rgba(239, 68, 68, 0.7), rgba(0, 0, 0, 0));
+        --btn-primary-grad-hover: linear-gradient(135deg, rgba(239, 68, 68, 0.82), rgba(0, 0, 0, 0));
+        --btn-primary-border: rgba(239, 68, 68, 0.86);
+        --btn-primary-border-hover: rgba(239, 68, 68, 0.96);
+        --panel-border: rgba(255, 255, 255, 0.14);
+        --panel-bg: rgba(255, 255, 255, 0.06);
+        --modal-bg: rgba(8, 8, 10, 0.76);
+        --pattern-color: rgba(255, 255, 255, 0.07);
+        --sea-opacity: 0.9;
+      }
       html[data-lock-shape="circle"] {
         --slot-radius: 999px;
       }
@@ -149,6 +181,32 @@
           repeating-linear-gradient(25deg, rgba(255, 255, 255, 0.03) 0 2px, rgba(255, 255, 255, 0) 2px 7px);
         opacity: 0.55;
         mix-blend-mode: overlay;
+      }
+      html[data-theme="crimson"] body::after {
+        content: "";
+        position: fixed;
+        inset: -10% -8% -10% -8%;
+        pointer-events: none;
+        background: radial-gradient(1500px 150px at 0% 55%, transparent 52%, rgba(239, 68, 68, 0.38) 54%, transparent 58%),
+          radial-gradient(1700px 190px at 0% 70%, transparent 55%, rgba(239, 68, 68, 0.22) 57%, transparent 61%),
+          radial-gradient(1200px 120px at 0% 40%, transparent 54%, rgba(244, 63, 94, 0.2) 56%, transparent 60%);
+        opacity: 0.55;
+        transform: rotate(-10deg) translateX(-8%);
+        animation: crimsonSweep 8s ease-in-out infinite alternate;
+        mix-blend-mode: screen;
+      }
+      html[data-reduce-motion="1"][data-theme="crimson"] body::after {
+        animation: none;
+        opacity: 0.32;
+        transform: rotate(-10deg);
+      }
+      @keyframes crimsonSweep {
+        from {
+          transform: rotate(-10deg) translateX(-12%);
+        }
+        to {
+          transform: rotate(-10deg) translateX(12%);
+        }
       }
       .app {
         height: 100%;
@@ -605,6 +663,17 @@
         mix-blend-mode: soft-light;
         text-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
         filter: blur(0.2px);
+      }
+      html[data-theme="crimson"] .bgPattern .bgDot {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: translate(-50%, -50%);
+        border-radius: 999px;
+        background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.22), rgba(239, 68, 68, 0.7) 38%, rgba(239, 68, 68, 0) 68%);
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.18);
+        mix-blend-mode: screen;
+        pointer-events: none;
       }
       .bgPattern .bgItem.word {
         letter-spacing: 1.2px;
@@ -3627,7 +3696,13 @@
           importBad: "الكود غير صحيح.",
           imported: "تم النقل ✅",
           themeBtn: ({ theme }) =>
-            theme === "cream" ? "لون الشاشة: كريمي" : theme === "royal" ? "لون الشاشة: ملكي" : "لون الشاشة: محيط",
+            theme === "cream"
+              ? "لون الشاشة: كريمي"
+              : theme === "royal"
+              ? "لون الشاشة: ملكي"
+              : theme === "crimson"
+              ? "لون الشاشة: جمر"
+              : "لون الشاشة: محيط",
           langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
           progressText: ({ completed, unlocked, total }) => `${completed} مكتملة — مفتوح حتى ${unlocked} / ${total}`,
           stageAria: ({ i }) => `المرحلة ${i}`,
@@ -3799,7 +3874,14 @@
           importPrompt: "Paste the transfer code here:",
           importBad: "Invalid code.",
           imported: "Imported ✅",
-          themeBtn: ({ theme }) => (theme === "cream" ? "Screen: Cream" : theme === "royal" ? "Screen: Royal" : "Screen: Ocean"),
+          themeBtn: ({ theme }) =>
+            theme === "cream"
+              ? "Screen: Cream"
+              : theme === "royal"
+              ? "Screen: Royal"
+              : theme === "crimson"
+              ? "Screen: Crimson"
+              : "Screen: Ocean",
           langBtn: ({ lang }) => (lang === "en" ? "العربية" : "English"),
           progressText: ({ completed, unlocked, total }) => `${completed} completed — unlocked up to ${unlocked} / ${total}`,
           stageAria: ({ i }) => `Level ${i}`,
@@ -4040,7 +4122,7 @@
       function normalizeTheme(theme) {
         const t = String(theme || "").toLowerCase();
         if (t === "dark") return "ocean";
-        if (t === "ocean" || t === "royal" || t === "cream") return t;
+        if (t === "ocean" || t === "royal" || t === "cream" || t === "crimson") return t;
         return "ocean";
       }
 
@@ -4048,7 +4130,11 @@
         const next = normalizeTheme(theme);
         document.documentElement.dataset.theme = next;
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", next === "cream" ? "#fff8ed" : next === "royal" ? "#050816" : "#04111f");
+        if (meta)
+          meta.setAttribute(
+            "content",
+            next === "cream" ? "#fff8ed" : next === "royal" ? "#050816" : next === "crimson" ? "#07070a" : "#04111f"
+          );
       }
 
       function currentTheme() {
@@ -4097,6 +4183,7 @@
         const h = Math.max(1, window.innerHeight || 1);
         const isMobile = document.documentElement.dataset.mobile === "1";
         const m = document.documentElement.dataset.reduceMotion === "1";
+        const theme = currentTheme();
         const count = isMobile
           ? m
             ? clamp(Math.round((w * h) / 52000), 12, 34)
@@ -4136,6 +4223,27 @@
           span.style.left = `${randFloat(4, 96)}%`;
           span.style.top = `${randFloat(5, 95)}%`;
           frag.appendChild(span);
+        }
+
+        if (theme === "crimson") {
+          const dotCount = isMobile
+            ? m
+              ? clamp(Math.round((w * h) / 140000), 8, 16)
+              : clamp(Math.round((w * h) / 110000), 12, 22)
+            : m
+            ? clamp(Math.round((w * h) / 120000), 12, 26)
+            : clamp(Math.round((w * h) / 90000), 18, 42);
+          for (let i = 0; i < dotCount; i++) {
+            const dot = document.createElement("span");
+            dot.className = "bgDot";
+            const s = randInt(4, isMobile ? 9 : 12);
+            dot.style.width = `${s}px`;
+            dot.style.height = `${s}px`;
+            dot.style.opacity = String(randFloat(0.18, 0.7));
+            dot.style.left = `${randFloat(3, 97)}%`;
+            dot.style.top = `${randFloat(4, 96)}%`;
+            frag.appendChild(dot);
+          }
         }
 
         root.appendChild(frag);
@@ -7569,7 +7677,7 @@
       }
 
       el.themeBtn.addEventListener("click", () => {
-        const order = ["ocean", "royal", "cream"];
+        const order = ["ocean", "royal", "cream", "crimson"];
         const cur = currentTheme();
         const idx = Math.max(0, order.indexOf(cur));
         const next = order[(idx + 1) % order.length];
