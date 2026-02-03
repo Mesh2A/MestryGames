@@ -1295,12 +1295,17 @@
       .friendsPanel {
         position: fixed;
         top: 74px;
-        right: 16px;
+        left: 16px;
+        right: auto;
         width: min(380px, calc(100vw - 24px));
         z-index: 999;
         transform: translateY(-140%);
         transition: transform 260ms ease;
         pointer-events: none;
+      }
+      html[dir="ltr"] .friendsPanel {
+        right: 16px;
+        left: auto;
       }
       .friendsPanel.open {
         transform: translateY(0);
@@ -1352,6 +1357,30 @@
         gap: 8px;
         align-items: center;
       }
+      .friendsTabs {
+        margin-top: 10px;
+        display: flex;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .friendsTab {
+        flex: 1 1 auto;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 12px;
+      }
+      .friendsTab.active {
+        border-color: rgba(37, 99, 235, 0.7);
+        background: rgba(37, 99, 235, 0.18);
+      }
       .friendsList {
         margin-top: 10px;
         display: grid;
@@ -1359,6 +1388,15 @@
         max-height: 260px;
         overflow: auto;
         padding: 2px;
+      }
+      .giftRow {
+        text-align: right;
+        width: 100%;
+        padding: 10px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
       }
       .friendRow {
         text-align: right;
@@ -1413,6 +1451,20 @@
         .slots {
           grid-template-columns: repeat(3, 1fr);
         }
+        .friendsPanel {
+          top: 66px;
+          left: 12px;
+          right: 12px;
+          width: auto;
+        }
+        html[dir="ltr"] .friendsPanel {
+          left: 12px;
+          right: 12px;
+          width: auto;
+        }
+        .friendsAddRow {
+          flex-wrap: wrap;
+        }
       }
       @media (max-width: 900px) {
         header {
@@ -1430,6 +1482,9 @@
         }
         .pathInner {
           min-width: max(100%, 980px);
+        }
+        .friendsPanel {
+          top: 70px;
         }
       }
     </style>
@@ -1787,17 +1842,31 @@
           <div id="friendsMeName" class="v">—</div>
           <div class="k">ID: <span id="friendsMeId" class="v">—</span></div>
         </div>
-        <div class="friendsAddRow">
-          <input id="friendIdInput" class="miniInput" autocomplete="off" placeholder="اكتب ID صديقك" />
-          <button id="friendAddBtn" class="btn primary" type="button">إضافة</button>
+        <div class="friendsTabs" role="tablist" aria-label="Friends Tabs">
+          <button id="friendsTabFriendsBtn" class="friendsTab active" type="button" data-tab="friends">الأصدقاء</button>
+          <button id="friendsTabGiftsBtn" class="friendsTab" type="button" data-tab="gifts">الإهداءات</button>
+          <button id="friendsTabAddBtn" class="friendsTab" type="button" data-tab="add">إضافة</button>
         </div>
         <div id="friendsMsg" class="friendsTiny"></div>
-        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-top:10px">
-          <div class="friendsTiny" style="opacity:.9">اللاعبين</div>
-          <div id="friendsCount" class="friendsTiny"></div>
+        <div id="friendsTabFriends" style="margin-top:10px">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px">
+            <div class="friendsTiny" style="opacity:.9">اللاعبين</div>
+            <div id="friendsCount" class="friendsTiny"></div>
+          </div>
+          <div id="friendsList" class="friendsList"></div>
+          <div id="friendsActions" class="friendsActions" style="display:none"></div>
         </div>
-        <div id="friendsList" class="friendsList"></div>
-        <div id="friendsActions" class="friendsActions" style="display:none"></div>
+        <div id="friendsTabGifts" style="display:none; margin-top:10px">
+          <div class="friendsTiny" style="opacity:.9">آخر الإهداءات</div>
+          <div id="friendsGiftsList" class="friendsList"></div>
+        </div>
+        <div id="friendsTabAdd" style="display:none; margin-top:10px">
+          <div class="friendsAddRow" style="margin-top:0">
+            <input id="friendIdInput" class="miniInput" autocomplete="off" placeholder="اكتب ID صديقك" />
+            <button id="friendAddBtn" class="btn primary" type="button">إضافة</button>
+          </div>
+          <div class="friendsTiny" style="margin-top:10px">اكتب ID واضغط إضافة.</div>
+        </div>
       </div>
     </div>
 
@@ -4599,14 +4668,21 @@
         btnLevel: document.getElementById("friendsBtnLevel"),
         meName: document.getElementById("friendsMeName"),
         meId: document.getElementById("friendsMeId"),
+        tabFriendsBtn: document.getElementById("friendsTabFriendsBtn"),
+        tabGiftsBtn: document.getElementById("friendsTabGiftsBtn"),
+        tabAddBtn: document.getElementById("friendsTabAddBtn"),
+        tabFriends: document.getElementById("friendsTabFriends"),
+        tabGifts: document.getElementById("friendsTabGifts"),
+        tabAdd: document.getElementById("friendsTabAdd"),
         addInput: document.getElementById("friendIdInput"),
         addBtn: document.getElementById("friendAddBtn"),
         msg: document.getElementById("friendsMsg"),
         count: document.getElementById("friendsCount"),
         list: document.getElementById("friendsList"),
+        giftsList: document.getElementById("friendsGiftsList"),
         actions: document.getElementById("friendsActions"),
       };
-      const friendsState = { open: false, me: null, friends: [], selectedId: "", details: null };
+      const friendsState = { open: false, tab: "friends", me: null, friends: [], gifts: [], selectedId: "", details: null };
 
       function escapeHtml(s) {
         return String(s || "")
@@ -4628,7 +4704,49 @@
         return { ok: r.ok, status: r.status, data };
       }
 
+      function setTab(next) {
+        friendsState.tab = next;
+        const friendsActive = next === "friends";
+        const giftsActive = next === "gifts";
+        const addActive = next === "add";
+        if (friendsUI.tabFriendsBtn) friendsUI.tabFriendsBtn.classList.toggle("active", friendsActive);
+        if (friendsUI.tabGiftsBtn) friendsUI.tabGiftsBtn.classList.toggle("active", giftsActive);
+        if (friendsUI.tabAddBtn) friendsUI.tabAddBtn.classList.toggle("active", addActive);
+        if (friendsUI.tabFriends) friendsUI.tabFriends.style.display = friendsActive ? "" : "none";
+        if (friendsUI.tabGifts) friendsUI.tabGifts.style.display = giftsActive ? "" : "none";
+        if (friendsUI.tabAdd) friendsUI.tabAdd.style.display = addActive ? "" : "none";
+      }
+
       function renderFriends() {
+        setTab(friendsState.tab || "friends");
+        if (friendsState.tab === "gifts") {
+          if (!friendsUI.giftsList) return;
+          const gifts = Array.isArray(friendsState.gifts) ? friendsState.gifts : [];
+          if (!gifts.length) {
+            friendsUI.giftsList.innerHTML = `<div class="friendsTiny">لا يوجد إهداءات.</div>`;
+            return;
+          }
+          friendsUI.giftsList.innerHTML = gifts
+            .map((g) => {
+              const when = g.createdAt ? new Date(g.createdAt).toLocaleString() : "";
+              const coins = typeof g.coins === "number" ? g.coins : 0;
+              const id = g.fromId ? `(${escapeHtml(g.fromId)})` : "";
+              return `<div class="giftRow">
+                <div class="friendMeta">
+                  <div class="name">${escapeHtml(g.fromName || "Player")} ${id}</div>
+                  <div class="id">+${escapeHtml(coins)}🪙</div>
+                </div>
+                <div class="friendsTiny" style="margin-top:4px">${escapeHtml(when)}</div>
+              </div>`;
+            })
+            .join("");
+          return;
+        }
+
+        if (friendsState.tab === "add") {
+          return;
+        }
+
         if (!friendsUI.list || !friendsUI.count) return;
         const list = Array.isArray(friendsState.friends) ? friendsState.friends : [];
         friendsUI.count.textContent = list.length ? `${list.length} لاعب` : "";
@@ -4682,6 +4800,7 @@
           setFriendsMsg("سجّل دخولك أولاً.");
           friendsState.me = null;
           friendsState.friends = [];
+          friendsState.gifts = [];
           friendsState.selectedId = "";
           friendsState.details = null;
           renderFriends();
@@ -4704,6 +4823,8 @@
 
         const list = await friendsJson("/api/friends/list", { method: "GET" });
         friendsState.friends = list.ok && list.data && Array.isArray(list.data.friends) ? list.data.friends : [];
+        const gifts = await friendsJson("/api/friends/gifts", { method: "GET" });
+        friendsState.gifts = gifts.ok && gifts.data && Array.isArray(gifts.data.gifts) ? gifts.data.gifts : [];
         if (friendsState.selectedId && !friendsState.friends.some((x) => x.id === friendsState.selectedId)) {
           friendsState.selectedId = "";
           friendsState.details = null;
@@ -4713,6 +4834,7 @@
 
       function openFriends() {
         friendsState.open = true;
+        friendsState.tab = friendsState.tab || "friends";
         if (friendsUI.panel) friendsUI.panel.classList.add("open");
         loadFriendsData().catch(() => {});
       }
@@ -4728,6 +4850,18 @@
       if (friendsUI.btn) friendsUI.btn.addEventListener("click", () => toggleFriends());
       if (friendsUI.btnLevel) friendsUI.btnLevel.addEventListener("click", () => toggleFriends());
       if (friendsUI.close) friendsUI.close.addEventListener("click", () => closeFriends());
+      if (friendsUI.tabFriendsBtn) friendsUI.tabFriendsBtn.addEventListener("click", () => {
+        friendsState.tab = "friends";
+        renderFriends();
+      });
+      if (friendsUI.tabGiftsBtn) friendsUI.tabGiftsBtn.addEventListener("click", () => {
+        friendsState.tab = "gifts";
+        renderFriends();
+      });
+      if (friendsUI.tabAddBtn) friendsUI.tabAddBtn.addEventListener("click", () => {
+        friendsState.tab = "add";
+        renderFriends();
+      });
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && friendsState.open) closeFriends();
       });

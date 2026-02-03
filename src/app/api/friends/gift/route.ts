@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       const nextState = { ...receiverState, coins: nextCoins, lastWriteAt: now };
 
       await tx.gameProfile.update({ where: { email: target.email }, data: { state: nextState } });
+      await tx.friendGiftEvent.create({ data: { fromEmail: email, toEmail: target.email, coins: giftCoins } });
       return { kind: "ok" as const, coinsAdded: giftCoins, nextCoins, nextAvailableAt: now + cooldownMs };
     });
 
@@ -71,4 +72,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-
