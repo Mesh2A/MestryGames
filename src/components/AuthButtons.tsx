@@ -217,13 +217,13 @@ export default function AuthButtons() {
                     redirect: false,
                     identifier: regUsername.trim(),
                     password: regPassword,
-                    callbackUrl: window.location.href,
+                    callbackUrl: "/",
                   });
                   if (!res || res.error) {
                     setRegError("تم إنشاء الحساب لكن تعذر تسجيل الدخول. حاول تسجيل الدخول.");
                     return;
                   }
-                  window.location.href = res.url || "/play";
+                  window.location.href = res.url || "/";
                 } finally {
                   setRegBusy(false);
                 }

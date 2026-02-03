@@ -12,20 +12,14 @@ function normalizeUsername(username: string) {
     .replace(/\s+/g, "");
 }
 
-function credentialsEmailForUsername(username: string) {
-  return `${username}@mestry.local`;
-}
-
-async function createCredentialsProfileTx(tx: Prisma.TransactionClient, args: { username: string; contactEmail: string; passwordHash: string }) {
-  const email = credentialsEmailForUsername(args.username);
-
+async function createCredentialsProfileTx(tx: Prisma.TransactionClient, args: { username: string; email: string; passwordHash: string }) {
   for (let attempt = 0; attempt < 7; attempt++) {
     const publicId = generatePublicId(11);
     try {
       return await tx.gameProfile.create({
         data: {
-          email,
-          contactEmail: args.contactEmail,
+          email: args.email,
+          contactEmail: args.email,
           username: args.username,
           passwordHash: args.passwordHash,
           publicId,
@@ -78,11 +72,34 @@ export async function POST(req: NextRequest) {
 
       const emailOwner = await tx.gameProfile.findFirst({
         where: { OR: [{ email }, { contactEmail: email }] },
-        select: { id: true },
+        select: { email: true, passwordHash: true, publicId: true },
       });
-      if (emailOwner) return { ok: false as const, error: "email_taken" as const };
+      if (emailOwner) {
+        if (emailOwner.email === email && !emailOwner.passwordHash) {
+          for (let attempt = 0; attempt < 7; attempt++) {
+            try {
+              await tx.gameProfile.update({
+                where: { email },
+                data: {
+                  username,
+                  passwordHash,
+                  contactEmail: email,
+                  publicId: emailOwner.publicId || generatePublicId(11),
+                },
+              });
+              return { ok: true as const };
+            } catch (e) {
+              const code = (e as { code?: unknown }).code;
+              if (code === "P2002") continue;
+              throw e;
+            }
+          }
+          throw new Error("create_profile_failed");
+        }
+        return { ok: false as const, error: "email_taken" as const };
+      }
 
-      await createCredentialsProfileTx(tx, { username, contactEmail: email, passwordHash });
+      await createCredentialsProfileTx(tx, { username, email, passwordHash });
       return { ok: true as const };
     });
 

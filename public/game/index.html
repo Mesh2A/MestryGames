@@ -29,7 +29,7 @@
             if (!lastScreen && state && typeof state.lastScreen === "string") lastScreen = state.lastScreen;
           }
 
-          if (theme) document.documentElement.dataset.theme = theme;
+          document.documentElement.dataset.theme = theme || "crimson";
           document.documentElement.dataset.booting = "1";
           if (lastScreen === "map" || lastScreen === "level") document.documentElement.dataset.bootScreen = lastScreen;
         } catch {}
@@ -2952,7 +2952,7 @@
           unlocked: 1,
           completed: [],
           hintsUsed: [],
-          theme: "ocean",
+          theme: "crimson",
           lang: "ar",
           coins: 0,
           coinsEarnedTotal: 0,
@@ -2996,8 +2996,8 @@
           s.theme === "cream" || s.theme === "royal" || s.theme === "ocean" || s.theme === "crimson"
             ? s.theme
             : s.theme === "dark"
-            ? "ocean"
-            : "ocean";
+            ? "crimson"
+            : "crimson";
         base.lang = s.lang === "en" ? "en" : "ar";
         base.lastScreen = s.lastScreen === "map" || s.lastScreen === "level" ? s.lastScreen : "home";
         if (
@@ -3468,7 +3468,7 @@
           if (!data || typeof data !== "object" || data.v !== 1 || !data.state) return false;
           app.state = normalizeState(data.state);
           saveState(app.state);
-          applyTheme(app.state.theme || "ocean");
+          applyTheme(app.state.theme || "crimson");
           updateCoinsUI();
           updateSettingsUI();
           updateShopUI();
@@ -4248,7 +4248,7 @@
       }
 
       function currentTheme() {
-        return normalizeTheme(document.documentElement.dataset.theme || "ocean");
+        return normalizeTheme(document.documentElement.dataset.theme || "crimson");
       }
 
       function updateThemeBtn() {
@@ -7154,7 +7154,7 @@
         app.state = remote;
 
         saveStateSilent(app.state);
-        applyTheme(app.state.theme || "ocean");
+        applyTheme(app.state.theme || "crimson");
         applyLanguage(app.state.lang || "ar");
         updateCoinsUI();
         updateUserCenter();
@@ -7933,7 +7933,7 @@
           saveStateSilent(app.state);
         }
 
-        const initialTheme = normalizeTheme(app.state.theme || "ocean");
+        const initialTheme = normalizeTheme(app.state.theme || "crimson");
         if (app.state.theme !== initialTheme) {
           app.state.theme = initialTheme;
           saveStateSilent(app.state);
