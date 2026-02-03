@@ -1,14 +1,14 @@
 import styles from "./page.module.css";
-import Link from "next/link";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import AuthButtons from "@/components/AuthButtons";
-import LogoutButton from "@/components/LogoutButton";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
+  if (session) redirect("/play");
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -16,17 +16,7 @@ export default async function Home() {
           <div className={styles.brand}>فتح الاقفال</div>
           <div className={styles.desc}>تسجيل الدخول يحفظ تقدمك وعمليات الشراء على حسابك.</div>
           <div className={styles.actions}>
-            {session ? (
-              <>
-                <Link className={styles.primary} href="/play">ابدأ اللعب</Link>
-                <LogoutButton className={styles.secondary} />
-              </>
-            ) : (
-              <AuthButtons />
-            )}
-          </div>
-          <div className={styles.meta}>
-            {session?.user?.email ? <span>مسجل: {session.user.email}</span> : <span>غير مسجل</span>}
+            <AuthButtons />
           </div>
         </div>
       </main>

@@ -1196,6 +1196,11 @@
       .level .panel {
         width: min(740px, 100%);
       }
+      .level .panel .inner {
+        max-height: calc(100dvh - 28px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       .levelTop {
         display: flex;
         align-items: center;
@@ -1416,6 +1421,11 @@
         margin-top: 10px;
         display: grid;
         gap: 8px;
+        max-height: min(44dvh, 360px);
+        overflow-y: auto;
+        padding-inline-end: 4px;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
       }
       .historyItem {
         display: flex;
@@ -5181,7 +5191,7 @@
         if (!el.history) return;
         el.history.innerHTML = "";
         const frag = document.createDocumentFragment();
-        const items = app.history.slice(-5).reverse();
+        const items = app.history.slice(-80).reverse();
         for (const item of items) {
           const row = document.createElement("div");
           row.className = "historyItem";

@@ -105,13 +105,13 @@ export default function AuthButtons() {
                 redirect: false,
                 identifier: normalizedIdentifier,
                 password,
-                callbackUrl: window.location.href,
+                callbackUrl: "/play",
               });
               if (!res || res.error) {
                 setError("بيانات الدخول غير صحيحة.");
                 return;
               }
-              window.location.href = res.url || "/play";
+              window.location.href = "/play";
             } finally {
               setBusy(false);
             }
@@ -158,7 +158,7 @@ export default function AuthButtons() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => signIn(p.id, { callbackUrl: window.location.href })}
+                onClick={() => signIn(p.id, { callbackUrl: "/play" })}
                 className={`${styles.btn} ${p.id === "apple" ? styles.apple : styles.google}`}
               >
                 <span className={styles.icon} aria-hidden="true">
@@ -217,13 +217,13 @@ export default function AuthButtons() {
                     redirect: false,
                     identifier: regUsername.trim(),
                     password: regPassword,
-                    callbackUrl: "/",
+                    callbackUrl: "/play",
                   });
                   if (!res || res.error) {
                     setRegError("تم إنشاء الحساب لكن تعذر تسجيل الدخول. حاول تسجيل الدخول.");
                     return;
                   }
-                  window.location.href = "/";
+                  window.location.href = "/play";
                 } finally {
                   setRegBusy(false);
                 }
