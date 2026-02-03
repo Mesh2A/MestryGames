@@ -49,6 +49,20 @@
   color: rgba(255, 190, 190, 0.95);
 }
 
+.hintOk,
+.hintBad {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.hintOk {
+  color: rgba(190, 255, 212, 0.95);
+}
+
+.hintBad {
+  color: rgba(255, 190, 190, 0.95);
+}
+
 .btnPrimary {
   height: 48px;
   border-radius: 16px;

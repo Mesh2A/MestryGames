@@ -24,6 +24,8 @@ export default function AuthButtons() {
   const [regRemember, setRegRemember] = useState(true);
   const [regBusy, setRegBusy] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
+  const [regUsernameAvailable, setRegUsernameAvailable] = useState<boolean | null>(null);
+  const [regEmailAvailable, setRegEmailAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     getProviders()
@@ -42,6 +44,40 @@ export default function AuthButtons() {
     const list = providers ? Object.values(providers) : [];
     return list.filter((p) => p.id === "google" || p.id === "apple");
   }, [providers]);
+
+  useEffect(() => {
+    if (!registerOpen) return;
+
+    let cancelled = false;
+    const t = window.setTimeout(async () => {
+      const username = regUsername.trim();
+      const email = regEmail.trim();
+      if (!username) setRegUsernameAvailable(null);
+      if (!email) setRegEmailAvailable(null);
+      if (!username && !email) return;
+      try {
+        const url = new URL("/api/auth/availability", window.location.origin);
+        if (username) url.searchParams.set("username", username);
+        if (email) url.searchParams.set("email", email);
+        const r = await fetch(url.toString(), { method: "GET", cache: "no-store" });
+        const data = (await r.json().catch(() => null)) as
+          | { usernameAvailable?: boolean | null; emailAvailable?: boolean | null }
+          | null;
+        if (cancelled) return;
+        if (username) setRegUsernameAvailable(typeof data?.usernameAvailable === "boolean" ? data.usernameAvailable : null);
+        if (email) setRegEmailAvailable(typeof data?.emailAvailable === "boolean" ? data.emailAvailable : null);
+      } catch {
+        if (cancelled) return;
+        if (username) setRegUsernameAvailable(null);
+        if (email) setRegEmailAvailable(null);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [registerOpen, regUsername, regEmail]);
 
   if (status === "loading") return null;
 
@@ -181,7 +217,7 @@ export default function AuthButtons() {
                     callbackUrl: "/play",
                   });
                   if (!res || res.error) {
-                    setRegisterOpen(false);
+                    setRegError("تم إنشاء الحساب لكن تعذر تسجيل الدخول. حاول تسجيل الدخول.");
                     return;
                   }
                   window.location.href = res.url || "/play";
@@ -193,10 +229,24 @@ export default function AuthButtons() {
               <label className={styles.field}>
                 <span className={styles.label}>يوزرنيم</span>
                 <input className={styles.input} value={regUsername} onChange={(e) => setRegUsername(e.target.value)} autoComplete="username" />
+                {typeof regUsernameAvailable === "boolean" ? (
+                  regUsernameAvailable ? (
+                    <div className={styles.hintOk}>اليوزرنيم متاح</div>
+                  ) : (
+                    <div className={styles.hintBad}>اليوزرنيم مستخدم</div>
+                  )
+                ) : null}
               </label>
               <label className={styles.field}>
                 <span className={styles.label}>ايميل</span>
                 <input className={styles.input} value={regEmail} onChange={(e) => setRegEmail(e.target.value)} autoComplete="email" inputMode="email" />
+                {typeof regEmailAvailable === "boolean" ? (
+                  regEmailAvailable ? (
+                    <div className={styles.hintOk}>الإيميل متاح</div>
+                  ) : (
+                    <div className={styles.hintBad}>الإيميل مستخدم</div>
+                  )
+                ) : null}
               </label>
               <label className={styles.field}>
                 <span className={styles.label}>باسوورد</span>
