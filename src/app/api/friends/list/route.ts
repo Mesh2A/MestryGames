@@ -19,6 +19,14 @@ function readPhotoFromState(state: unknown) {
   return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
 }
 
+function readLastSeenAtFromState(state: unknown) {
+  if (!state || typeof state !== "object") return 0;
+  const v = (state as Record<string, unknown>).lastSeenAt;
+  if (typeof v === "number" && Number.isFinite(v)) return Math.max(0, Math.floor(v));
+  if (typeof v === "string") return Math.max(0, Math.floor(parseInt(v, 10) || 0));
+  return 0;
+}
+
 function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
   const name = String(displayName || "").trim();
   if (name) return name.split(/\s+/).filter(Boolean)[0] || name;
@@ -63,12 +71,15 @@ export async function GET() {
       : [];
     const giftMap = new Map(giftRows.map((g) => [g.toEmail, g.lastGiftAt ? g.lastGiftAt.getTime() : 0]));
     const now = Date.now();
+    const onlineWindowMs = 2 * 60 * 1000;
 
     const friends = ensured
       .map((p) => ({
         id: p.publicId,
         firstName: firstNameFromDisplayNameOrEmail(readDisplayNameFromState(p.state), p.email),
         photo: readPhotoFromState(p.state),
+        lastSeenAt: readLastSeenAtFromState(p.state) || p.updatedAt.getTime(),
+        online: now - (readLastSeenAtFromState(p.state) || p.updatedAt.getTime()) <= onlineWindowMs,
         coins: readCoinsFromState(p.state),
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),

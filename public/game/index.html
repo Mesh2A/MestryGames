@@ -1337,6 +1337,25 @@
         transform: translateY(0);
         pointer-events: auto;
       }
+      .chatPanel {
+        position: fixed;
+        top: 74px;
+        left: 16px;
+        right: auto;
+        width: min(920px, calc(100vw - 24px));
+        z-index: 999;
+        transform: translateY(-140%);
+        transition: transform 260ms ease;
+        pointer-events: none;
+      }
+      html[dir="ltr"] .chatPanel {
+        right: 16px;
+        left: auto;
+      }
+      .chatPanel.open {
+        transform: translateY(0);
+        pointer-events: auto;
+      }
       .friendsCard {
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
@@ -1348,6 +1367,101 @@
         overflow: auto;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
+      }
+      .chatCard {
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.82);
+        backdrop-filter: blur(12px);
+        padding: 12px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        max-height: calc(100vh - 96px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .chatTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .chatTitle {
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.2px;
+      }
+      .chatLayout {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) 1fr;
+        gap: 10px;
+        min-height: 360px;
+        height: calc(100vh - 170px);
+      }
+      .chatLeft {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 10px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 10px;
+        overflow: hidden;
+      }
+      .chatFriendsList {
+        display: grid;
+        gap: 8px;
+        overflow: auto;
+        padding: 2px;
+      }
+      .chatFriendRow {
+        text-align: right;
+        width: 100%;
+        padding: 10px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        cursor: pointer;
+      }
+      .chatFriendRow.active {
+        border-color: rgba(37, 99, 235, 0.7);
+        background: rgba(37, 99, 235, 0.15);
+      }
+      .chatRight {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 10px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 10px;
+        overflow: hidden;
+      }
+      .chatHeader {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .chatPeerName {
+        font-weight: 800;
+      }
+      .chatMessages {
+        overflow: auto;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.14);
+      }
+      .chatComposer {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .chatComposer .miniInput {
+        flex: 1 1 auto;
       }
       .avatarSquare {
         width: 60px;
@@ -1621,6 +1735,23 @@
         opacity: 0.78;
         line-height: 1.5;
       }
+      .presenceLine {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .presenceDot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(239, 68, 68, 0.85);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16);
+      }
+      .presenceDot.on {
+        background: rgba(34, 197, 94, 0.9);
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+      }
       .toastHost {
         position: fixed;
         top: 70px;
@@ -1686,6 +1817,21 @@
           right: 12px;
           width: auto;
         }
+        .chatPanel {
+          top: 66px;
+          left: 12px;
+          right: 12px;
+          width: auto;
+        }
+        html[dir="ltr"] .chatPanel {
+          left: 12px;
+          right: 12px;
+          width: auto;
+        }
+        .chatLayout {
+          grid-template-columns: 1fr;
+          height: calc(100vh - 200px);
+        }
         .friendsAddRow {
           flex-wrap: wrap;
         }
@@ -1735,6 +1881,7 @@
         <div class="actions">
           <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
           <button id="settingsBtn" class="btn ghost" type="button">اعدادات</button>
+          <button id="chatBtn" class="btn ghost" type="button">محادثة</button>
           <button id="friendsBtn" class="btn ghost" type="button">الحساب</button>
           <button id="homeHeaderBtn" class="btn ghost" type="button">الرئيسية</button>
         </div>
@@ -2135,6 +2282,7 @@
             <div class="friendsTiny" style="opacity:.9">اللاعبين</div>
             <div id="friendsCount" class="friendsTiny"></div>
           </div>
+          <input id="friendsSearchInput" class="miniInput" autocomplete="off" placeholder="بحث" style="margin-top:10px; width:100%" />
           <div id="friendsList" class="friendsList"></div>
           <div id="friendsActions" class="friendsActions" style="display:none"></div>
         </div>
@@ -2158,6 +2306,33 @@
       <div class="avatarViewerCard" role="dialog" aria-modal="true">
         <button id="avatarViewerClose" class="avatarViewerClose" type="button" aria-label="Close">✕</button>
         <div id="avatarViewerBox" class="avatarSquare avatarViewerBox" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div id="chatPanel" class="chatPanel" aria-hidden="true">
+      <div class="chatCard">
+        <div class="chatTop">
+          <div class="chatTitle">المحادثة</div>
+          <button id="chatCloseBtn" class="friendsClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="chatLayout">
+          <div class="chatLeft">
+            <input id="chatSearchInput" class="miniInput" autocomplete="off" placeholder="بحث" style="width:100%" />
+            <div id="chatFriendsList" class="chatFriendsList"></div>
+          </div>
+          <div class="chatRight">
+            <div class="chatHeader">
+              <div id="chatPeerName" class="chatPeerName">اختر صديق</div>
+              <div id="chatPeerMeta" class="friendsTiny"></div>
+            </div>
+            <div id="chatMessages" class="chatMessages">
+              <div class="friendsTiny">قريبًا: سيتم إضافة الشات هنا.</div>
+            </div>
+            <div class="chatComposer">
+              <input id="chatInput" class="miniInput" autocomplete="off" placeholder="اكتب رسالة..." disabled />
+              <button id="chatSendBtn" class="btn primary" type="button" disabled>إرسال</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2204,6 +2379,7 @@
           unlocks: { circle: false, square: false },
           seenCoach: [],
           lastWriteAt: 0,
+          lastSeenAt: 0,
         };
       }
 
@@ -2291,6 +2467,7 @@
 
         base.seenCoach = Array.isArray(s.seenCoach) ? s.seenCoach.filter((x) => typeof x === "string") : [];
         base.lastWriteAt = typeof s.lastWriteAt === "number" && Number.isFinite(s.lastWriteAt) ? Math.max(0, Math.floor(s.lastWriteAt)) : 0;
+        base.lastSeenAt = typeof s.lastSeenAt === "number" && Number.isFinite(s.lastSeenAt) ? Math.max(0, Math.floor(s.lastSeenAt)) : 0;
 
         base.completed.sort((a, b) => a - b);
         base.hintsUsed.sort((a, b) => a - b);
@@ -2550,6 +2727,7 @@
         coinsBadge: document.getElementById("coinsBadge"),
         coinsText: document.getElementById("coinsText"),
         settingsBtn: document.getElementById("settingsBtn"),
+        chatBtn: document.getElementById("chatBtn"),
         homeHeaderBtn: document.getElementById("homeHeaderBtn"),
         brandTitle: document.getElementById("brandTitle"),
         brandSub: document.getElementById("brandSub"),
@@ -2741,6 +2919,7 @@
           brandTitle: "فتح الاقفال",
           brandSub: "تصميم مودرن — افتح الأقفال وارتقِ",
           settingsBtn: "اعدادات",
+          chatBtn: "محادثة",
           homeHeaderBtn: "الرئيسية",
           homeTitle: "فتح الاقفال",
           homeDesc: "كم قفل تقدر تفتح ؟",
@@ -2907,6 +3086,7 @@
           brandTitle: "Unlock Locks",
           brandSub: "Modern design — unlock and climb",
           settingsBtn: "Settings",
+          chatBtn: "Chat",
           homeHeaderBtn: "Home",
           homeTitle: "Unlock Locks",
           homeDesc: "How many locks can you open?",
@@ -3095,6 +3275,7 @@
         if (el.brandTitle) el.brandTitle.textContent = t("brandTitle");
         if (el.brandSub) el.brandSub.textContent = t("brandSub");
         if (el.settingsBtn) el.settingsBtn.textContent = t("settingsBtn");
+        if (el.chatBtn) el.chatBtn.textContent = t("chatBtn");
         if (el.homeHeaderBtn) el.homeHeaderBtn.textContent = t("homeHeaderBtn");
         if (el.homeTitle) el.homeTitle.textContent = t("homeTitle");
         if (el.homeDesc) el.homeDesc.textContent = t("homeDesc");
@@ -5081,6 +5262,7 @@
       });
 
       el.settingsBtn.addEventListener("click", () => openSettings());
+      if (el.chatBtn) el.chatBtn.addEventListener("click", () => toggleChat());
       el.homeHeaderBtn.addEventListener("click", () => goHome());
 
       const friendsUI = {
@@ -5102,11 +5284,33 @@
         addBtn: document.getElementById("friendAddBtn"),
         msg: document.getElementById("friendsMsg"),
         count: document.getElementById("friendsCount"),
+        searchInput: document.getElementById("friendsSearchInput"),
         list: document.getElementById("friendsList"),
         giftsList: document.getElementById("friendsGiftsList"),
         actions: document.getElementById("friendsActions"),
       };
-      const friendsState = { open: false, tab: "friends", me: null, friends: [], gifts: [], selectedId: "", details: null, friendsSig: "", giftsSig: "" };
+      const friendsState = {
+        open: false,
+        tab: "friends",
+        me: null,
+        friends: [],
+        gifts: [],
+        selectedId: "",
+        details: null,
+        friendsSig: "",
+        giftsSig: "",
+        search: "",
+      };
+      const chatUI = {
+        panel: document.getElementById("chatPanel"),
+        close: document.getElementById("chatCloseBtn"),
+        searchInput: document.getElementById("chatSearchInput"),
+        friendsList: document.getElementById("chatFriendsList"),
+        peerName: document.getElementById("chatPeerName"),
+        peerMeta: document.getElementById("chatPeerMeta"),
+        messages: document.getElementById("chatMessages"),
+      };
+      const chatState = { open: false, selectedId: "", search: "" };
       const toastUI = { host: document.getElementById("toastHost") };
       const toastState = { busy: false, queue: [], lastInboxAt: 0, lastGiftAt: 0, lastReqEventAt: 0 };
       const avatarViewerUI = {
@@ -5124,6 +5328,35 @@
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#39;");
+      }
+
+      function formatAgo(ms) {
+        const t = Number(ms || 0);
+        if (!Number.isFinite(t) || t <= 0) return "غير معروف";
+        const diff = Math.max(0, Date.now() - t);
+        const m = Math.floor(diff / 60000);
+        if (m <= 0) return "الآن";
+        if (m < 60) {
+          if (m === 1) return "قبل دقيقة";
+          if (m === 2) return "قبل دقيقتين";
+          return `قبل ${m} دقائق`;
+        }
+        const h = Math.floor(diff / 3600000);
+        if (h < 24) {
+          if (h === 1) return "قبل ساعة";
+          if (h === 2) return "قبل ساعتين";
+          return `قبل ${h} ساعات`;
+        }
+        const d = Math.floor(diff / 86400000);
+        if (d === 1) return "قبل يوم";
+        if (d === 2) return "قبل يومين";
+        return `قبل ${d} أيام`;
+      }
+
+      function isOnlineFromLastSeen(ms) {
+        const t = Number(ms || 0);
+        if (!Number.isFinite(t) || t <= 0) return false;
+        return Date.now() - t <= 2 * 60 * 1000;
       }
 
       function setFriendsMsg(text) {
@@ -5511,6 +5744,16 @@
 
       let livePollId = null;
       let lastFriendsPullAt = 0;
+      let lastPresenceAt = 0;
+      async function presencePing() {
+        if (!cloud.enabled) return;
+        const now = Date.now();
+        app.state.lastSeenAt = now;
+        saveStateSilent(app.state);
+        try {
+          await fetch("/api/presence/ping", { method: "POST" });
+        } catch {}
+      }
       function startLivePolling() {
         if (livePollId) return;
         livePollId = setInterval(() => {
@@ -5518,8 +5761,13 @@
           pollFriendRequestEvents().catch(() => {});
           pollGiftEvents().catch(() => {});
           pollRemoteStateLight().catch(() => {});
-          if (friendsState.open && Date.now() - lastFriendsPullAt > 6000) {
-            lastFriendsPullAt = Date.now();
+          const now = Date.now();
+          if (cloud.enabled && now - lastPresenceAt > 20000) {
+            lastPresenceAt = now;
+            presencePing().catch(() => {});
+          }
+          if ((friendsState.open || chatState.open) && now - lastFriendsPullAt > 6000) {
+            lastFriendsPullAt = now;
             loadFriendsData().catch(() => {});
           }
         }, 3000);
@@ -5569,7 +5817,15 @@
 
         if (!friendsUI.list || !friendsUI.count) return;
         const list = Array.isArray(friendsState.friends) ? friendsState.friends : [];
-        friendsUI.count.textContent = list.length ? `${list.length} لاعب` : "";
+        const q = String(friendsState.search || "").trim().toLowerCase();
+        const filtered = q
+          ? list.filter((f) => {
+              const name = String(f && f.firstName ? f.firstName : "").toLowerCase();
+              const id = String(f && f.id ? f.id : "").toLowerCase();
+              return name.includes(q) || id.includes(q);
+            })
+          : list;
+        friendsUI.count.textContent = filtered.length ? (q ? `${filtered.length} / ${list.length}` : `${filtered.length} لاعب`) : "";
 
         if (!list.length) {
           friendsUI.list.innerHTML = `<div class="friendsTiny">اضغط زر الأصدقاء لعرض القائمة.</div>`;
@@ -5577,18 +5833,22 @@
           return;
         }
 
-        friendsUI.list.innerHTML = list
+        friendsUI.list.innerHTML = filtered
           .map((f) => {
             const active = friendsState.selectedId && friendsState.selectedId === f.id ? " active" : "";
             const fid = String(f.id || "").trim();
+            const lastSeenAt = typeof f.lastSeenAt === "number" ? f.lastSeenAt : Date.parse(String(f.updatedAt || "")) || 0;
+            const online = typeof f.online === "boolean" ? f.online : isOnlineFromLastSeen(lastSeenAt);
+            const dot = online ? "presenceDot on" : "presenceDot";
             return `<button type="button" class="friendRow${active}" data-id="${escapeHtml(f.id)}">
               <div class="friendMeta">
-                <div class="name">${escapeHtml(f.firstName || "Player")}</div>
+                <div class="name"><span class="presenceLine"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></span></div>
                 <div class="id idWithCopy">
                   <span>${escapeHtml(fid)}</span>
                   <span class="copyBtn copyBtnInline" data-copy="${escapeHtml(fid)}" title="نسخ">⧉</span>
                 </div>
               </div>
+              <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
             </button>`;
           })
           .join("");
@@ -5672,7 +5932,9 @@
             const photoLen = String(f.photo || "").length;
             const canGift = f.canGift ? 1 : 0;
             const availAt = Math.floor(Number(f.giftAvailableAt || 0) || 0);
-            return `${id}:${name}:${photoLen}:${canGift}:${availAt}`;
+            const lastSeenAt = Math.floor(Number(f.lastSeenAt || 0) || 0);
+            const online = f.online ? 1 : 0;
+            return `${id}:${name}:${photoLen}:${canGift}:${availAt}:${lastSeenAt}:${online}`;
           })
           .join("|");
         const nextGiftsSig = nextGifts
@@ -5696,7 +5958,9 @@
           friendsState.selectedId = "";
           friendsState.details = null;
         }
-        if (selectedMissing || nextFriendsSig !== prevFriendsSig || nextGiftsSig !== prevGiftsSig) renderFriends();
+        const shouldRerender = selectedMissing || nextFriendsSig !== prevFriendsSig || nextGiftsSig !== prevGiftsSig;
+        if (shouldRerender) renderFriends();
+        if (chatState.open && shouldRerender) renderChat();
       }
 
       function openFriends() {
@@ -5714,8 +5978,73 @@
         else openFriends();
       }
 
+      function renderChat() {
+        if (!chatUI.friendsList) return;
+        const list = Array.isArray(friendsState.friends) ? friendsState.friends : [];
+        const q = String(chatState.search || "").trim().toLowerCase();
+        const filtered = q
+          ? list.filter((f) => {
+              const name = String(f && f.firstName ? f.firstName : "").toLowerCase();
+              const id = String(f && f.id ? f.id : "").toLowerCase();
+              return name.includes(q) || id.includes(q);
+            })
+          : list;
+
+        if (!filtered.length) {
+          chatUI.friendsList.innerHTML = `<div class="friendsTiny">لا يوجد أصدقاء.</div>`;
+        } else {
+          chatUI.friendsList.innerHTML = filtered
+            .map((f) => {
+              const active = chatState.selectedId && chatState.selectedId === f.id ? " active" : "";
+              const lastSeenAt = typeof f.lastSeenAt === "number" ? f.lastSeenAt : Date.parse(String(f.updatedAt || "")) || 0;
+              const online = typeof f.online === "boolean" ? f.online : isOnlineFromLastSeen(lastSeenAt);
+              const dot = online ? "presenceDot on" : "presenceDot";
+              return `<button type="button" class="chatFriendRow${active}" data-id="${escapeHtml(f.id)}">
+                <div class="friendMeta">
+                  <div class="name"><span class="presenceLine"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></span></div>
+                </div>
+                <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
+              </button>`;
+            })
+            .join("");
+        }
+
+        const sel = chatState.selectedId ? list.find((x) => x.id === chatState.selectedId) : null;
+        if (chatUI.peerName) chatUI.peerName.textContent = sel ? String(sel.firstName || "Player") : "اختر صديق";
+        if (chatUI.peerMeta) {
+          if (!sel) chatUI.peerMeta.textContent = "";
+          else {
+            const lastSeenAt = typeof sel.lastSeenAt === "number" ? sel.lastSeenAt : Date.parse(String(sel.updatedAt || "")) || 0;
+            const online = typeof sel.online === "boolean" ? sel.online : isOnlineFromLastSeen(lastSeenAt);
+            chatUI.peerMeta.textContent = online ? "متصل الآن" : `آخر ظهور: ${formatAgo(lastSeenAt)}`;
+          }
+        }
+      }
+
+      function openChat() {
+        chatState.open = true;
+        if (chatUI.panel) chatUI.panel.classList.add("open");
+        loadFriendsData().catch(() => {});
+        renderChat();
+      }
+      function closeChat() {
+        chatState.open = false;
+        if (chatUI.panel) chatUI.panel.classList.remove("open");
+      }
+      function toggleChat() {
+        if (chatState.open) closeChat();
+        else openChat();
+      }
+
       if (friendsUI.btn) friendsUI.btn.addEventListener("click", () => toggleFriends());
       if (friendsUI.close) friendsUI.close.addEventListener("click", () => closeFriends());
+      if (friendsUI.searchInput) {
+        friendsUI.searchInput.addEventListener("input", (e) => {
+          const v = e && e.target && typeof e.target.value === "string" ? e.target.value : "";
+          friendsState.search = v;
+          renderFriends();
+        });
+      }
       if (friendsUI.photoInput) {
         friendsUI.photoInput.addEventListener("change", async (e) => {
           const input = e.target;
@@ -5723,6 +6052,23 @@
           if (input) input.value = "";
           if (!file) return;
           await handleMePhotoPick(file);
+        });
+      }
+      if (chatUI.close) chatUI.close.addEventListener("click", () => closeChat());
+      if (chatUI.searchInput) {
+        chatUI.searchInput.addEventListener("input", (e) => {
+          const v = e && e.target && typeof e.target.value === "string" ? e.target.value : "";
+          chatState.search = v;
+          renderChat();
+        });
+      }
+      if (chatUI.friendsList) {
+        chatUI.friendsList.addEventListener("click", (e) => {
+          const btn = e.target && e.target.closest ? e.target.closest("button.chatFriendRow") : null;
+          if (!btn) return;
+          const id = btn.getAttribute("data-id") || "";
+          chatState.selectedId = id;
+          renderChat();
         });
       }
       if (friendsUI.meCopyIdBtn) {
@@ -5758,6 +6104,10 @@
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && avatarViewerState.open) {
           closeAvatarViewer();
+          return;
+        }
+        if (e.key === "Escape" && chatState.open) {
+          closeChat();
           return;
         }
         if (e.key === "Escape" && friendsState.open) closeFriends();
