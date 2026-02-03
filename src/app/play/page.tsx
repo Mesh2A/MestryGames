@@ -50,29 +50,6 @@ export default async function PlayPage() {
             <AuthButtons />
           </div>
         </div>
-      ) : firstName ? (
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: 16,
-            transform: "translateX(-50%)",
-            padding: "8px 12px",
-            borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(13, 18, 34, 0.6)",
-            color: "#fff",
-            fontSize: 12,
-            maxWidth: "min(360px, 72vw)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            pointerEvents: "none",
-            zIndex: 5,
-          }}
-        >
-          {firstName}
-        </div>
       ) : null}
       <iframe
         title="game"

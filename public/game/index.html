@@ -393,28 +393,6 @@
       .profileDropBody {
         padding: 14px;
       }
-      .userCenter {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        padding: 8px 12px;
-        border-radius: 999px;
-        border: 1px solid var(--panel-border);
-        background: var(--panel-bg);
-        color: rgba(255, 255, 255, 0.94);
-        font-size: 12px;
-        max-width: min(360px, 54vw);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: none !important;
-        pointer-events: none;
-      }
-      html[data-mobile="0"] .userCenter {
-        background-image: radial-gradient(260px 140px at 30% 0%, var(--shine), transparent 70%),
-          radial-gradient(320px 160px at 85% 0%, var(--glow-a), transparent 76%);
-      }
       @media (max-width: 520px) {
         header {
           padding: 12px 12px;
@@ -427,21 +405,29 @@
         }
         header .actions {
           width: 100%;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 8px;
+          justify-content: flex-start;
+          flex-wrap: nowrap;
+          gap: 10px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 2px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        header .actions::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+        }
+        header .actions > * {
+          flex: 0 0 auto;
         }
         header .actions .btn {
-          padding: 8px 10px;
+          padding: 8px 12px;
           font-size: 12px;
         }
         header .actions .badgeMini {
           padding: 7px 10px;
-        }
-        .userCenter {
-          font-size: 11px;
-          padding: 7px 10px;
-          max-width: min(300px, 62vw);
         }
       }
       .btn:disabled,
@@ -2193,7 +2179,6 @@
             <div id="playerAvatar" class="playerAvatar">P</div>
           </div>
         </div>
-        <div id="userCenter" class="userCenter" aria-hidden="true"></div>
         <div class="actions">
           <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
           <button id="tasksBtn" class="btn ghost" type="button">المهام</button>
@@ -2945,10 +2930,8 @@
           const r = await fetch("/api/auth/session", { method: "GET", credentials: "include" });
           const data = await r.json().catch(() => null);
           const email = data && data.user && typeof data.user.email === "string" ? data.user.email : "";
-          const name = data && data.user && typeof data.user.name === "string" ? data.user.name : "";
           if (!email) return null;
-          const firstName = firstNameFromDisplayName(name) || String(email).split("@")[0] || "";
-          return { email, name, firstName };
+          return { email };
         } catch {
           return null;
         }
@@ -2956,7 +2939,7 @@
 
       function updateUserCenter() {
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
-        const name = firstNameFromDisplayName(displayName) || cloud.firstName || "Player";
+        const name = firstNameFromDisplayName(displayName) || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
         if (el.playerName) el.playerName.textContent = name;
         if (el.playerAvatar) {
           const letter = String(name || "P")
@@ -2966,7 +2949,6 @@
           const photo = app && app.state && typeof app.state.photo === "string" ? app.state.photo : "";
           setAvatarSquare(el.playerAvatar, photo, letter || "P");
         }
-        if (el.userCenter) el.userCenter.style.display = "none";
       }
 
       function flagEmojiFromRegion(region) {
@@ -3058,7 +3040,7 @@
         const isVisible = el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show");
         if (!isVisible) return;
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
-        const name = firstNameFromDisplayName(displayName) || cloud.firstName || "Player";
+        const name = firstNameFromDisplayName(displayName) || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
         if (el.profileName) el.profileName.textContent = name;
         if (el.profileFlag) el.profileFlag.textContent = flagEmojiFromRegion(getCountryCode());
         if (el.profileAvatar) {
@@ -3227,7 +3209,6 @@
         homeHeaderBtn: document.getElementById("homeHeaderBtn"),
         brandTitle: document.getElementById("brandTitle"),
         brandSub: document.getElementById("brandSub"),
-        userCenter: document.getElementById("userCenter"),
         playerName: document.getElementById("playerName"),
         playerAvatar: document.getElementById("playerAvatar"),
         home: document.getElementById("homeScreen"),
@@ -6545,7 +6526,7 @@
           app.state.photo = remote.photo;
           changed = true;
           if (friendsUI.meAvatar) {
-            const name = firstNameFromDisplayName(String(app.state.displayName || "")) || cloud.firstName || "P";
+            const name = firstNameFromDisplayName(String(app.state.displayName || "")) || "P";
             const a = String(name).trim().slice(0, 1).toUpperCase() || "P";
             setAvatarSquare(friendsUI.meAvatar, app.state.photo, a);
           }
@@ -7228,23 +7209,10 @@
       });
 
       (async function bootstrap() {
-        let qsFirstName = "";
-        try {
-          qsFirstName = String(new URLSearchParams(window.location.search).get("fn") || "").trim();
-        } catch {
-          qsFirstName = "";
-        }
-        if (qsFirstName) {
-          cloud.firstName = qsFirstName;
-          updateUserCenter();
-        }
-
         const u = await fetchSessionUser();
         if (u) {
           cloud.enabled = true;
           cloud.email = u.email;
-          cloud.name = u.name;
-          cloud.firstName = u.firstName;
           setStorageKeyForEmail(u.email);
         }
 
