@@ -6,6 +6,18 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+function readDisplayNameFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).displayName;
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
+  const name = String(displayName || "").trim();
+  if (name) return name.split(/\s+/).filter(Boolean)[0] || name;
+  return firstNameFromEmail(email);
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
@@ -29,16 +41,19 @@ export async function GET(req: NextRequest) {
     const profiles = fromEmails.length
       ? await prisma.gameProfile.findMany({
           where: { email: { in: fromEmails } },
-          select: { email: true, publicId: true },
+          select: { email: true, publicId: true, state: true },
         })
       : [];
 
     const ensured = await Promise.all(profiles.map((p) => (p.publicId ? p : ensureGameProfile(p.email))));
     const map = new Map(ensured.map((p) => [p.email, p.publicId || ""]));
+    const nameMap = new Map(
+      ensured.map((p) => [p.email, firstNameFromDisplayNameOrEmail(readDisplayNameFromState(p.state), p.email)])
+    );
 
     const gifts = events.map((e) => ({
       fromId: map.get(e.fromEmail) || "",
-      fromName: firstNameFromEmail(e.fromEmail),
+      fromName: nameMap.get(e.fromEmail) || firstNameFromEmail(e.fromEmail),
       coins: e.coins,
       createdAt: e.createdAt.toISOString(),
     }));
