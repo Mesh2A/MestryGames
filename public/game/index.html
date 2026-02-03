@@ -152,16 +152,22 @@
         grid-template-rows: auto 1fr;
       }
       header {
-        padding: 16px 20px;
+        padding: 14px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        position: relative;
+        position: sticky;
+        top: 0;
+        z-index: 12;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(180deg, rgba(18, 24, 44, 0.94), rgba(12, 16, 30, 0.72));
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
       }
       header .brand {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         gap: 10px;
       }
       header h1 {
@@ -188,6 +194,44 @@
         display: flex;
         gap: 10px;
         align-items: center;
+      }
+      .playerBrand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-direction: row-reverse;
+      }
+      html[dir="ltr"] .playerBrand {
+        flex-direction: row;
+      }
+      .playerAvatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        font-weight: 900;
+        font-size: 13px;
+        flex: 0 0 auto;
+      }
+      .playerAvatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .playerName {
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        color: rgba(255, 255, 255, 0.95);
+        max-width: 220px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .userCenter {
         position: absolute;
@@ -442,7 +486,7 @@
       .homeCard .inner {
         height: 100%;
         display: grid;
-        grid-template-rows: auto 1fr auto;
+        grid-template-rows: 1fr auto auto;
         gap: 12px;
       }
       .homeCard.panel .inner {
@@ -450,6 +494,8 @@
       }
       .homeCard .title {
         font-size: clamp(16px, 2.4vw, 22px);
+        text-align: center;
+        justify-self: center;
       }
       .homeCard .desc {
         margin: 0;
@@ -1982,13 +2028,15 @@
     <div class="app">
       <header>
         <div class="brand">
-          <h1 id="brandTitle">فتح الاقفال</h1>
-          <div id="brandSub" class="sub">تصميم مودرن — افتح الأقفال وارتقِ</div>
+          <div id="playerBrand" class="playerBrand">
+            <div id="playerName" class="playerName">—</div>
+            <div id="playerAvatar" class="playerAvatar">P</div>
+          </div>
         </div>
         <div id="userCenter" class="userCenter" aria-hidden="true"></div>
         <div class="actions">
           <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
-          <button id="settingsBtn" class="btn ghost" type="button">اعدادات</button>
+          <button id="tasksBtn" class="btn ghost" type="button">المهام</button>
           <button id="chatBtn" class="btn ghost" type="button">محادثة</button>
           <button id="friendsBtn" class="btn ghost" type="button">الحساب</button>
           <button id="homeHeaderBtn" class="btn ghost" type="button">الرئيسية</button>
@@ -2001,12 +2049,12 @@
           <div class="homeStack">
             <div class="panel homeCard">
               <div class="inner">
-                <h2 id="homeTitle" class="title">فتح الاقفال</h2>
-                <p id="homeDesc" class="desc">كم قفل تقدر تفتح ؟</p>
+                <h2 id="homeTitle" class="title">MestRyLocks</h2>
                 <div class="homeButtons">
                   <button id="startBtn" class="btn primary" type="button">ابدأ</button>
                   <button id="dailyBtn" class="btn" type="button">تحدي يومي</button>
                   <button id="howBtn" class="btn" type="button">طريقة اللعبه</button>
+                  <button id="settingsBtn" class="btn" type="button">اعدادات</button>
                   <button id="logoutBtn" class="btn danger" type="button" style="display:none">تسجيل خروج</button>
                 </div>
               </div>
@@ -2207,14 +2255,16 @@
                       <button id="claimDailyRewardBtn" class="btn primary" type="button">استلام</button>
                     </div>
                   </div>
-                  <div style="margin-top:12px">
-                    <div id="missionsTitle" class="t">مهام اليوم</div>
-                    <div id="missionsList" class="shopList"></div>
-                  </div>
-                  <div>
-                    <div id="achTitle" class="t">الإنجازات</div>
-                    <div id="achList" class="shopList"></div>
-                  </div>
+                </div>
+              </div>
+              <div id="missionsContent" style="display:none">
+                <div>
+                  <div id="missionsTitle" class="t">مهام اليوم</div>
+                  <div id="missionsList" class="shopList"></div>
+                </div>
+                <div style="margin-top:12px">
+                  <div id="achTitle" class="t">الإنجازات</div>
+                  <div id="achList" class="shopList"></div>
                 </div>
               </div>
               <div id="nameContent" style="display:none">
@@ -2699,15 +2749,18 @@
       }
 
       function updateUserCenter() {
-        if (!el.userCenter) return;
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
-        const name = firstNameFromDisplayName(displayName) || cloud.firstName || "";
-        if (!name) {
-          el.userCenter.style.display = "none";
-          return;
+        const name = firstNameFromDisplayName(displayName) || cloud.firstName || "Player";
+        if (el.playerName) el.playerName.textContent = name;
+        if (el.playerAvatar) {
+          const letter = String(name || "P")
+            .trim()
+            .slice(0, 1)
+            .toUpperCase();
+          const photo = app && app.state && typeof app.state.photo === "string" ? app.state.photo : "";
+          setAvatarSquare(el.playerAvatar, photo, letter || "P");
         }
-        el.userCenter.textContent = name;
-        el.userCenter.style.display = "";
+        if (el.userCenter) el.userCenter.style.display = "none";
       }
 
       function setStorageKeyForEmail(email) {
@@ -2835,11 +2888,14 @@
         coinsBadge: document.getElementById("coinsBadge"),
         coinsText: document.getElementById("coinsText"),
         settingsBtn: document.getElementById("settingsBtn"),
+        tasksBtn: document.getElementById("tasksBtn"),
         chatBtn: document.getElementById("chatBtn"),
         homeHeaderBtn: document.getElementById("homeHeaderBtn"),
         brandTitle: document.getElementById("brandTitle"),
         brandSub: document.getElementById("brandSub"),
         userCenter: document.getElementById("userCenter"),
+        playerName: document.getElementById("playerName"),
+        playerAvatar: document.getElementById("playerAvatar"),
         home: document.getElementById("homeScreen"),
         map: document.getElementById("mapScreen"),
         level: document.getElementById("levelScreen"),
@@ -2879,6 +2935,7 @@
         howWarn2: document.getElementById("howWarn2"),
         howHintNote: document.getElementById("howHintNote"),
         settingsContent: document.getElementById("settingsContent"),
+        missionsContent: document.getElementById("missionsContent"),
         settingsDesc: document.getElementById("settingsDesc"),
         nameChangeSub: document.getElementById("nameChangeSub"),
         changeNameBtn: document.getElementById("changeNameBtn"),
@@ -3027,10 +3084,11 @@
           brandTitle: "فتح الاقفال",
           brandSub: "تصميم مودرن — افتح الأقفال وارتقِ",
           settingsBtn: "اعدادات",
+          tasksBtn: "المهام",
           chatBtn: "محادثة",
           homeHeaderBtn: "الرئيسية",
-          homeTitle: "فتح الاقفال",
-          homeDesc: "كم قفل تقدر تفتح ؟",
+          homeTitle: "MestRyLocks",
+          missionsModalTitle: "المهام",
           startBtn: "ابدأ",
           howBtn: "طريقة اللعبه",
           logoutBtn: "تسجيل خروج",
@@ -3194,10 +3252,11 @@
           brandTitle: "Unlock Locks",
           brandSub: "Modern design — unlock and climb",
           settingsBtn: "Settings",
+          tasksBtn: "Tasks",
           chatBtn: "Chat",
           homeHeaderBtn: "Home",
-          homeTitle: "Unlock Locks",
-          homeDesc: "How many locks can you open?",
+          homeTitle: "MestRyLocks",
+          missionsModalTitle: "Tasks",
           startBtn: "Start",
           howBtn: "How to play",
           logoutBtn: "Logout",
@@ -3383,6 +3442,7 @@
         if (el.brandTitle) el.brandTitle.textContent = t("brandTitle");
         if (el.brandSub) el.brandSub.textContent = t("brandSub");
         if (el.settingsBtn) el.settingsBtn.textContent = t("settingsBtn");
+        if (el.tasksBtn) el.tasksBtn.textContent = t("tasksBtn");
         if (el.chatBtn) el.chatBtn.textContent = t("chatBtn");
         if (el.homeHeaderBtn) el.homeHeaderBtn.textContent = t("homeHeaderBtn");
         if (el.homeTitle) el.homeTitle.textContent = t("homeTitle");
@@ -4590,11 +4650,13 @@
         modalMode = mode;
         lastFocusedEl = document.activeElement;
         el.modalBackdrop.dataset.mode = mode;
-        if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "math" || mode === "name");
+        if (el.modal) el.modal.classList.toggle("compact", mode === "settings" || mode === "missions" || mode === "math" || mode === "name");
         if (el.modalTitle) {
           el.modalTitle.textContent =
             mode === "settings"
               ? t("settingsTitle")
+              : mode === "missions"
+              ? t("missionsModalTitle")
               : mode === "shop"
               ? t("shopModalTitle")
               : mode === "math"
@@ -4608,11 +4670,13 @@
         if (el.howToContent) el.howToContent.style.display = mode === "howto" ? "" : "none";
         if (el.assistContent) el.assistContent.style.display = mode === "assist" ? "" : "none";
         if (el.settingsContent) el.settingsContent.style.display = mode === "settings" ? "" : "none";
+        if (el.missionsContent) el.missionsContent.style.display = mode === "missions" ? "" : "none";
         if (el.nameContent) el.nameContent.style.display = mode === "name" ? "" : "none";
         if (el.shopContent) el.shopContent.style.display = mode === "shop" ? "" : "none";
         if (el.mathContent) el.mathContent.style.display = mode === "math" ? "" : "none";
         updateThemeBtn();
         if (mode === "settings") updateSettingsUI();
+        if (mode === "missions") updateSettingsUI();
         if (mode === "shop") updateShopUI();
         if (mode === "assist") {
           updateLevelFeaturesUI();
@@ -4625,6 +4689,14 @@
         if (mode === "settings" && el.modal && el.settingsBtn) {
           requestAnimationFrame(() => {
             const br = el.settingsBtn.getBoundingClientRect();
+            const mr = el.modal.getBoundingClientRect();
+            const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
+            const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
+            el.modal.style.setProperty("--modal-origin", `${ox}px ${oy}px`);
+          });
+        } else if (mode === "missions" && el.modal && el.tasksBtn) {
+          requestAnimationFrame(() => {
+            const br = el.tasksBtn.getBoundingClientRect();
             const mr = el.modal.getBoundingClientRect();
             const ox = clamp(br.left + br.width * 0.6 - mr.left, 10, mr.width - 10);
             const oy = clamp(br.bottom - mr.top, 10, mr.height - 10);
@@ -4648,6 +4720,10 @@
 
       function openSettings() {
         openModal("settings");
+      }
+
+      function openMissions() {
+        openModal("missions");
       }
 
       function closeHowTo() {
@@ -5370,6 +5446,7 @@
       });
 
       el.settingsBtn.addEventListener("click", () => openSettings());
+      if (el.tasksBtn) el.tasksBtn.addEventListener("click", () => openMissions());
       if (el.chatBtn) el.chatBtn.addEventListener("click", () => toggleChat());
       el.homeHeaderBtn.addEventListener("click", () => goHome());
 
