@@ -1505,6 +1505,95 @@
         font-weight: 700;
         letter-spacing: 0.6px;
       }
+      .idLine {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .idWithCopy {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .copyBtn {
+        width: 28px;
+        height: 28px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        font: inherit;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .copyBtn:hover {
+        filter: brightness(1.08);
+      }
+      .copyBtn:active {
+        transform: translateY(1px);
+      }
+      .copyBtnInline {
+        width: 26px;
+        height: 26px;
+        border-radius: 11px;
+        font-size: 12px;
+      }
+      .friendsMeLeft .avatarSquare,
+      .friendsFriendAvatar {
+        cursor: pointer;
+      }
+      .avatarViewer {
+        position: fixed;
+        inset: 0;
+        z-index: 1300;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .avatarViewer.open {
+        display: flex;
+      }
+      .avatarViewerBackdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(2, 8, 20, 0.72);
+        backdrop-filter: blur(8px);
+      }
+      .avatarViewerCard {
+        position: relative;
+        z-index: 1;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(13, 18, 34, 0.86);
+        padding: 12px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      }
+      .avatarViewerClose {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        cursor: pointer;
+      }
+      html[dir="ltr"] .avatarViewerClose {
+        left: auto;
+        right: 10px;
+      }
+      .avatarViewerBox {
+        width: min(360px, calc(100vw - 72px));
+        height: min(360px, calc(100vw - 72px));
+        border-radius: 18px;
+      }
       .friendsActions {
         margin-top: 10px;
         display: grid;
@@ -2030,7 +2119,10 @@
               <div id="friendsMeAvatar" class="avatarSquare" aria-hidden="true"></div>
             </div>
           </div>
-          <div class="k">ID: <span id="friendsMeId" class="v">—</span></div>
+          <div class="k idLine">
+            ID: <span id="friendsMeId" class="v">—</span>
+            <button id="friendsMeCopyIdBtn" class="copyBtn copyBtnInline" type="button" aria-label="نسخ ID">⧉</button>
+          </div>
         </div>
         <div class="friendsTabs" role="tablist" aria-label="Friends Tabs">
           <button id="friendsTabFriendsBtn" class="friendsTab active" type="button" data-tab="friends">الأصدقاء</button>
@@ -2061,6 +2153,13 @@
     </div>
 
     <div id="toastHost" class="toastHost" aria-hidden="true"></div>
+    <div id="avatarViewer" class="avatarViewer" aria-hidden="true">
+      <div id="avatarViewerBackdrop" class="avatarViewerBackdrop"></div>
+      <div class="avatarViewerCard" role="dialog" aria-modal="true">
+        <button id="avatarViewerClose" class="avatarViewerClose" type="button" aria-label="Close">✕</button>
+        <div id="avatarViewerBox" class="avatarSquare avatarViewerBox" aria-hidden="true"></div>
+      </div>
+    </div>
 
     <script>
       const STORAGE_KEY = "lockgame_v1";
@@ -4990,6 +5089,7 @@
         btn: document.getElementById("friendsBtn"),
         meName: document.getElementById("friendsMeName"),
         meId: document.getElementById("friendsMeId"),
+        meCopyIdBtn: document.getElementById("friendsMeCopyIdBtn"),
         meAvatar: document.getElementById("friendsMeAvatar"),
         photoInput: document.getElementById("friendsPhotoInput"),
         tabFriendsBtn: document.getElementById("friendsTabFriendsBtn"),
@@ -5006,9 +5106,16 @@
         giftsList: document.getElementById("friendsGiftsList"),
         actions: document.getElementById("friendsActions"),
       };
-      const friendsState = { open: false, tab: "friends", me: null, friends: [], gifts: [], selectedId: "", details: null };
+      const friendsState = { open: false, tab: "friends", me: null, friends: [], gifts: [], selectedId: "", details: null, friendsSig: "", giftsSig: "" };
       const toastUI = { host: document.getElementById("toastHost") };
       const toastState = { busy: false, queue: [], lastInboxAt: 0, lastGiftAt: 0, lastReqEventAt: 0 };
+      const avatarViewerUI = {
+        host: document.getElementById("avatarViewer"),
+        backdrop: document.getElementById("avatarViewerBackdrop"),
+        close: document.getElementById("avatarViewerClose"),
+        box: document.getElementById("avatarViewerBox"),
+      };
+      const avatarViewerState = { open: false };
 
       function escapeHtml(s) {
         return String(s || "")
@@ -5028,6 +5135,47 @@
         const r = await fetch(url, init);
         const data = await r.json().catch(() => null);
         return { ok: r.ok, status: r.status, data };
+      }
+
+      async function copyToClipboard(text) {
+        const s = String(text || "");
+        if (!s) return false;
+        try {
+          if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            await navigator.clipboard.writeText(s);
+            return true;
+          }
+        } catch {}
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = s;
+          ta.setAttribute("readonly", "true");
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand("copy");
+          ta.remove();
+          return !!ok;
+        } catch {
+          return false;
+        }
+      }
+
+      function openAvatarViewer(photo, fallbackLetter) {
+        if (!avatarViewerUI.host || !avatarViewerUI.box) return;
+        const letter = (fallbackLetter || "—").slice(0, 1).toUpperCase();
+        setAvatarSquare(avatarViewerUI.box, photo || "", letter);
+        avatarViewerUI.host.classList.add("open");
+        avatarViewerUI.host.setAttribute("aria-hidden", "false");
+        avatarViewerState.open = true;
+      }
+      function closeAvatarViewer() {
+        if (!avatarViewerUI.host) return;
+        avatarViewerUI.host.classList.remove("open");
+        avatarViewerUI.host.setAttribute("aria-hidden", "true");
+        avatarViewerState.open = false;
       }
 
       function setAvatarSquare(elm, photo, fallbackLetter) {
@@ -5433,10 +5581,14 @@
         friendsUI.list.innerHTML = list
           .map((f) => {
             const active = friendsState.selectedId && friendsState.selectedId === f.id ? " active" : "";
+            const fid = String(f.id || "").trim();
             return `<button type="button" class="friendRow${active}" data-id="${escapeHtml(f.id)}">
               <div class="friendMeta">
                 <div class="name">${escapeHtml(f.firstName || "Player")}</div>
-                <div class="id">${escapeHtml(f.id)}</div>
+                <div class="id idWithCopy">
+                  <span>${escapeHtml(fid)}</span>
+                  <span class="copyBtn copyBtnInline" data-copy="${escapeHtml(fid)}" title="نسخ">⧉</span>
+                </div>
               </div>
             </button>`;
           })
@@ -5463,7 +5615,7 @@
           details && details.id === friendsState.selectedId
             ? `<div class="friendsTiny">ستريك: ${escapeHtml(details.stats?.streak ?? 0)} | فوز: ${escapeHtml(details.stats?.wins ?? 0)} | فتح: ${escapeHtml(details.stats?.unlocked ?? 1)}</div>
                <div class="friendsTiny">تاريخ التسجيل: ${escapeHtml(new Date(details.createdAt).toLocaleDateString())}</div>`
-            : `<div class="friendsTiny">اضغط تفاصيل اللاعب لعرض البيانات.</div>`;
+            : ``;
 
         friendsUI.actions.innerHTML = `
           <div class="friendsActionRow">
@@ -5562,6 +5714,24 @@
           await handleMePhotoPick(file);
         });
       }
+      if (friendsUI.meCopyIdBtn) {
+        friendsUI.meCopyIdBtn.addEventListener("click", async () => {
+          const id = friendsUI.meId ? String(friendsUI.meId.textContent || "").trim() : "";
+          const ok = await copyToClipboard(id);
+          if (ok) enqueueToast({ title: "تم النسخ", body: id, autoMs: 1400 });
+          else enqueueToast({ title: "فشل", body: "تعذر النسخ.", autoMs: 1600 });
+        });
+      }
+      if (friendsUI.meAvatar) {
+        friendsUI.meAvatar.addEventListener("click", () => {
+          const name = (friendsState.me && friendsState.me.firstName ? String(friendsState.me.firstName) : "P").trim();
+          const letter = name.slice(0, 1).toUpperCase() || "P";
+          const photo = app && app.state && typeof app.state.photo === "string" ? app.state.photo : "";
+          openAvatarViewer(photo, letter);
+        });
+      }
+      if (avatarViewerUI.backdrop) avatarViewerUI.backdrop.addEventListener("click", () => closeAvatarViewer());
+      if (avatarViewerUI.close) avatarViewerUI.close.addEventListener("click", () => closeAvatarViewer());
       if (friendsUI.tabFriendsBtn) friendsUI.tabFriendsBtn.addEventListener("click", () => {
         friendsState.tab = "friends";
         renderFriends();
@@ -5575,11 +5745,28 @@
         renderFriends();
       });
       document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && avatarViewerState.open) {
+          closeAvatarViewer();
+          return;
+        }
         if (e.key === "Escape" && friendsState.open) closeFriends();
       });
 
       if (friendsUI.list) {
         friendsUI.list.addEventListener("click", (e) => {
+          const copyEl = e.target && e.target.closest ? e.target.closest(".copyBtn[data-copy]") : null;
+          if (copyEl) {
+            e.preventDefault();
+            e.stopPropagation();
+            const txt = copyEl.getAttribute("data-copy") || "";
+            copyToClipboard(txt)
+              .then((ok) => {
+                if (ok) enqueueToast({ title: "تم النسخ", body: txt, autoMs: 1400 });
+                else enqueueToast({ title: "فشل", body: "تعذر النسخ.", autoMs: 1600 });
+              })
+              .catch(() => enqueueToast({ title: "فشل", body: "تعذر النسخ.", autoMs: 1600 }));
+            return;
+          }
           const btn = e.target && e.target.closest ? e.target.closest("button.friendRow") : null;
           if (!btn) return;
           const id = btn.getAttribute("data-id") || "";
@@ -5591,6 +5778,15 @@
 
       if (friendsUI.actions) {
         friendsUI.actions.addEventListener("click", async (e) => {
+          const av = e.target && e.target.closest ? e.target.closest(".friendsFriendAvatar") : null;
+          if (av) {
+            const list = Array.isArray(friendsState.friends) ? friendsState.friends : [];
+            const sel = friendsState.selectedId ? list.find((x) => x.id === friendsState.selectedId) : null;
+            const letter = sel && sel.firstName ? String(sel.firstName).trim().slice(0, 1).toUpperCase() : "P";
+            const photo = sel && typeof sel.photo === "string" ? sel.photo : "";
+            openAvatarViewer(photo, letter);
+            return;
+          }
           const t = e.target && e.target.closest ? e.target.closest("button") : null;
           if (!t) return;
           const id = friendsState.selectedId;
