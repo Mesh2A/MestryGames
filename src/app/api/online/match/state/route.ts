@@ -33,7 +33,9 @@ function safeState(raw: unknown) {
   const a = Array.isArray(s.a) ? s.a : [];
   const b = Array.isArray(s.b) ? s.b : [];
   const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
-  return { a, b, lastMasked };
+  const endedReason = typeof s.endedReason === "string" ? s.endedReason : null;
+  const forfeitedBy = typeof s.forfeitedBy === "string" ? s.forfeitedBy : null;
+  return { a, b, lastMasked, endedReason, forfeitedBy };
 }
 
 function maskDigits(len: number) {
@@ -135,6 +137,8 @@ export async function GET(req: NextRequest) {
           timeLeftMs,
           winner: m.winnerEmail ? (m.winnerEmail === email ? "me" : "them") : null,
           endedAt: m.endedAt ? m.endedAt.toISOString() : null,
+          endedReason: state.endedReason,
+          forfeitedBy: state.forfeitedBy ? (state.forfeitedBy === email ? "me" : "them") : null,
           opponent: oppProfile
             ? {
                 id: oppProfile.publicId,

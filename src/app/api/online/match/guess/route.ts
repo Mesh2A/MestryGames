@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
       if (solved) {
         const pot = Math.max(0, Math.floor(m.fee)) * 2;
         const winnerEmail = email;
+        nextState.endedReason = "solved";
         await tx.$executeRaw`
           UPDATE "OnlineMatch"
           SET "winnerEmail" = ${winnerEmail}, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()

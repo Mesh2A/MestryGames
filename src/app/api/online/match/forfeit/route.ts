@@ -32,8 +32,16 @@ export async function POST(req: NextRequest) {
       await ensureGameProfile(email);
 
       const rows = await tx.$queryRaw<
-        { id: string; fee: number; aEmail: string; bEmail: string; winnerEmail: string | null; endedAt: Date | null }[]
-      >`SELECT "id","fee","aEmail","bEmail","winnerEmail","endedAt" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
+        {
+          id: string;
+          fee: number;
+          aEmail: string;
+          bEmail: string;
+          winnerEmail: string | null;
+          endedAt: Date | null;
+          state: unknown;
+        }[]
+      >`SELECT "id","fee","aEmail","bEmail","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
       if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
@@ -41,10 +49,13 @@ export async function POST(req: NextRequest) {
 
       const winnerEmail = m.aEmail === email ? m.bEmail : m.aEmail;
       const pot = Math.max(0, Math.floor(m.fee)) * 2;
+      const now = Date.now();
+      const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
+      const nextState = { ...prevState, endedReason: "forfeit", forfeitedBy: email, forfeitedAt: now };
 
       await tx.$executeRaw`
         UPDATE "OnlineMatch"
-        SET "winnerEmail" = ${winnerEmail}, "endedAt" = NOW(), "updatedAt" = NOW()
+        SET "winnerEmail" = ${winnerEmail}, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
         WHERE "id" = ${matchId}
       `;
 
