@@ -26,13 +26,36 @@ export function getProfileStats(state: unknown) {
   const winsRaw = stats.wins;
   const wins = typeof winsRaw === "number" && Number.isFinite(winsRaw) ? Math.max(0, Math.floor(winsRaw)) : 0;
 
+  const winStreakRaw = stats.winStreak;
+  const winStreak = typeof winStreakRaw === "number" && Number.isFinite(winStreakRaw) ? Math.max(0, Math.floor(winStreakRaw)) : 0;
+
+  const bestWinStreakRaw = stats.bestWinStreak;
+  const bestWinStreak =
+    typeof bestWinStreakRaw === "number" && Number.isFinite(bestWinStreakRaw) ? Math.max(0, Math.floor(bestWinStreakRaw)) : 0;
+
+  const winsNormalRaw = stats.winsNormal;
+  const winsNormal = typeof winsNormalRaw === "number" && Number.isFinite(winsNormalRaw) ? Math.max(0, Math.floor(winsNormalRaw)) : 0;
+
+  const winsTimedRaw = stats.winsTimed;
+  const winsTimed = typeof winsTimedRaw === "number" && Number.isFinite(winsTimedRaw) ? Math.max(0, Math.floor(winsTimedRaw)) : 0;
+
+  const winsLimitedRaw = stats.winsLimited;
+  const winsLimited =
+    typeof winsLimitedRaw === "number" && Number.isFinite(winsLimitedRaw) ? Math.max(0, Math.floor(winsLimitedRaw)) : 0;
+
+  const winsDailyRaw = stats.winsDaily;
+  const winsDaily = typeof winsDailyRaw === "number" && Number.isFinite(winsDailyRaw) ? Math.max(0, Math.floor(winsDailyRaw)) : 0;
+
+  const winsOnlineRaw = stats.winsOnline;
+  const winsOnline = typeof winsOnlineRaw === "number" && Number.isFinite(winsOnlineRaw) ? Math.max(0, Math.floor(winsOnlineRaw)) : 0;
+
   const unlockedRaw = s.unlocked;
   const unlocked = typeof unlockedRaw === "number" && Number.isFinite(unlockedRaw) ? Math.max(1, Math.floor(unlockedRaw)) : 1;
 
   const completedRaw = s.completed;
   const completed = Array.isArray(completedRaw) ? completedRaw.filter((n) => Number.isInteger(n)).length : 0;
 
-  return { streak, wins, unlocked, completed };
+  return { streak, wins, winStreak, bestWinStreak, winsNormal, winsTimed, winsLimited, winsDaily, winsOnline, unlocked, completed };
 }
 
 export function getProfileLevel(state: unknown) {

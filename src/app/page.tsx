@@ -13,7 +13,7 @@ export default async function Home() {
     <div className={styles.page}>
       <main className={styles.main}>
         <div className={styles.card}>
-          <div className={styles.brand}>فتح الاقفال</div>
+          <div className={styles.brand}>MestRyLock</div>
           <div className={styles.desc}>تسجيل الدخول يحفظ تقدمك وعمليات الشراء على حسابك.</div>
           <div className={styles.actions}>
             <AuthButtons />

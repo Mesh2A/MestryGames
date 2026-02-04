@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1020" />
-    <title>فتح الاقفال</title>
+    <title>MestRyLock</title>
     <script>
       (() => {
         try {
@@ -433,17 +433,40 @@
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(255, 255, 255, 0.06);
-        padding: 12px;
+        padding: 10px;
         display: grid;
-        gap: 6px;
+        gap: 4px;
       }
       .profileCard .k {
-        font-size: 11px;
+        font-size: 10px;
         color: rgba(255, 255, 255, 0.7);
       }
       .profileCard .v {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 900;
+      }
+      .profileCard.wide {
+        grid-column: 1 / -1;
+      }
+      .profileSplit {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.86);
+      }
+      @media (max-width: 520px) {
+        .profileSplit {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      .profileSplit .k {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .profileSplit .v {
+        font-weight: 900;
+        font-size: 14px;
       }
       .profileDropBackdrop {
         position: fixed;
@@ -2511,10 +2534,10 @@
         align-items: flex-end;
       }
       .friendsActionRow .btn {
-        min-height: 36px;
-        padding: 8px 10px;
+        min-height: 32px;
+        padding: 7px 9px;
         font-size: 12px;
-        border-radius: 12px;
+        border-radius: 11px;
       }
       .friendsFriendAvatar {
         margin-inline-start: auto;
@@ -2746,6 +2769,14 @@
                   <div id="profileSolved" class="v">0</div>
                 </div>
                 <div class="profileCard">
+                  <div class="k">الفوز</div>
+                  <div id="profileWins" class="v">0</div>
+                </div>
+                <div class="profileCard">
+                  <div class="k">ستريك الفوز</div>
+                  <div id="profileWinStreak" class="v">0</div>
+                </div>
+                <div class="profileCard">
                   <div class="k">متوسط المحاولات</div>
                   <div id="profileAvg" class="v">0</div>
                 </div>
@@ -2754,12 +2785,26 @@
                   <div id="profileBest" class="v">0</div>
                 </div>
                 <div class="profileCard">
+                  <div class="k">أفضل ستريك فوز</div>
+                  <div id="profileWinBest" class="v">0</div>
+                </div>
+                <div class="profileCard">
                   <div class="k">سلسلة بدون تلميح</div>
                   <div id="profileStreak" class="v">0</div>
                 </div>
                 <div class="profileCard">
                   <div class="k">تلميحات</div>
                   <div id="profileHints" class="v">0</div>
+                </div>
+                <div class="profileCard wide">
+                  <div class="k">الفوز حسب النمط</div>
+                  <div class="profileSplit">
+                    <div><div class="k">عادي</div><div id="profileWinsNormal" class="v">0</div></div>
+                    <div><div class="k">مؤقت</div><div id="profileWinsTimed" class="v">0</div></div>
+                    <div><div class="k">محاولات</div><div id="profileWinsLimited" class="v">0</div></div>
+                    <div><div class="k">يومي</div><div id="profileWinsDaily" class="v">0</div></div>
+                    <div><div class="k">اونلاين</div><div id="profileWinsOnline" class="v">0</div></div>
+                  </div>
                 </div>
                 <div class="profileCard">
                   <div class="k">الإنجازات</div>
@@ -2777,7 +2822,7 @@
           <div class="homeStack">
             <div class="panel homeCard">
               <div class="inner">
-                <h2 id="homeTitle" class="title">MestRyLocks</h2>
+                <h2 id="homeTitle" class="title">MestRyLock</h2>
                 <div class="homeButtons">
                   <button id="onlineBtn" class="btn twoLine" type="button" disabled>
                     <span id="onlineBtnK">تحدي اونلاين</span>
@@ -3308,7 +3353,19 @@
           dailyChallenge: { id: 1, availableAt: 0, lastCompletedAt: 0 },
           freeHints: {},
           dailyFreeHints: {},
-          stats: { wins: 0, attempts: 0, streakNoHint: 0, bestNoHint: 0 },
+          stats: {
+            wins: 0,
+            attempts: 0,
+            streakNoHint: 0,
+            bestNoHint: 0,
+            winStreak: 0,
+            bestWinStreak: 0,
+            winsNormal: 0,
+            winsTimed: 0,
+            winsLimited: 0,
+            winsDaily: 0,
+            winsOnline: 0,
+          },
           achievements: [],
           reduceMotion: false,
           lockShape: "round",
@@ -3428,6 +3485,16 @@
         base.stats.attempts = typeof base.stats.attempts === "number" ? Math.max(0, Math.floor(base.stats.attempts)) : 0;
         base.stats.streakNoHint = typeof base.stats.streakNoHint === "number" ? Math.max(0, Math.floor(base.stats.streakNoHint)) : 0;
         base.stats.bestNoHint = typeof base.stats.bestNoHint === "number" ? Math.max(0, Math.floor(base.stats.bestNoHint)) : 0;
+        base.stats.winStreak = typeof base.stats.winStreak === "number" ? Math.max(0, Math.floor(base.stats.winStreak)) : 0;
+        base.stats.bestWinStreak = typeof base.stats.bestWinStreak === "number" ? Math.max(0, Math.floor(base.stats.bestWinStreak)) : 0;
+        base.stats.winsNormal = typeof base.stats.winsNormal === "number" ? Math.max(0, Math.floor(base.stats.winsNormal)) : 0;
+        base.stats.winsTimed = typeof base.stats.winsTimed === "number" ? Math.max(0, Math.floor(base.stats.winsTimed)) : 0;
+        base.stats.winsLimited = typeof base.stats.winsLimited === "number" ? Math.max(0, Math.floor(base.stats.winsLimited)) : 0;
+        base.stats.winsDaily = typeof base.stats.winsDaily === "number" ? Math.max(0, Math.floor(base.stats.winsDaily)) : 0;
+        base.stats.winsOnline = typeof base.stats.winsOnline === "number" ? Math.max(0, Math.floor(base.stats.winsOnline)) : 0;
+        const winModesSum =
+          base.stats.winsNormal + base.stats.winsTimed + base.stats.winsLimited + base.stats.winsDaily + base.stats.winsOnline;
+        if (base.stats.wins > 0 && winModesSum === 0) base.stats.winsNormal = base.stats.wins;
 
         base.achievements = Array.isArray(s.achievements) ? s.achievements.filter((x) => typeof x === "string") : [];
 
@@ -3712,15 +3779,30 @@
         if (el.profileCoinsEarned) el.profileCoinsEarned.textContent = String(earned);
         if (el.profileCoinsNow) el.profileCoinsNow.textContent = String(app.state.coins || 0);
 
-        const wins = app.state.stats && app.state.stats.wins ? app.state.stats.wins : 0;
-        const attempts = app.state.stats && app.state.stats.attempts ? app.state.stats.attempts : 0;
+        const wins = app.state.stats && typeof app.state.stats.wins === "number" ? app.state.stats.wins : 0;
+        const attempts = app.state.stats && typeof app.state.stats.attempts === "number" ? app.state.stats.attempts : 0;
         const avg = wins ? (attempts / wins).toFixed(1) : "0";
         if (el.profileSolved) el.profileSolved.textContent = String(app.state.completed.length);
+        if (el.profileWins) el.profileWins.textContent = String(wins || 0);
+        if (el.profileWinStreak)
+          el.profileWinStreak.textContent = String(app.state.stats && typeof app.state.stats.winStreak === "number" ? app.state.stats.winStreak : 0);
         if (el.profileAvg) el.profileAvg.textContent = String(avg);
         if (el.profileBest) el.profileBest.textContent = String(app.state.stats && app.state.stats.bestNoHint ? app.state.stats.bestNoHint : 0);
+        if (el.profileWinBest)
+          el.profileWinBest.textContent = String(app.state.stats && typeof app.state.stats.bestWinStreak === "number" ? app.state.stats.bestWinStreak : 0);
         if (el.profileStreak) el.profileStreak.textContent = String(app.state.stats && app.state.stats.streakNoHint ? app.state.stats.streakNoHint : 0);
         if (el.profileHints) el.profileHints.textContent = String(app.state.hintTokens || 0);
         if (el.profileAch) el.profileAch.textContent = String(Array.isArray(app.state.achievements) ? app.state.achievements.length : 0);
+        if (el.profileWinsNormal)
+          el.profileWinsNormal.textContent = String(app.state.stats && typeof app.state.stats.winsNormal === "number" ? app.state.stats.winsNormal : 0);
+        if (el.profileWinsTimed)
+          el.profileWinsTimed.textContent = String(app.state.stats && typeof app.state.stats.winsTimed === "number" ? app.state.stats.winsTimed : 0);
+        if (el.profileWinsLimited)
+          el.profileWinsLimited.textContent = String(app.state.stats && typeof app.state.stats.winsLimited === "number" ? app.state.stats.winsLimited : 0);
+        if (el.profileWinsDaily)
+          el.profileWinsDaily.textContent = String(app.state.stats && typeof app.state.stats.winsDaily === "number" ? app.state.stats.winsDaily : 0);
+        if (el.profileWinsOnline)
+          el.profileWinsOnline.textContent = String(app.state.stats && typeof app.state.stats.winsOnline === "number" ? app.state.stats.winsOnline : 0);
       }
 
       function setStorageKeyForEmail(email) {
@@ -4035,11 +4117,19 @@
         profileCoinsEarned: document.getElementById("profileCoinsEarned"),
         profileCoinsNow: document.getElementById("profileCoinsNow"),
         profileSolved: document.getElementById("profileSolved"),
+        profileWins: document.getElementById("profileWins"),
+        profileWinStreak: document.getElementById("profileWinStreak"),
         profileAvg: document.getElementById("profileAvg"),
         profileBest: document.getElementById("profileBest"),
+        profileWinBest: document.getElementById("profileWinBest"),
         profileStreak: document.getElementById("profileStreak"),
         profileHints: document.getElementById("profileHints"),
         profileAch: document.getElementById("profileAch"),
+        profileWinsNormal: document.getElementById("profileWinsNormal"),
+        profileWinsTimed: document.getElementById("profileWinsTimed"),
+        profileWinsLimited: document.getElementById("profileWinsLimited"),
+        profileWinsDaily: document.getElementById("profileWinsDaily"),
+        profileWinsOnline: document.getElementById("profileWinsOnline"),
         progressText: document.getElementById("progressText"),
         pathInner: document.getElementById("pathInner"),
         mapPrevBtn: document.getElementById("mapPrevBtn"),
@@ -4105,14 +4195,14 @@
 
       const I18N = {
         ar: {
-          docTitle: "فتح الاقفال",
-          brandTitle: "فتح الاقفال",
+          docTitle: "MestRyLock",
+          brandTitle: "MestRyLock",
           brandSub: "تصميم مودرن — افتح الأقفال وارتقِ",
           settingsBtn: "اعدادات",
           tasksBtn: "المهام",
           chatBtn: "محادثة",
           homeHeaderBtn: "الرئيسية",
-          homeTitle: "MestRyLocks",
+          homeTitle: "MestRyLock",
           missionsModalTitle: "المهام",
           profileModalTitle: "البروفايل",
           onlineBtn: "تحدي اونلاين",
@@ -4291,7 +4381,7 @@
           tasksBtn: "Tasks",
           chatBtn: "Chat",
           homeHeaderBtn: "Home",
-          homeTitle: "MestRyLocks",
+          homeTitle: "MestRyLock",
           missionsModalTitle: "Tasks",
           profileModalTitle: "Profile",
           onlineBtn: "Online challenge",
@@ -5625,6 +5715,10 @@
           if (app.session.timeLeft <= 0) {
             app.session.over = true;
             if (el.msg) el.msg.textContent = t("timeUp");
+            if (app.state && app.state.stats) {
+              app.state.stats.winStreak = 0;
+              saveState(app.state);
+            }
           }
         }, 1000);
       }
@@ -5763,6 +5857,10 @@
             if (app.attempts >= app.session.attemptLimit) {
               app.session.over = true;
               el.msg.textContent = t("attemptsOver");
+              if (app.state && app.state.stats) {
+                app.state.stats.winStreak = 0;
+                saveState(app.state);
+              }
             }
           }
           if (!app.session.over) {
@@ -5790,7 +5888,10 @@
           }
           setDailyStars(app.stage.id, stars);
           app.state.stats.wins += 1;
+          app.state.stats.winsDaily += 1;
           app.state.stats.attempts += app.attempts;
+          app.state.stats.winStreak += 1;
+          app.state.stats.bestWinStreak = Math.max(app.state.stats.bestWinStreak, app.state.stats.winStreak);
           if (!usedHint) {
             app.state.stats.streakNoHint += 1;
             app.state.stats.bestNoHint = Math.max(app.state.stats.bestNoHint, app.state.stats.streakNoHint);
@@ -5815,7 +5916,13 @@
           if (app.state.unlocked < level + 1) app.state.unlocked = clamp(level + 1, 1, TOTAL_LEVELS);
 
           app.state.stats.wins += 1;
+          const mode = app.state.mode || "normal";
+          if (mode === "timed") app.state.stats.winsTimed += 1;
+          else if (mode === "limited") app.state.stats.winsLimited += 1;
+          else app.state.stats.winsNormal += 1;
           app.state.stats.attempts += app.attempts;
+          app.state.stats.winStreak += 1;
+          app.state.stats.bestWinStreak = Math.max(app.state.stats.bestWinStreak, app.state.stats.winStreak);
           if (!usedHint) {
             app.state.stats.streakNoHint += 1;
             app.state.stats.bestNoHint = Math.max(app.state.stats.bestNoHint, app.state.stats.streakNoHint);
@@ -8367,8 +8474,43 @@
         const friendAvatarHtml = friendPhoto ? `<img alt="" loading="lazy" decoding="async" src="${escapeHtml(friendPhoto)}" />` : escapeHtml(friendAvatarLetter);
         const detailsHtml =
           details && details.id === friendsState.selectedId
-            ? `<div class="friendsTiny">ستريك: ${escapeHtml(details.stats?.streak ?? 0)} | فوز: ${escapeHtml(details.stats?.wins ?? 0)} | فتح: ${escapeHtml(details.stats?.unlocked ?? 1)}</div>
-               <div class="friendsTiny">تاريخ التسجيل: ${escapeHtml(new Date(details.createdAt).toLocaleDateString())}</div>`
+            ? (() => {
+                const s = details.stats || {};
+                const wins = typeof s.wins === "number" ? s.wins : 0;
+                const winStreak = typeof s.winStreak === "number" ? s.winStreak : 0;
+                const bestWinStreak = typeof s.bestWinStreak === "number" ? s.bestWinStreak : 0;
+                const streakNoHint = typeof s.streak === "number" ? s.streak : 0;
+                const completed = typeof s.completed === "number" ? s.completed : 0;
+                const unlocked = typeof s.unlocked === "number" ? s.unlocked : 1;
+                const coins = typeof details.coins === "number" ? Math.max(0, Math.floor(details.coins)) : 0;
+                const lv = typeof details.level === "number" ? Math.max(1, Math.floor(details.level)) : 1;
+                const createdAt = details.createdAt ? new Date(details.createdAt).toLocaleDateString() : "—";
+                const winsNormal = typeof s.winsNormal === "number" ? s.winsNormal : 0;
+                const winsTimed = typeof s.winsTimed === "number" ? s.winsTimed : 0;
+                const winsLimited = typeof s.winsLimited === "number" ? s.winsLimited : 0;
+                const winsDaily = typeof s.winsDaily === "number" ? s.winsDaily : 0;
+                const winsOnline = typeof s.winsOnline === "number" ? s.winsOnline : 0;
+                return `<div class="friendsTiny" style="margin-top:6px">LV ${escapeHtml(String(lv))} • تاريخ التسجيل: ${escapeHtml(createdAt)}</div>
+                  <div class="profileGrid" style="margin-top:10px">
+                    <div class="profileCard"><div class="k">العملات الحالية</div><div class="v">${escapeHtml(String(coins))}</div></div>
+                    <div class="profileCard"><div class="k">الفوز</div><div class="v">${escapeHtml(String(wins))}</div></div>
+                    <div class="profileCard"><div class="k">ستريك الفوز</div><div class="v">${escapeHtml(String(winStreak))}</div></div>
+                    <div class="profileCard"><div class="k">أفضل ستريك فوز</div><div class="v">${escapeHtml(String(bestWinStreak))}</div></div>
+                    <div class="profileCard"><div class="k">سلسلة بدون تلميح</div><div class="v">${escapeHtml(String(streakNoHint))}</div></div>
+                    <div class="profileCard"><div class="k">المكتملة</div><div class="v">${escapeHtml(String(completed))}</div></div>
+                    <div class="profileCard"><div class="k">المرحلة</div><div class="v">${escapeHtml(String(unlocked))}</div></div>
+                    <div class="profileCard wide">
+                      <div class="k">الفوز حسب النمط</div>
+                      <div class="profileSplit">
+                        <div><div class="k">عادي</div><div class="v">${escapeHtml(String(winsNormal))}</div></div>
+                        <div><div class="k">مؤقت</div><div class="v">${escapeHtml(String(winsTimed))}</div></div>
+                        <div><div class="k">محاولات</div><div class="v">${escapeHtml(String(winsLimited))}</div></div>
+                        <div><div class="k">يومي</div><div class="v">${escapeHtml(String(winsDaily))}</div></div>
+                        <div><div class="k">اونلاين</div><div class="v">${escapeHtml(String(winsOnline))}</div></div>
+                      </div>
+                    </div>
+                  </div>`;
+              })()
             : ``;
 
         friendsUI.actions.innerHTML = `

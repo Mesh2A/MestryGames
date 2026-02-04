@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "لعبة القفل",
+  title: "MestRyLock",
   description: "لعبة أرقام مع تحديات ومكافآت",
 };
 

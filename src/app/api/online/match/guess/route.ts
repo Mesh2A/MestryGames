@@ -5,7 +5,28 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
-const TURN_MS = 18_000;
+const TURN_MS = 30_000;
+
+function ensureStats(state: Record<string, unknown>) {
+  const raw = state.stats && typeof state.stats === "object" ? (state.stats as Record<string, unknown>) : {};
+  const num = (k: string) => {
+    const v = raw[k];
+    return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
+  };
+  return {
+    wins: num("wins"),
+    attempts: num("attempts"),
+    streakNoHint: num("streakNoHint"),
+    bestNoHint: num("bestNoHint"),
+    winStreak: num("winStreak"),
+    bestWinStreak: num("bestWinStreak"),
+    winsNormal: num("winsNormal"),
+    winsTimed: num("winsTimed"),
+    winsLimited: num("winsLimited"),
+    winsDaily: num("winsDaily"),
+    winsOnline: num("winsOnline"),
+  };
+}
 
 function isDigitsN(s: string, len: number) {
   if (typeof s !== "string") return false;
@@ -133,6 +154,7 @@ export async function POST(req: NextRequest) {
       if (solved) {
         const pot = Math.max(0, Math.floor(m.fee)) * 2;
         const winnerEmail = email;
+        const loserEmail = m.aEmail === winnerEmail ? m.bEmail : m.aEmail;
         nextState.endedReason = "solved";
         await tx.$executeRaw`
           UPDATE "OnlineMatch"
@@ -140,13 +162,31 @@ export async function POST(req: NextRequest) {
           WHERE "id" = ${matchId}
         `;
 
-        const profile = await tx.gameProfile.findUnique({ where: { email: winnerEmail }, select: { state: true } });
-        const s = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
-        const coins = readCoinsFromState(s);
-        const updated = { ...s, coins: coins + pot };
-        await tx.gameProfile.update({ where: { email: winnerEmail }, data: { state: updated } });
+        const [winnerProfile, loserProfile] = await Promise.all([
+          tx.gameProfile.findUnique({ where: { email: winnerEmail }, select: { state: true } }),
+          tx.gameProfile.findUnique({ where: { email: loserEmail }, select: { state: true } }),
+        ]);
 
-        return { ok: true as const, solved: true as const, result, pot, coins: coins + pot };
+        const wState = winnerProfile?.state && typeof winnerProfile.state === "object" ? (winnerProfile.state as Record<string, unknown>) : {};
+        const wCoins = readCoinsFromState(wState);
+        const wStats = ensureStats(wState);
+        wStats.wins += 1;
+        wStats.winsOnline += 1;
+        wStats.winStreak += 1;
+        wStats.bestWinStreak = Math.max(wStats.bestWinStreak, wStats.winStreak);
+        const wUpdated = { ...wState, coins: wCoins + pot, stats: wStats, lastWriteAt: now };
+
+        const lState = loserProfile?.state && typeof loserProfile.state === "object" ? (loserProfile.state as Record<string, unknown>) : {};
+        const lStats = ensureStats(lState);
+        lStats.winStreak = 0;
+        const lUpdated = { ...lState, stats: lStats, lastWriteAt: now };
+
+        await Promise.all([
+          tx.gameProfile.update({ where: { email: winnerEmail }, data: { state: wUpdated } }),
+          tx.gameProfile.update({ where: { email: loserEmail }, data: { state: lUpdated } }),
+        ]);
+
+        return { ok: true as const, solved: true as const, result, pot, coins: wCoins + pot };
       }
 
       const nextTurn = m.aEmail === email ? m.bEmail : m.aEmail;
