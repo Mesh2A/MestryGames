@@ -1,6 +1,7 @@
 import { authOptions } from "@/lib/auth";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile, readCoinsEarnedTotalFromState, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
+import { getOnlineEnabled } from "@/lib/onlineConfig";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -82,6 +83,9 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
+
+  const onlineEnabled = await getOnlineEnabled();
+  if (!onlineEnabled) return NextResponse.json({ error: "online_disabled" }, { status: 403, headers: { "Cache-Control": "no-store" } });
 
   let body: unknown = null;
   try {

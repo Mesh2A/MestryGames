@@ -1,5 +1,7 @@
 import { authOptions } from "@/lib/auth";
 import { ensureDbReady } from "@/lib/ensureDb";
+import { readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
+import { getOnlineEnabled } from "@/lib/onlineConfig";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -19,6 +21,35 @@ export async function GET(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400, headers: { "Cache-Control": "no-store" } });
 
   try {
+    const onlineEnabled = await getOnlineEnabled();
+    if (!onlineEnabled) {
+      const out = await prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<
+          { id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number }[]
+        >`SELECT "id","email","status","matchId","mode","fee","codeLen" FROM "OnlineQueue" WHERE "id" = ${id} LIMIT 1 FOR UPDATE`;
+        const row = rows && rows[0] ? rows[0] : null;
+        if (!row || row.email !== email) return { ok: false as const };
+        if (row.status !== "waiting") return { ok: true as const, status: row.status, matchId: row.matchId, mode: row.mode, fee: row.fee, codeLen: row.codeLen };
+
+        await tx.$executeRaw`
+          UPDATE "OnlineQueue" SET "status" = 'cancelled', "updatedAt" = NOW() WHERE "id" = ${id}
+        `;
+
+        const profile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+        const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+        const coins = readCoinsFromState(stateObj);
+        const peak = readCoinsPeakFromState(stateObj);
+        const fee = Math.max(0, Math.floor(row.fee));
+        const nextCoins = coins + fee;
+        const nextState = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
+        await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
+
+        return { ok: true as const, status: "cancelled" as const, matchId: null, mode: row.mode, fee: row.fee, codeLen: row.codeLen, refunded: true as const, coins: nextCoins };
+      });
+      if (!out.ok) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
+    }
+
     const rows = await prisma.$queryRaw<{ id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number }[]>`
       SELECT "id", "email", "status", "matchId", "mode", "fee", "codeLen"
       FROM "OnlineQueue"
@@ -32,4 +63,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
-

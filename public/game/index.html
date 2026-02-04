@@ -5559,6 +5559,14 @@
         region: "",
       };
 
+      const onlineFeature = {
+        fetched: false,
+        fetching: false,
+        enabled: true,
+        lastFetchAt: 0,
+        pollId: 0,
+      };
+
       function shortSha(sha) {
         const s = String(sha || "").trim();
         return s ? s.slice(0, 7) : "";
@@ -5598,13 +5606,33 @@
         }
       }
 
+      async function fetchOnlineEnabledOnce(force) {
+        const now = Date.now();
+        if (!force && onlineFeature.fetching) return;
+        if (!force && onlineFeature.fetched && now - onlineFeature.lastFetchAt < 12_000) return;
+        onlineFeature.fetching = true;
+        onlineFeature.lastFetchAt = now;
+        try {
+          const r = await fetch("/api/online/enabled", { method: "GET", cache: "no-store" });
+          const d = await r.json().catch(() => null);
+          if (d && typeof d.onlineEnabled === "boolean") {
+            onlineFeature.enabled = !!d.onlineEnabled;
+            onlineFeature.fetched = true;
+          }
+        } catch {
+        } finally {
+          onlineFeature.fetching = false;
+          updateOnlineBtnUI();
+        }
+      }
+
       function onlineUnlocked() {
         return !!(cloud && cloud.enabled);
       }
 
       function updateOnlineBtnUI() {
         if (!el.onlineBtn) return;
-        const unlocked = onlineUnlocked();
+        const unlocked = onlineUnlocked() && !!onlineFeature.enabled;
         el.onlineBtn.disabled = !unlocked;
         el.onlineBtn.classList.toggle("primary", unlocked);
         el.onlineBtn.classList.toggle("zero", !unlocked);
@@ -5635,6 +5663,7 @@
         if (el.modeBtn) el.modeBtn.textContent = t("modeBtn", { mode: app.state.mode || "normal" });
         renderVersionValue();
         fetchVersionOnce().catch(() => {});
+        fetchOnlineEnabledOnce(false).catch(() => {});
 
         const shape = app.state.lockShape || "round";
         if (el.shapeBtn) {
@@ -7068,7 +7097,7 @@
         onlineState.barRafId = requestAnimationFrame(tick);
       }
 
-      function onlineRenderEndScreen(fee, winnerIsMe, endedReason, forfeitedBy) {
+      function onlineRenderEndScreen(fee, winner, endedReason, forfeitedBy) {
         if (!el.winBox || !el.winSub || !el.winTitle) return;
         const pot = Math.max(0, Math.floor(fee)) * 2;
         const myName = onlineState.meName || "لاعب";
@@ -7076,18 +7105,24 @@
         const oppName = onlineState.oppName || "خصم";
         const oppPhoto = onlineState.oppPhoto || "";
 
-        const loserIsMe = !winnerIsMe;
-        const loserName = loserIsMe ? myName : oppName;
-        const loserPhoto = loserIsMe ? myPhoto : oppPhoto;
-        const winnerName = winnerIsMe ? myName : oppName;
-        const winnerPhoto = winnerIsMe ? myPhoto : oppPhoto;
+        const winnerIsMe = winner === "me";
+        const hasWinner = winner === "me" || winner === "them";
+        const isDisabled = String(endedReason || "") === "disabled";
 
-        el.winBox.classList.toggle("onlineWin", winnerIsMe);
-        el.winBox.classList.toggle("onlineLose", !winnerIsMe);
-        el.winTitle.textContent = winnerIsMe ? "فزت!" : "خسرت";
+        const loserIsMe = hasWinner ? !winnerIsMe : false;
+        const loserName = hasWinner ? (loserIsMe ? myName : oppName) : myName;
+        const loserPhoto = hasWinner ? (loserIsMe ? myPhoto : oppPhoto) : myPhoto;
+        const winnerName = hasWinner ? (winnerIsMe ? myName : oppName) : oppName;
+        const winnerPhoto = hasWinner ? (winnerIsMe ? myPhoto : oppPhoto) : oppPhoto;
+
+        el.winBox.classList.toggle("onlineWin", hasWinner && winnerIsMe && !isDisabled);
+        el.winBox.classList.toggle("onlineLose", hasWinner && !winnerIsMe && !isDisabled);
+        el.winTitle.textContent = isDisabled ? "تم إيقاف الأونلاين" : winnerIsMe ? "فزت!" : "خسرت";
 
         const subLine =
-          endedReason === "forfeit"
+          isDisabled
+            ? "تم إيقاف الأونلاين وإعادة الرهان."
+            : endedReason === "forfeit"
             ? forfeitedBy === "them"
               ? "الخصم انسحب"
               : forfeitedBy === "me"
@@ -7124,7 +7159,7 @@
         if (loserAv) setAvatarSquare(loserAv, loserPhoto, String(loserName || "L").slice(0, 1).toUpperCase());
         if (winnerAv) setAvatarSquare(winnerAv, winnerPhoto, String(winnerName || "W").slice(0, 1).toUpperCase());
 
-        requestAnimationFrame(() => onlineAnimatePayout(fee, winnerIsMe));
+        requestAnimationFrame(() => onlineAnimatePayout(fee, winner, endedReason));
       }
 
       function formatCoin(n) {
@@ -7146,11 +7181,13 @@
         requestAnimationFrame(step);
       }
 
-      function onlineAnimatePayout(fee, winnerIsMe) {
+      function onlineAnimatePayout(fee, winner, endedReason) {
         if (!el.winBox || !el.winBox.classList.contains("show")) return;
+        if (String(endedReason || "") === "disabled") return;
+        if (winner !== "me" && winner !== "them") return;
         const reduce = document.documentElement && document.documentElement.getAttribute("data-reduce-motion") === "1";
         const pot = Math.max(0, Math.floor(fee)) * 2;
-        const key = `${onlineState.matchId}|${winnerIsMe ? "W" : "L"}|${fee}`;
+        const key = `${onlineState.matchId}|${winner === "me" ? "W" : "L"}|${fee}`;
         if (onlineState.endAnimKey === key) return;
         onlineState.endAnimKey = key;
 
@@ -7237,7 +7274,11 @@
         }
 
         if (typeof m.myCoins === "number") {
-          setCoinsTotal(m.myCoins, null, true);
+          const pot = Math.max(0, Math.floor(fee)) * 2;
+          const winner = m.winner === "me" || m.winner === "them" ? m.winner : null;
+          const endedReason = typeof m.endedReason === "string" ? m.endedReason : "";
+          const earnedDelta = winner === "me" && endedReason !== "disabled" ? pot : 0;
+          setCoinsTotal(m.myCoins, earnedDelta, true);
         }
 
         const turn = m.turn;
@@ -7281,8 +7322,8 @@
         if (turn === "ended") {
           stopOnlineMatchPolling();
           app.session.over = true;
-          const winnerIsMe = m.winner === "me";
-          onlineRenderEndScreen(fee, winnerIsMe, m.endedReason, m.forfeitedBy);
+          const winner = m.winner === "me" || m.winner === "them" ? m.winner : null;
+          onlineRenderEndScreen(fee, winner, m.endedReason, m.forfeitedBy);
           if (el.nextBtn) {
             el.nextBtn.disabled = false;
             el.nextBtn.textContent = "الرئيسية";
@@ -7313,6 +7354,13 @@
         onlineState.matchId = "";
         onlineState.busy = false;
         stopOnlineQueuePolling();
+
+        if (!onlineFeature.enabled) {
+          el.onlineContent.innerHTML = `<div class="onlineWrap">
+            <div class="tiny">الأونلاين متوقف حالياً من الإدارة.</div>
+          </div>`;
+          return;
+        }
 
         const card = (mode, title, sub) => {
           const cfg = onlineCfg(mode);
@@ -7417,6 +7465,12 @@
           enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
           return;
         }
+        await fetchOnlineEnabledOnce(true).catch(() => {});
+        if (!onlineFeature.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+          renderOnlineSelect();
+          return;
+        }
         if (onlineState.busy) return;
         onlineState.busy = true;
         try {
@@ -7430,6 +7484,13 @@
           const me = await mePromise;
           if (!r.ok) {
             const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
+            if (code === "online_disabled") {
+              onlineFeature.enabled = false;
+              updateOnlineBtnUI();
+              enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2600 });
+              renderOnlineSelect();
+              return;
+            }
             if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
             else enqueueToast({ title: t("onlineBtn"), body: "تعذر بدء البحث.", autoMs: 2600 });
             renderOnlineSelect();
@@ -7455,6 +7516,7 @@
               }
               if (s.data.status === "cancelled") {
                 stopOnlineQueuePolling();
+                if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
                 renderOnlineSelect();
               }
             }, 650);
@@ -7515,6 +7577,14 @@
             body: JSON.stringify({ id: app.stage.matchId, guess }),
           });
           if (!r.ok || !r.data) {
+            const code = r.data && typeof r.data.error === "string" ? r.data.error : "";
+            if (code === "online_disabled") {
+              onlineFeature.enabled = false;
+              updateOnlineBtnUI();
+              enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+              await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+              return;
+            }
             el.msg.textContent = "تعذر إرسال المحاولة.";
             return;
           }
@@ -7586,10 +7656,20 @@
         });
       }
       if (el.onlineBtn) {
+        fetchOnlineEnabledOnce(true).catch(() => {});
+        if (!onlineFeature.pollId) {
+          onlineFeature.pollId = setInterval(() => {
+            fetchOnlineEnabledOnce(false).catch(() => {});
+          }, 15_000);
+        }
         updateOnlineBtnUI();
         el.onlineBtn.addEventListener("click", () => {
           if (!cloud.enabled) {
             enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
+            return;
+          }
+          if (!onlineFeature.enabled) {
+            enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
             return;
           }
           renderOnlineSelect();

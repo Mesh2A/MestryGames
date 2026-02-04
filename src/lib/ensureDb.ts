@@ -65,6 +65,14 @@ export async function ensureDbReady() {
             CREATE INDEX IF NOT EXISTS "OnlineMatch_bEmail_createdAt_idx"
             ON "OnlineMatch"("bEmail", "createdAt")
           `);
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "AppConfig" (
+              "id" TEXT PRIMARY KEY,
+              "onlineEnabled" BOOLEAN NOT NULL DEFAULT TRUE,
+              "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `);
+          await prisma.$executeRawUnsafe(`INSERT INTO "AppConfig" ("id") VALUES ('global') ON CONFLICT ("id") DO NOTHING`);
           globalForEnsure.ensured = true;
           return;
         } catch (e) {

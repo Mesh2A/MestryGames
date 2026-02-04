@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type AdminUser = {
   id: string;
@@ -23,8 +23,63 @@ export default function AdminUsersPanel() {
   const [selected, setSelected] = useState<AdminUser | null>(null);
   const [op, setOp] = useState<"add" | "set">("add");
   const [amount, setAmount] = useState("");
+  const [onlineEnabled, setOnlineEnabled] = useState<boolean | null>(null);
+  const [onlineBusy, setOnlineBusy] = useState(false);
 
   const parsedAmount = useMemo(() => Math.max(0, Math.floor(parseInt(amount || "0", 10) || 0)), [amount]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/admin/online", { method: "GET" });
+        const data = (await r.json().catch(() => null)) as unknown;
+        if (!mounted) return;
+        if (!r.ok || !data || typeof data !== "object") {
+          setOnlineEnabled(null);
+          return;
+        }
+        const enabledRaw = (data as Record<string, unknown>).onlineEnabled;
+        if (typeof enabledRaw !== "boolean") {
+          setOnlineEnabled(null);
+          return;
+        }
+        setOnlineEnabled(enabledRaw);
+      } catch {
+        if (mounted) setOnlineEnabled(null);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function toggleOnline() {
+    setMessage("");
+    if (onlineBusy) return;
+    if (onlineEnabled === null) {
+      setMessage("تعذر قراءة حالة الأونلاين.");
+      return;
+    }
+    const next = !onlineEnabled;
+    setOnlineBusy(true);
+    try {
+      const r = await fetch("/api/admin/online", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onlineEnabled: next }),
+      });
+      const data = (await r.json().catch(() => null)) as { onlineEnabled?: boolean; error?: string } | null;
+      if (!r.ok || !data || typeof data.onlineEnabled !== "boolean") {
+        setMessage((data && data.error) || "فشل تحديث حالة الأونلاين.");
+        return;
+      }
+      setOnlineEnabled(data.onlineEnabled);
+      setMessage(data.onlineEnabled ? "تم تشغيل الأونلاين." : "تم إيقاف الأونلاين.");
+    } finally {
+      setOnlineBusy(false);
+    }
+  }
 
   async function load() {
     setMessage("");
@@ -104,6 +159,26 @@ export default function AdminUsersPanel() {
 
   return (
     <div style={windowStyle}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ fontSize: 12, opacity: 0.92 }}>تحدي اونلاين</div>
+        <button
+          type="button"
+          onClick={toggleOnline}
+          disabled={onlineBusy || onlineEnabled === null}
+          style={{
+            ...btnStyle,
+            padding: "8px 10px",
+            background:
+              onlineEnabled === null ? "rgba(255,255,255,0.06)" : onlineEnabled ? "rgba(34, 197, 94, 0.25)" : "rgba(148, 163, 184, 0.14)",
+            borderColor:
+              onlineEnabled === null ? "rgba(255,255,255,0.16)" : onlineEnabled ? "rgba(34, 197, 94, 0.5)" : "rgba(148, 163, 184, 0.30)",
+            minWidth: 110,
+          }}
+        >
+          {onlineEnabled === null ? "غير متاح" : onlineEnabled ? "تشغيل" : "إيقاف"}
+        </button>
+      </div>
+
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="MestRy@Admin" style={inputStyle} />
         <button type="button" onClick={load} disabled={loading} style={{ ...btnStyle, minWidth: 120 }}>

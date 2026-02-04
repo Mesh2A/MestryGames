@@ -1,6 +1,7 @@
 import { authOptions } from "@/lib/auth";
 import { ensureDbReady } from "@/lib/ensureDb";
-import { ensureGameProfile, readCoinsFromState } from "@/lib/gameProfile";
+import { ensureGameProfile, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
+import { getOnlineEnabled } from "@/lib/onlineConfig";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
@@ -44,6 +45,14 @@ function maskDigits(len: number) {
     .join("");
 }
 
+function normalizeStateForDisabled(raw: unknown) {
+  const base = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const a = Array.isArray(base.a) ? base.a : [];
+  const b = Array.isArray(base.b) ? base.b : [];
+  const lastMasked = base.lastMasked && typeof base.lastMasked === "object" ? base.lastMasked : null;
+  return { ...base, a, b, lastMasked, endedReason: "disabled", forfeitedBy: null };
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
@@ -57,6 +66,8 @@ export async function GET(req: NextRequest) {
 
   const matchId = String(req.nextUrl.searchParams.get("id") || "").trim();
   if (!matchId) return NextResponse.json({ error: "missing_id" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+
+  const onlineEnabled = await getOnlineEnabled();
 
   try {
     const out = await prisma.$transaction(async (tx) => {
@@ -80,6 +91,32 @@ export async function GET(req: NextRequest) {
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
       if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
+
+      if (!onlineEnabled && !m.endedAt) {
+        const nextState = normalizeStateForDisabled(m.state);
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "winnerEmail" = NULL, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+
+        const refund = async (who: string) => {
+          const profile = await tx.gameProfile.findUnique({ where: { email: who }, select: { state: true } });
+          const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+          const coins = readCoinsFromState(stateObj);
+          const peak = readCoinsPeakFromState(stateObj);
+          const fee = Math.max(0, Math.floor(m.fee));
+          const nextCoins = coins + fee;
+          const next = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
+          await tx.gameProfile.update({ where: { email: who }, data: { state: next } });
+        };
+        await refund(m.aEmail);
+        await refund(m.bEmail);
+
+        m.winnerEmail = null;
+        m.endedAt = new Date();
+        m.state = nextState;
+      }
 
       const now = Date.now();
       const turnStartedAt = Number(m.turnStartedAt || 0);
