@@ -6769,6 +6769,7 @@
           for (const input of app.inputs) {
             input.disabled = locked;
             input.placeholder = locked ? "M" : "";
+            if (locked) input.value = "";
           }
 
           if (Array.isArray(m.myHistory)) {
