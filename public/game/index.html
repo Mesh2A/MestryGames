@@ -1669,6 +1669,132 @@
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;
       }
+      .onlineWrap {
+        display: grid;
+        gap: 14px;
+      }
+      .onlinePacks {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      @media (max-width: 680px) {
+        .onlinePacks {
+          grid-template-columns: 1fr;
+        }
+      }
+      .onlinePack {
+        border-radius: 18px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+        text-align: right;
+        min-height: 120px;
+        transition: transform 180ms ease;
+      }
+      .onlinePack:hover {
+        transform: translateY(-2px);
+      }
+      .onlinePack .t {
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+      .onlinePack .sub {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .onlinePack .price {
+        font-weight: 900;
+        font-size: 18px;
+      }
+      .onlinePack .btn {
+        width: 100%;
+      }
+      .onlineMatchRow {
+        display: grid;
+        grid-template-columns: 1fr 40px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+      .onlineVs {
+        text-align: center;
+        color: var(--muted);
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+      .onlinePlayerCard {
+        border-radius: 18px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 54px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+      .onlineAvatar {
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        overflow: hidden;
+        position: relative;
+      }
+      .onlineAvatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .onlineAvatar.active {
+        outline: 3px solid rgba(34, 197, 94, 0.85);
+        outline-offset: 2px;
+      }
+      .onlineMeta {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+      .onlineName {
+        font-weight: 900;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .onlineTiny {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .onlineBar {
+        height: 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+      }
+      .onlineBar > span {
+        display: block;
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, rgba(34, 197, 94, 0.9), rgba(59, 130, 246, 0.9));
+        transition: width 220ms ease;
+      }
+      .slot input::placeholder {
+        color: rgba(255, 255, 255, 0.42);
+        font-weight: 900;
+        font-style: italic;
+        letter-spacing: 0.8px;
+      }
+      .maskM {
+        font-weight: 900;
+        font-style: italic;
+        letter-spacing: 0.8px;
+      }
       .modalList {
         margin: 10px 0 0 0;
         padding: 0 18px 0 0;
@@ -2427,6 +2553,7 @@
                   </div>
                   <div class="profileLine"><span class="profileK">ID</span> <span id="profileId" class="profileV">—</span></div>
                   <div class="profileLine"><span class="profileK">الإيميل</span> <span id="profileEmail" class="profileV">—</span></div>
+                  <div class="profileLine"><span class="profileK">LV</span> <span id="profileLevel" class="profileV">1</span></div>
                   <div class="profileLine"><span class="profileK">تاريخ الإنشاء</span> <span id="profileCreatedAt" class="profileV">—</span></div>
                   <div class="profileLine"><span class="profileK">إجمالي العملات المكتسبة</span> <span id="profileCoinsEarned" class="profileV">0</span></div>
                 </div>
@@ -2540,6 +2667,28 @@
                   <div id="timerBadge" class="badge" style="display:none"></div>
                 </div>
               </div>
+              <div id="onlineHud" class="onlineWrap" style="display:none">
+                <div class="onlineMatchRow">
+                  <div class="onlinePlayerCard">
+                    <div id="onlineMeAvatar" class="onlineAvatar">P</div>
+                    <div class="onlineMeta">
+                      <div id="onlineMeName" class="onlineName">—</div>
+                      <div id="onlineMeSub" class="onlineTiny">—</div>
+                    </div>
+                  </div>
+                  <div class="onlineVs">VS</div>
+                  <div class="onlinePlayerCard">
+                    <div id="onlineOppAvatar" class="onlineAvatar">?</div>
+                    <div class="onlineMeta">
+                      <div id="onlineOppName" class="onlineName">—</div>
+                      <div id="onlineOppSub" class="onlineTiny">—</div>
+                    </div>
+                  </div>
+                </div>
+                <div id="onlineTurnText" class="onlineTiny">—</div>
+                <div class="onlineBar"><span id="onlineTurnBar"></span></div>
+                <div id="onlineOppLast" class="onlineTiny" style="text-align:right"></div>
+              </div>
 
               <div class="lock">
                 <div class="slots" id="slots"></div>
@@ -2615,6 +2764,7 @@
                   </div>
                 </div>
               </div>
+              <div id="onlineContent" style="display:none"></div>
               <div id="settingsContent" style="display:none">
                 <div id="settingsDesc" class="tiny">غيّر لون الشاشة لراحة العين.</div>
                 <div class="shopList">
@@ -3368,6 +3518,8 @@
         if (el.profileId) el.profileId.textContent = meId || "—";
         const meEmail = friendsState.me && typeof friendsState.me.email === "string" ? friendsState.me.email : "";
         if (el.profileEmail) el.profileEmail.textContent = meEmail || "—";
+        const meLevel = friendsState.me && typeof friendsState.me.level === "number" ? Math.max(1, Math.floor(friendsState.me.level)) : 1;
+        if (el.profileLevel) el.profileLevel.textContent = String(meLevel);
 
         const createdAtMs = (() => {
           if (friendsState.me && typeof friendsState.me.createdAt === "string") {
@@ -3579,6 +3731,7 @@
         closeModalBtn: document.getElementById("closeModalBtn"),
         howToContent: document.getElementById("howToContent"),
         assistContent: document.getElementById("assistContent"),
+        onlineContent: document.getElementById("onlineContent"),
         assistIntro: document.getElementById("assistIntro"),
         assistHintK: document.getElementById("assistHintK"),
         assistHintSub: document.getElementById("assistHintSub"),
@@ -3699,6 +3852,7 @@
         profileFlag: document.getElementById("profileFlag"),
         profileId: document.getElementById("profileId"),
         profileEmail: document.getElementById("profileEmail"),
+        profileLevel: document.getElementById("profileLevel"),
         profileCreatedAt: document.getElementById("profileCreatedAt"),
         profileCoinsEarned: document.getElementById("profileCoinsEarned"),
         profileCoinsNow: document.getElementById("profileCoinsNow"),
@@ -3718,6 +3872,16 @@
         attemptsNum: document.getElementById("attemptsNum"),
         modeBadge: document.getElementById("modeBadge"),
         timerBadge: document.getElementById("timerBadge"),
+        onlineHud: document.getElementById("onlineHud"),
+        onlineMeAvatar: document.getElementById("onlineMeAvatar"),
+        onlineMeName: document.getElementById("onlineMeName"),
+        onlineMeSub: document.getElementById("onlineMeSub"),
+        onlineOppAvatar: document.getElementById("onlineOppAvatar"),
+        onlineOppName: document.getElementById("onlineOppName"),
+        onlineOppSub: document.getElementById("onlineOppSub"),
+        onlineTurnText: document.getElementById("onlineTurnText"),
+        onlineTurnBar: document.getElementById("onlineTurnBar"),
+        onlineOppLast: document.getElementById("onlineOppLast"),
         msg: document.getElementById("msg"),
         checkBtn: document.getElementById("checkBtn"),
         hintBtn: document.getElementById("hintBtn"),
@@ -4627,7 +4791,10 @@
       }
 
       function stageKey(stage) {
-        return stage.kind === "daily" ? `daily:${stage.id}` : `level:${stage.id}`;
+        if (!stage || typeof stage !== "object") return "level:1";
+        if (stage.kind === "daily") return `daily:${stage.id}`;
+        if (stage.kind === "online") return `online:${stage.matchId || "0"}`;
+        return `level:${stage.id}`;
       }
 
       function dailyCodeLength(key) {
@@ -4641,11 +4808,13 @@
       }
 
       function codeLengthForStage(stage) {
+        if (stage.kind === "online") return clamp(Math.floor(stage.codeLen || 3), 3, 6);
         if (stage.kind === "daily") return dailyCodeLength(stage.id);
         return codeLengthForLevel(stage.id);
       }
 
       function generateAnswerForStage(stage) {
+        if (stage.kind === "online") return "";
         if (stage.kind === "daily") {
           const len = codeLengthForStage(stage);
           let seed = 2166136261;
@@ -4980,7 +5149,7 @@
       }
 
       function onlineUnlocked() {
-        return Array.isArray(app.state.completed) && app.state.completed.includes(45);
+        return !!(cloud && cloud.enabled);
       }
 
       function updateOnlineBtnUI() {
@@ -5095,6 +5264,12 @@
       }
 
       function updateLevelFeaturesUI() {
+        if (app.stage && app.stage.kind === "online") {
+          if (el.hintBtn) el.hintBtn.disabled = true;
+          if (el.levelFeatReveal1Btn) el.levelFeatReveal1Btn.disabled = true;
+          if (el.levelFeatReveal2Btn) el.levelFeatReveal2Btn.disabled = true;
+          return;
+        }
         ensureItems();
         const hintPaid = Math.max(0, Math.floor(app.state.hintTokens || 0));
         const hintFree = Math.max(0, freeHintLimit() - freeHintUsedCount(app.stage));
@@ -5277,6 +5452,11 @@
       }
 
       function setModeUI(stage) {
+        if (stage.kind === "online") {
+          if (!el.modeBadge) return;
+          el.modeBadge.textContent = `اونلاين • ${codeLengthForStage(stage)} أرقام`;
+          return;
+        }
         const mode = stage.kind === "daily" ? "daily" : app.state.mode || "normal";
         if (!el.modeBadge) return;
         if (mode === "limited" && app.session.attemptLimit) {
@@ -5326,8 +5506,13 @@
         app.stage = stage;
         app.attempts = 0;
         el.attemptsNum.textContent = "0";
-        el.levelNum.textContent = stage.kind === "daily" ? stage.id : String(stage.id);
-        if (el.levelLabel) el.levelLabel.textContent = stage.kind === "daily" ? t("dailyBtn") : t("levelLabel");
+        if (stage.kind === "online") {
+          el.levelNum.textContent = stage.mode === "easy" ? "سهل" : stage.mode === "medium" ? "متوسط" : "صعب";
+          if (el.levelLabel) el.levelLabel.textContent = t("onlineBtn");
+        } else {
+          el.levelNum.textContent = stage.kind === "daily" ? stage.id : String(stage.id);
+          if (el.levelLabel) el.levelLabel.textContent = stage.kind === "daily" ? t("dailyBtn") : t("levelLabel");
+        }
         renderSlotsForStage(stage);
         clearSlots();
         resetSession();
@@ -5335,8 +5520,11 @@
         app.session.usedAnyHint = false;
         app.session.usedPaidHint = false;
         updateLevelFeaturesUI();
+        if (el.onlineHud) el.onlineHud.style.display = stage.kind === "online" ? "" : "none";
+        if (el.backToMapBtn) el.backToMapBtn.textContent = stage.kind === "online" ? "خروج" : t("backToMapBtn");
+        if (el.assistBtn) el.assistBtn.style.display = stage.kind === "online" ? "none" : "";
 
-        if (stage.kind !== "daily") {
+        if (stage.kind === "level") {
           const mode = app.state.mode || "normal";
           const len = codeLengthForStage(stage);
           if (mode === "timed") startTimer(clamp(50 + len * 8, 45, 110));
@@ -5361,6 +5549,10 @@
         const len = codeLengthForStage(app.stage);
         if (!isDigitsN(guess, len)) {
           el.msg.textContent = t("enterDigits", { len });
+          return;
+        }
+        if (app.stage.kind === "online") {
+          onlineSubmitGuess(guess);
           return;
         }
         const answer = generateAnswerForStage(app.stage);
@@ -5488,12 +5680,15 @@
               ? t("mathTitle")
               : mode === "assist"
               ? t("assistTitle")
+              : mode === "online"
+              ? t("onlineBtn")
               : mode === "name"
               ? "تغيير الاسم"
               : t("howTitle");
         }
         if (el.howToContent) el.howToContent.style.display = mode === "howto" ? "" : "none";
         if (el.assistContent) el.assistContent.style.display = mode === "assist" ? "" : "none";
+        if (el.onlineContent) el.onlineContent.style.display = mode === "online" ? "" : "none";
         if (el.settingsContent) el.settingsContent.style.display = mode === "settings" ? "" : "none";
         if (el.missionsContent) el.missionsContent.style.display = mode === "missions" ? "" : "none";
         if (el.nameContent) el.nameContent.style.display = mode === "name" ? "" : "none";
@@ -5599,6 +5794,27 @@
       }
 
       function closeHowTo() {
+        const closingOnline = modalMode === "online";
+        const queueId = closingOnline ? onlineState.queueId : "";
+        if (closingOnline) {
+          stopOnlineQueuePolling();
+          onlineState.queueId = "";
+          onlineState.open = false;
+          if (queueId) {
+            friendsJson("/api/online/queue/cancel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: queueId }),
+            }).then((r) => {
+              if (r && r.ok && r.data && r.data.refunded) {
+                app.state.coins = typeof r.data.coins === "number" ? r.data.coins : app.state.coins;
+                saveStateSilent(app.state);
+                updateCoinsUI();
+                updateSettingsUI();
+              }
+            });
+          }
+        }
         el.modalBackdrop.classList.remove("show");
         el.modalBackdrop.setAttribute("aria-hidden", "true");
         delete el.modalBackdrop.dataset.mode;
@@ -6310,11 +6526,359 @@
         });
       }
 
+      const onlineState = {
+        open: false,
+        mode: "",
+        fee: 0,
+        codeLen: 0,
+        queueId: "",
+        matchId: "",
+        searchingStartedAt: 0,
+        pollQueueId: null,
+        pollMatchId: null,
+        spinId: null,
+        lastMaskedAt: 0,
+        busy: false,
+      };
+
+      function onlineCfg(mode) {
+        if (mode === "easy") return { fee: 29, codeLen: 3 };
+        if (mode === "medium") return { fee: 45, codeLen: 4 };
+        return { fee: 89, codeLen: 5 };
+      }
+
+      function stopOnlineQueuePolling() {
+        if (onlineState.pollQueueId) clearInterval(onlineState.pollQueueId);
+        onlineState.pollQueueId = null;
+        if (onlineState.spinId) clearInterval(onlineState.spinId);
+        onlineState.spinId = null;
+      }
+
+      function stopOnlineMatchPolling() {
+        if (onlineState.pollMatchId) clearInterval(onlineState.pollMatchId);
+        onlineState.pollMatchId = null;
+      }
+
+      function renderOnlineSelect() {
+        if (!el.onlineContent) return;
+        onlineState.open = true;
+        onlineState.queueId = "";
+        onlineState.matchId = "";
+        onlineState.busy = false;
+        stopOnlineQueuePolling();
+
+        const card = (mode, title, sub) => {
+          const cfg = onlineCfg(mode);
+          return `<div class="onlinePack">
+            <div class="t">${escapeHtml(title)}</div>
+            <div class="sub">${escapeHtml(sub)}</div>
+            <div class="price">${cfg.fee}🪙</div>
+            <button class="btn primary" type="button" data-online-mode="${escapeHtml(mode)}">ابدأ</button>
+          </div>`;
+        };
+
+        el.onlineContent.innerHTML = `<div class="onlineWrap">
+          <div class="tiny">اختر القيم ثم نبحث لك عن خصم بنفس القيم.</div>
+          <div class="onlinePacks">
+            ${card("easy", "سهل", "3 أرقام")}
+            ${card("medium", "متوسط", "4 أرقام")}
+            ${card("hard", "صعب", "5 أرقام")}
+          </div>
+          <div class="tiny" style="color:var(--muted)">الفائز يأخذ مجموع القيمتين.</div>
+        </div>`;
+      }
+
+      function onlineSetSearchAvatar(elm, photo, letter) {
+        if (!elm) return;
+        setAvatarSquare(elm, photo, letter || "?");
+      }
+
+      function renderOnlineSearching(mode, me) {
+        if (!el.onlineContent) return;
+        const cfg = onlineCfg(mode);
+        onlineState.mode = mode;
+        onlineState.fee = cfg.fee;
+        onlineState.codeLen = cfg.codeLen;
+        onlineState.searchingStartedAt = Date.now();
+
+        el.onlineContent.innerHTML = `<div class="onlineWrap">
+          <div class="onlineMatchRow">
+            <div class="onlinePlayerCard">
+              <div id="onlineSearchMeAvatar" class="onlineAvatar">P</div>
+              <div class="onlineMeta">
+                <div class="onlineName">${escapeHtml((me && me.firstName) || "لاعب")}</div>
+                <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙 • ${escapeHtml(String(cfg.codeLen))} أرقام</div>
+              </div>
+            </div>
+            <div class="onlineVs">VS</div>
+            <div class="onlinePlayerCard">
+              <div id="onlineSearchOppAvatar" class="onlineAvatar">?</div>
+              <div class="onlineMeta">
+                <div id="onlineSearchOppName" class="onlineName">نبحث…</div>
+                <div class="onlineTiny">على حسب النت</div>
+              </div>
+            </div>
+          </div>
+          <div class="onlineBar"><span id="onlineSearchBar"></span></div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
+            <button id="onlineCancelBtn" class="btn" type="button">إلغاء</button>
+          </div>
+        </div>`;
+
+        const meAv = document.getElementById("onlineSearchMeAvatar");
+        const oppAv = document.getElementById("onlineSearchOppAvatar");
+        const oppName = document.getElementById("onlineSearchOppName");
+        const bar = document.getElementById("onlineSearchBar");
+
+        onlineSetSearchAvatar(meAv, me && me.photo ? me.photo : "", String((me && me.firstName) || "P").slice(0, 1).toUpperCase());
+        onlineSetSearchAvatar(oppAv, "", "?");
+
+        if (onlineState.spinId) clearInterval(onlineState.spinId);
+        onlineState.spinId = setInterval(() => {
+          const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+          onlineSetSearchAvatar(oppAv, "", letter);
+          if (oppName) oppName.textContent = "نبحث…";
+          const elapsed = Date.now() - onlineState.searchingStartedAt;
+          const p = Math.min(100, Math.max(4, Math.floor((elapsed / 30_000) * 100)));
+          if (bar) bar.style.width = `${p}%`;
+        }, 320);
+
+        const cancelBtn = document.getElementById("onlineCancelBtn");
+        if (cancelBtn) {
+          cancelBtn.addEventListener("click", async () => {
+            if (!onlineState.queueId) {
+              renderOnlineSelect();
+              return;
+            }
+            stopOnlineQueuePolling();
+            const r = await friendsJson("/api/online/queue/cancel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: onlineState.queueId }),
+            });
+            if (r.ok && r.data && r.data.refunded) {
+              app.state.coins = typeof r.data.coins === "number" ? r.data.coins : app.state.coins;
+              saveStateSilent(app.state);
+              updateCoinsUI();
+              updateSettingsUI();
+            }
+            renderOnlineSelect();
+          });
+        }
+      }
+
+      async function onlineJoin(mode) {
+        if (!cloud.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
+          return;
+        }
+        if (onlineState.busy) return;
+        onlineState.busy = true;
+        try {
+          const me = await ensureMeLoaded();
+          const r = await friendsJson("/api/online/queue/join", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode }),
+          });
+          if (!r.ok) {
+            const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
+            if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
+            else enqueueToast({ title: t("onlineBtn"), body: "تعذر بدء البحث.", autoMs: 2600 });
+            renderOnlineSelect();
+            return;
+          }
+          if (!r.data) return;
+          if (r.data.status === "matched" && r.data.matchId) {
+            stopOnlineQueuePolling();
+            closeHowTo();
+            startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null);
+            return;
+          }
+          if (r.data.status === "waiting" && r.data.queueId) {
+            onlineState.queueId = r.data.queueId;
+            renderOnlineSearching(r.data.mode, me);
+            stopOnlineQueuePolling();
+            onlineState.pollQueueId = setInterval(async () => {
+              const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
+              if (!s.ok || !s.data) return;
+              if (s.data.status === "matched" && s.data.matchId) {
+                stopOnlineQueuePolling();
+                closeHowTo();
+                startOnlineMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null);
+              }
+              if (s.data.status === "cancelled") {
+                stopOnlineQueuePolling();
+                renderOnlineSelect();
+              }
+            }, 1200);
+          }
+        } finally {
+          onlineState.busy = false;
+        }
+      }
+
+      async function startOnlineMatch(matchId, mode, fee, codeLen, me, opponentFromJoin) {
+        onlineState.matchId = matchId;
+        onlineState.mode = mode;
+        onlineState.fee = fee;
+        onlineState.codeLen = codeLen;
+        onlineState.lastMaskedAt = 0;
+
+        openStage({ kind: "online", id: 0, matchId, mode, fee, codeLen });
+
+        const myName = (me && me.firstName) || "لاعب";
+        const myPhoto = me && typeof me.photo === "string" ? me.photo : "";
+        if (el.onlineMeName) el.onlineMeName.textContent = myName;
+        if (el.onlineMeSub) el.onlineMeSub.textContent = `${fee}🪙 • ${codeLen} أرقام`;
+        if (el.onlineMeAvatar) setAvatarSquare(el.onlineMeAvatar, myPhoto, String(myName).slice(0, 1).toUpperCase());
+
+        const opp = opponentFromJoin;
+        if (opp && el.onlineOppName) el.onlineOppName.textContent = opp.firstName || "خصم";
+        if (opp && el.onlineOppSub) el.onlineOppSub.textContent = "اونلاين";
+        if (opp && el.onlineOppAvatar) setAvatarSquare(el.onlineOppAvatar, opp.photo || "", String((opp.firstName || "O")).slice(0, 1).toUpperCase());
+
+        stopOnlineMatchPolling();
+        onlineState.pollMatchId = setInterval(async () => {
+          if (!onlineState.matchId) return;
+          const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(onlineState.matchId)}`, { method: "GET" });
+          if (!r.ok || !r.data || !r.data.match) return;
+          const m = r.data.match;
+          if (m.opponent && el.onlineOppName) {
+            el.onlineOppName.textContent = m.opponent.firstName || "خصم";
+            if (el.onlineOppAvatar) setAvatarSquare(el.onlineOppAvatar, m.opponent.photo || "", String((m.opponent.firstName || "O")).slice(0, 1).toUpperCase());
+            if (el.onlineOppSub) el.onlineOppSub.textContent = "اونلاين";
+          }
+          if (typeof m.myCoins === "number") {
+            app.state.coins = Math.max(0, Math.floor(m.myCoins));
+            saveStateSilent(app.state);
+            updateCoinsUI();
+            updateSettingsUI();
+          }
+
+          const turn = m.turn;
+          const timeLeftMs = typeof m.timeLeftMs === "number" ? Math.max(0, Math.floor(m.timeLeftMs)) : 0;
+          const pct = Math.min(100, Math.max(0, Math.floor((timeLeftMs / 18000) * 100)));
+          if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
+          if (el.onlineTurnText) el.onlineTurnText.textContent = turn === "me" ? "دورك الآن" : turn === "them" ? "دور الخصم" : "انتهى التحدي";
+          if (el.onlineMeAvatar) el.onlineMeAvatar.classList.toggle("active", turn === "me");
+          if (el.onlineOppAvatar) el.onlineOppAvatar.classList.toggle("active", turn === "them");
+
+          const locked = turn !== "me";
+          if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
+          for (const input of app.inputs) {
+            input.disabled = locked;
+            input.placeholder = locked ? "M" : "";
+          }
+
+          if (Array.isArray(m.myHistory)) {
+            const my = m.myHistory
+              .filter((x) => x && typeof x === "object" && typeof x.guess === "string" && Array.isArray(x.result))
+              .map((x) => ({ guess: x.guess, result: x.result }));
+            app.history = my;
+            app.attempts = my.length;
+            if (el.attemptsNum) el.attemptsNum.textContent = String(app.attempts);
+            renderHistory();
+          }
+
+          if (m.lastMasked && m.lastMasked.by && m.lastMasked.at && m.lastMasked.by !== (me && me.email)) {
+            if (m.lastMasked.at > onlineState.lastMaskedAt) {
+              onlineState.lastMaskedAt = m.lastMasked.at;
+              if (el.onlineOppLast) el.onlineOppLast.innerHTML = `الخصم لعب: <span class="maskM">${escapeHtml(m.lastMasked.value || "")}</span>`;
+            }
+          }
+
+          if (turn === "ended") {
+            stopOnlineMatchPolling();
+            app.session.over = true;
+            if (el.winTitle) el.winTitle.textContent = m.winner === "me" ? "فزت!" : "خسرت";
+            if (el.winSub) el.winSub.textContent = m.winner === "me" ? `+${fee * 2}🪙` : "حاول مرة ثانية";
+            if (el.nextBtn) {
+              el.nextBtn.disabled = false;
+              el.nextBtn.textContent = "الرئيسية";
+            }
+            if (el.mapBtn2) el.mapBtn2.style.display = "none";
+            if (el.shareBtn) el.shareBtn.style.display = "none";
+            if (el.winBox) el.winBox.classList.add("show");
+          }
+        }, 900);
+
+        requestAnimationFrame(() => {
+          if (app.inputs && app.inputs[0]) app.inputs[0].focus();
+        });
+      }
+
+      async function onlineSubmitGuess(guess) {
+        if (!app.stage || app.stage.kind !== "online") return;
+        if (onlineState.busy) return;
+        onlineState.busy = true;
+        try {
+          if (el.checkBtn) el.checkBtn.disabled = true;
+          const r = await friendsJson("/api/online/match/guess", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: app.stage.matchId, guess }),
+          });
+          if (!r.ok || !r.data) {
+            el.msg.textContent = "تعذر إرسال المحاولة.";
+            return;
+          }
+          if (Array.isArray(r.data.result)) {
+            const result = r.data.result;
+            app.attempts += 1;
+            if (el.attemptsNum) el.attemptsNum.textContent = String(app.attempts);
+            el.msg.textContent = "";
+            app.history.push({ guess, result });
+            renderHistory();
+            for (let i = 0; i < result.length; i++) {
+              const slot = app.inputs[i] && app.inputs[i].parentElement;
+              if (!slot) continue;
+              slot.classList.remove("ok", "bad", "warn");
+              slot.classList.add(result[i]);
+            }
+          }
+          clearGuessOnly();
+        } finally {
+          onlineState.busy = false;
+        }
+      }
+
+      async function onlineExitMatch() {
+        if (!app.stage || app.stage.kind !== "online") return;
+        stopOnlineMatchPolling();
+        const matchId = app.stage.matchId;
+        if (matchId) {
+          await friendsJson("/api/online/match/forfeit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: matchId }),
+          });
+        }
+        if (el.mapBtn2) el.mapBtn2.style.display = "";
+        if (el.shareBtn) el.shareBtn.style.display = "";
+        if (el.winBox) el.winBox.classList.remove("show");
+        goHome();
+      }
+
       el.startBtn.addEventListener("click", () => goMap());
+      if (el.onlineContent) {
+        el.onlineContent.addEventListener("click", (e) => {
+          const btn = e && e.target && e.target.closest ? e.target.closest("button[data-online-mode]") : null;
+          if (!btn) return;
+          const mode = String(btn.dataset.onlineMode || "").trim();
+          if (!mode) return;
+          onlineJoin(mode);
+        });
+      }
       if (el.onlineBtn) {
         updateOnlineBtnUI();
         el.onlineBtn.addEventListener("click", () => {
-          enqueueToast({ title: t("onlineBtn"), body: "قريباً…", autoMs: 2400 });
+          if (!cloud.enabled) {
+            enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
+            return;
+          }
+          renderOnlineSelect();
+          openModal("online");
         });
       }
       el.dailyBtn.addEventListener("click", () => openDaily());
@@ -6329,7 +6893,13 @@
         el.discordBtn.style.display = "";
         el.discordBtn.addEventListener("click", () => openDiscord());
       }
-      el.backToMapBtn.addEventListener("click", () => goMap());
+      el.backToMapBtn.addEventListener("click", () => {
+        if (app.stage && app.stage.kind === "online") {
+          onlineExitMatch();
+          return;
+        }
+        goMap();
+      });
       el.mapBtn2.addEventListener("click", () => goMap());
       el.checkBtn.addEventListener("click", () => check());
       el.hintBtn.addEventListener("click", () => useHint());
@@ -6350,6 +6920,10 @@
       });
 
       el.nextBtn.addEventListener("click", () => {
+        if (app.stage.kind === "online") {
+          goHome();
+          return;
+        }
         if (app.stage.kind !== "level") {
           goMap();
           return;
@@ -7320,7 +7894,7 @@
                   <div class="friendLine">
                     <div class="avatarMini">${avatar}</div>
                     <div class="friendText">
-                      <div class="friendNameRow"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></div>
+                      <div class="friendNameRow"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span><span class="friendsTiny" style="margin-inline-start:8px">LV ${escapeHtml(String(typeof f.level === "number" ? Math.max(1, Math.floor(f.level)) : 1))}</span></div>
                       <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
                     </div>
                   </div>

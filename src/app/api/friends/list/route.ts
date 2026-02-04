@@ -1,7 +1,7 @@
 import { authOptions } from "@/lib/auth";
 import { ensureGameProfile, readCoinsFromState } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
-import { firstNameFromEmail, getProfileStats } from "@/lib/profile";
+import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
@@ -84,6 +84,7 @@ export async function GET() {
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
         stats: getProfileStats(p.state),
+        level: getProfileLevel(p.state).level,
         giftAvailableAt: (giftMap.get(p.email) || 0) ? (giftMap.get(p.email) as number) + cooldownMs : 0,
         canGift: !(giftMap.get(p.email) || 0) || now >= ((giftMap.get(p.email) as number) + cooldownMs),
       }))

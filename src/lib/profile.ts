@@ -34,3 +34,19 @@ export function getProfileStats(state: unknown) {
 
   return { streak, wins, unlocked, completed };
 }
+
+export function getProfileLevel(state: unknown) {
+  const stats = getProfileStats(state);
+  const xp = Math.max(
+    0,
+    Math.floor(stats.completed * 12 + stats.wins * 8 + stats.streak * 6 + Math.floor(stats.unlocked / 10) * 5)
+  );
+  let level = 1;
+  for (let next = 2; next <= 99; next++) {
+    const need = 120 * next * next + 180 * next;
+    if (xp >= need) level = next;
+    else break;
+  }
+  const nextNeed = level >= 99 ? null : 120 * (level + 1) * (level + 1) + 180 * (level + 1);
+  return { level, xp, nextXp: nextNeed };
+}

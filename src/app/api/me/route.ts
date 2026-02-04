@@ -1,6 +1,6 @@
 import { authOptions } from "@/lib/auth";
 import { ensureGameProfile } from "@/lib/gameProfile";
-import { firstNameFromEmail, getProfileStats } from "@/lib/profile";
+import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
@@ -34,6 +34,7 @@ export async function GET() {
     const displayEmail = profile.contactEmail || profile.email;
     const displayName = readDisplayNameFromState(profile.state);
     const photo = readPhotoFromState(profile.state);
+    const level = getProfileLevel(profile.state);
     return NextResponse.json(
       {
         email: displayEmail,
@@ -45,6 +46,9 @@ export async function GET() {
         firstName: firstNameFromDisplayNameOrEmail(displayName, displayEmail),
         createdAt: profile.createdAt.toISOString(),
         stats: getProfileStats(profile.state),
+        level: level.level,
+        xp: level.xp,
+        nextXp: level.nextXp,
       },
       { status: 200 }
     );

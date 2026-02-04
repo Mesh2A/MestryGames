@@ -1,0 +1,159 @@
+import { authOptions } from "@/lib/auth";
+import { ensureDbReady } from "@/lib/ensureDb";
+import { ensureGameProfile, readCoinsFromState } from "@/lib/gameProfile";
+import { prisma } from "@/lib/prisma";
+import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
+
+const TURN_MS = 18_000;
+
+function readDisplayNameFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).displayName;
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function readPhotoFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).photo;
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
+}
+
+function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
+  const name = String(displayName || "").trim();
+  if (name) return name.split(/\s+/).filter(Boolean)[0] || name;
+  return firstNameFromEmail(email);
+}
+
+function safeState(raw: unknown) {
+  const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const a = Array.isArray(s.a) ? s.a : [];
+  const b = Array.isArray(s.b) ? s.b : [];
+  const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
+  return { a, b, lastMasked };
+}
+
+function maskDigits(len: number) {
+  return Array.from({ length: Math.max(0, Math.floor(len)) })
+    .map(() => "M")
+    .join("");
+}
+
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const email = session?.user?.email;
+  if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+
+  try {
+    await ensureDbReady();
+  } catch {
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
+
+  const matchId = String(req.nextUrl.searchParams.get("id") || "").trim();
+  if (!matchId) return NextResponse.json({ error: "missing_id" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+
+  try {
+    const out = await prisma.$transaction(async (tx) => {
+      await ensureGameProfile(email);
+
+      const rows = await tx.$queryRaw<
+        {
+          id: string;
+          mode: string;
+          fee: number;
+          codeLen: number;
+          aEmail: string;
+          bEmail: string;
+          turnEmail: string;
+          turnStartedAt: bigint;
+          winnerEmail: string | null;
+          endedAt: Date | null;
+          state: unknown;
+        }[]
+      >`SELECT "id","mode","fee","codeLen","aEmail","bEmail","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
+      const m = rows && rows[0] ? rows[0] : null;
+      if (!m) return { ok: false as const, error: "not_found" as const };
+      if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
+
+      const now = Date.now();
+      const turnStartedAt = Number(m.turnStartedAt || 0);
+      const expired = !m.endedAt && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS;
+      if (expired) {
+        const nextTurn = m.turnEmail === m.aEmail ? m.bEmail : m.aEmail;
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+        m.turnEmail = nextTurn;
+        m.turnStartedAt = BigInt(now);
+      }
+
+      const state = safeState(m.state);
+      const myRole = m.aEmail === email ? "a" : "b";
+      const myHistory = (myRole === "a" ? state.a : state.b).filter((x) => x && typeof x === "object").slice(-120);
+
+      const oppEmail = m.aEmail === email ? m.bEmail : m.aEmail;
+      const oppProfile = await tx.gameProfile.findUnique({
+        where: { email: oppEmail },
+        select: { email: true, publicId: true, state: true, createdAt: true },
+      });
+
+      const myProfile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true, publicId: true } });
+      const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
+      const myCoins = readCoinsFromState(myState);
+
+      const timeLeftMs = m.endedAt ? 0 : Math.max(0, TURN_MS - (Date.now() - Number(m.turnStartedAt || 0)));
+
+      const lastMasked =
+        state.lastMasked &&
+        typeof state.lastMasked.by === "string" &&
+        typeof state.lastMasked.at === "number" &&
+        typeof state.lastMasked.len === "number"
+          ? {
+              by: state.lastMasked.by,
+              at: state.lastMasked.at,
+              value: maskDigits(state.lastMasked.len),
+            }
+          : null;
+
+      return {
+        ok: true as const,
+        match: {
+          id: m.id,
+          mode: m.mode,
+          fee: m.fee,
+          codeLen: m.codeLen,
+          myRole,
+          myId: myProfile?.publicId || null,
+          myCoins,
+          turn: m.endedAt ? "ended" : m.turnEmail === email ? "me" : "them",
+          timeLeftMs,
+          winner: m.winnerEmail ? (m.winnerEmail === email ? "me" : "them") : null,
+          endedAt: m.endedAt ? m.endedAt.toISOString() : null,
+          opponent: oppProfile
+            ? {
+                id: oppProfile.publicId,
+                firstName: firstNameFromDisplayNameOrEmail(readDisplayNameFromState(oppProfile.state), oppProfile.email),
+                photo: readPhotoFromState(oppProfile.state),
+                createdAt: oppProfile.createdAt.toISOString(),
+                stats: getProfileStats(oppProfile.state),
+                level: getProfileLevel(oppProfile.state).level,
+              }
+            : null,
+          myHistory,
+          lastMasked,
+        },
+      };
+    });
+
+    if (!out.ok) return NextResponse.json(out, { status: out.error === "forbidden" ? 403 : 404, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
+  }
+}

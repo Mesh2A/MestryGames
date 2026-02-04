@@ -1,7 +1,7 @@
 import { authOptions } from "@/lib/auth";
 import { ensureGameProfile, readCoinsFromState } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
-import { firstNameFromEmail, getProfileStats } from "@/lib/profile";
+import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
         photo: readPhotoFromState(target.state),
         coins: readCoinsFromState(target.state),
         stats: getProfileStats(target.state),
+        level: getProfileLevel(target.state).level,
       },
       { status: 200 }
     );
