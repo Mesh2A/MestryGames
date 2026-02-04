@@ -23,6 +23,9 @@ function ensureStats(state: Record<string, unknown>) {
     winsLimited: num("winsLimited"),
     winsDaily: num("winsDaily"),
     winsOnline: num("winsOnline"),
+    winsOnlineEasy: num("winsOnlineEasy"),
+    winsOnlineMedium: num("winsOnlineMedium"),
+    winsOnlineHard: num("winsOnlineHard"),
   };
 }
 
@@ -55,6 +58,7 @@ export async function POST(req: NextRequest) {
       const rows = await tx.$queryRaw<
         {
           id: string;
+          mode: string;
           fee: number;
           aEmail: string;
           bEmail: string;
@@ -62,7 +66,7 @@ export async function POST(req: NextRequest) {
           endedAt: Date | null;
           state: unknown;
         }[]
-      >`SELECT "id","fee","aEmail","bEmail","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
+      >`SELECT "id","mode","fee","aEmail","bEmail","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
       if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
@@ -91,6 +95,9 @@ export async function POST(req: NextRequest) {
       const wStats = ensureStats(wState);
       wStats.wins += 1;
       wStats.winsOnline += 1;
+      if (m.mode === "easy") wStats.winsOnlineEasy += 1;
+      else if (m.mode === "medium") wStats.winsOnlineMedium += 1;
+      else if (m.mode === "hard") wStats.winsOnlineHard += 1;
       wStats.winStreak += 1;
       wStats.bestWinStreak = Math.max(wStats.bestWinStreak, wStats.winStreak);
       const wUpdated = { ...wState, coins: wCoins + pot, stats: wStats, lastWriteAt: now };

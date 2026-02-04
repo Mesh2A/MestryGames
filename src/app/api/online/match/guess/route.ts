@@ -25,6 +25,9 @@ function ensureStats(state: Record<string, unknown>) {
     winsLimited: num("winsLimited"),
     winsDaily: num("winsDaily"),
     winsOnline: num("winsOnline"),
+    winsOnlineEasy: num("winsOnlineEasy"),
+    winsOnlineMedium: num("winsOnlineMedium"),
+    winsOnlineHard: num("winsOnlineHard"),
   };
 }
 
@@ -172,6 +175,9 @@ export async function POST(req: NextRequest) {
         const wStats = ensureStats(wState);
         wStats.wins += 1;
         wStats.winsOnline += 1;
+        if (m.mode === "easy") wStats.winsOnlineEasy += 1;
+        else if (m.mode === "medium") wStats.winsOnlineMedium += 1;
+        else if (m.mode === "hard") wStats.winsOnlineHard += 1;
         wStats.winStreak += 1;
         wStats.bestWinStreak = Math.max(wStats.bestWinStreak, wStats.winStreak);
         const wUpdated = { ...wState, coins: wCoins + pot, stats: wStats, lastWriteAt: now };

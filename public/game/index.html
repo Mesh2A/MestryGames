@@ -2041,6 +2041,94 @@
         transform: translateY(0);
         pointer-events: auto;
       }
+      .friendDetailsBackdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 160ms ease;
+      }
+      .friendDetailsBackdrop.show {
+        pointer-events: auto;
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.34);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .friendDetailsCard {
+        position: absolute;
+        top: 74px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(560px, calc(100vw - 24px));
+        max-height: calc(100vh - 96px);
+        overflow: auto;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.88);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        padding: 12px;
+      }
+      .friendDetailsTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .friendDetailsTitle {
+        font-weight: 900;
+        font-size: 14px;
+        letter-spacing: 0.2px;
+      }
+      .friendDetailsClose {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        cursor: pointer;
+      }
+      .confirmMiniBackdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1100;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 160ms ease;
+      }
+      .confirmMiniBackdrop.show {
+        pointer-events: auto;
+        opacity: 1;
+        background: rgba(0, 0, 0, 0.38);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .confirmMiniCard {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(360px, calc(100vw - 24px));
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.92);
+        padding: 12px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      }
+      .confirmMiniQ {
+        font-weight: 900;
+        font-size: 13px;
+      }
+      .confirmMiniRow {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .confirmMiniRow .btn {
+        flex: 1;
+      }
       .chatPanel {
         position: fixed;
         top: 74px;
@@ -2789,12 +2877,12 @@
                   <div id="profileWinBest" class="v">0</div>
                 </div>
                 <div class="profileCard">
-                  <div class="k">سلسلة بدون تلميح</div>
-                  <div id="profileStreak" class="v">0</div>
+                  <div class="k">الإنجازات</div>
+                  <div id="profileAch" class="v">0</div>
                 </div>
                 <div class="profileCard">
-                  <div class="k">تلميحات</div>
-                  <div id="profileHints" class="v">0</div>
+                  <div class="k">سلسلة بدون تلميح</div>
+                  <div id="profileStreak" class="v">0</div>
                 </div>
                 <div class="profileCard wide">
                   <div class="k">الفوز حسب النمط</div>
@@ -2806,9 +2894,13 @@
                     <div><div class="k">اونلاين</div><div id="profileWinsOnline" class="v">0</div></div>
                   </div>
                 </div>
-                <div class="profileCard">
-                  <div class="k">الإنجازات</div>
-                  <div id="profileAch" class="v">0</div>
+                <div class="profileCard wide">
+                  <div class="k">اونلاين حسب الصعوبة</div>
+                  <div class="profileSplit">
+                    <div><div class="k">سهل</div><div id="profileWinsOnlineEasy" class="v">0</div></div>
+                    <div><div class="k">متوسط</div><div id="profileWinsOnlineMedium" class="v">0</div></div>
+                    <div><div class="k">صعب</div><div id="profileWinsOnlineHard" class="v">0</div></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3262,6 +3354,26 @@
       </div>
     </div>
 
+    <div id="friendDetailsBackdrop" class="friendDetailsBackdrop" aria-hidden="true">
+      <div class="friendDetailsCard" role="dialog" aria-modal="true">
+        <div class="friendDetailsTop">
+          <div id="friendDetailsTitle" class="friendDetailsTitle">تفاصيل اللاعب</div>
+          <button id="friendDetailsClose" class="friendDetailsClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <div id="friendDetailsBody" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div id="friendRemoveBlockBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="confirmMiniCard" role="dialog" aria-modal="true">
+        <div id="friendRemoveBlockQ" class="confirmMiniQ">هل تريد حذف صديق او حظر صديق؟</div>
+        <div class="confirmMiniRow">
+          <button id="friendConfirmRemoveBtn" class="btn danger" type="button">حذف صديق</button>
+          <button id="friendConfirmBlockBtn" class="btn" type="button">حظر صديق</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toastHost" class="toastHost" aria-hidden="true"></div>
     <div id="avatarViewer" class="avatarViewer" aria-hidden="true">
       <div id="avatarViewerBackdrop" class="avatarViewerBackdrop"></div>
@@ -3365,6 +3477,9 @@
             winsLimited: 0,
             winsDaily: 0,
             winsOnline: 0,
+            winsOnlineEasy: 0,
+            winsOnlineMedium: 0,
+            winsOnlineHard: 0,
           },
           achievements: [],
           reduceMotion: false,
@@ -3492,9 +3607,14 @@
         base.stats.winsLimited = typeof base.stats.winsLimited === "number" ? Math.max(0, Math.floor(base.stats.winsLimited)) : 0;
         base.stats.winsDaily = typeof base.stats.winsDaily === "number" ? Math.max(0, Math.floor(base.stats.winsDaily)) : 0;
         base.stats.winsOnline = typeof base.stats.winsOnline === "number" ? Math.max(0, Math.floor(base.stats.winsOnline)) : 0;
+        base.stats.winsOnlineEasy = typeof base.stats.winsOnlineEasy === "number" ? Math.max(0, Math.floor(base.stats.winsOnlineEasy)) : 0;
+        base.stats.winsOnlineMedium = typeof base.stats.winsOnlineMedium === "number" ? Math.max(0, Math.floor(base.stats.winsOnlineMedium)) : 0;
+        base.stats.winsOnlineHard = typeof base.stats.winsOnlineHard === "number" ? Math.max(0, Math.floor(base.stats.winsOnlineHard)) : 0;
         const winModesSum =
           base.stats.winsNormal + base.stats.winsTimed + base.stats.winsLimited + base.stats.winsDaily + base.stats.winsOnline;
         if (base.stats.wins > 0 && winModesSum === 0) base.stats.winsNormal = base.stats.wins;
+        const winOnlineSum = base.stats.winsOnlineEasy + base.stats.winsOnlineMedium + base.stats.winsOnlineHard;
+        if (base.stats.winsOnline > 0 && winOnlineSum === 0) base.stats.winsOnlineEasy = base.stats.winsOnline;
 
         base.achievements = Array.isArray(s.achievements) ? s.achievements.filter((x) => typeof x === "string") : [];
 
@@ -3791,7 +3911,6 @@
         if (el.profileWinBest)
           el.profileWinBest.textContent = String(app.state.stats && typeof app.state.stats.bestWinStreak === "number" ? app.state.stats.bestWinStreak : 0);
         if (el.profileStreak) el.profileStreak.textContent = String(app.state.stats && app.state.stats.streakNoHint ? app.state.stats.streakNoHint : 0);
-        if (el.profileHints) el.profileHints.textContent = String(app.state.hintTokens || 0);
         if (el.profileAch) el.profileAch.textContent = String(Array.isArray(app.state.achievements) ? app.state.achievements.length : 0);
         if (el.profileWinsNormal)
           el.profileWinsNormal.textContent = String(app.state.stats && typeof app.state.stats.winsNormal === "number" ? app.state.stats.winsNormal : 0);
@@ -3803,6 +3922,18 @@
           el.profileWinsDaily.textContent = String(app.state.stats && typeof app.state.stats.winsDaily === "number" ? app.state.stats.winsDaily : 0);
         if (el.profileWinsOnline)
           el.profileWinsOnline.textContent = String(app.state.stats && typeof app.state.stats.winsOnline === "number" ? app.state.stats.winsOnline : 0);
+        if (el.profileWinsOnlineEasy)
+          el.profileWinsOnlineEasy.textContent = String(
+            app.state.stats && typeof app.state.stats.winsOnlineEasy === "number" ? app.state.stats.winsOnlineEasy : 0
+          );
+        if (el.profileWinsOnlineMedium)
+          el.profileWinsOnlineMedium.textContent = String(
+            app.state.stats && typeof app.state.stats.winsOnlineMedium === "number" ? app.state.stats.winsOnlineMedium : 0
+          );
+        if (el.profileWinsOnlineHard)
+          el.profileWinsOnlineHard.textContent = String(
+            app.state.stats && typeof app.state.stats.winsOnlineHard === "number" ? app.state.stats.winsOnlineHard : 0
+          );
       }
 
       function setStorageKeyForEmail(email) {
@@ -4123,13 +4254,22 @@
         profileBest: document.getElementById("profileBest"),
         profileWinBest: document.getElementById("profileWinBest"),
         profileStreak: document.getElementById("profileStreak"),
-        profileHints: document.getElementById("profileHints"),
         profileAch: document.getElementById("profileAch"),
         profileWinsNormal: document.getElementById("profileWinsNormal"),
         profileWinsTimed: document.getElementById("profileWinsTimed"),
         profileWinsLimited: document.getElementById("profileWinsLimited"),
         profileWinsDaily: document.getElementById("profileWinsDaily"),
         profileWinsOnline: document.getElementById("profileWinsOnline"),
+        profileWinsOnlineEasy: document.getElementById("profileWinsOnlineEasy"),
+        profileWinsOnlineMedium: document.getElementById("profileWinsOnlineMedium"),
+        profileWinsOnlineHard: document.getElementById("profileWinsOnlineHard"),
+        friendDetailsBackdrop: document.getElementById("friendDetailsBackdrop"),
+        friendDetailsClose: document.getElementById("friendDetailsClose"),
+        friendDetailsTitle: document.getElementById("friendDetailsTitle"),
+        friendDetailsBody: document.getElementById("friendDetailsBody"),
+        friendRemoveBlockBackdrop: document.getElementById("friendRemoveBlockBackdrop"),
+        friendConfirmRemoveBtn: document.getElementById("friendConfirmRemoveBtn"),
+        friendConfirmBlockBtn: document.getElementById("friendConfirmBlockBtn"),
         progressText: document.getElementById("progressText"),
         pathInner: document.getElementById("pathInner"),
         mapPrevBtn: document.getElementById("mapPrevBtn"),
@@ -7532,13 +7672,27 @@
         friends: [],
         gifts: [],
         selectedId: "",
-        details: null,
+        detailsById: {},
+        blockedIds: [],
         friendsSig: "",
         giftsSig: "",
         search: "",
         loadPromise: null,
         lastLoadAt: 0,
       };
+      function readBlockedFriendIds() {
+        const ui = readUiPrefs();
+        const raw = ui && typeof ui === "object" ? ui.blockedFriendIds : null;
+        const ids = Array.isArray(raw) ? raw : [];
+        return Array.from(new Set(ids.map((x) => String(x || "").trim().toUpperCase()).filter(Boolean))).slice(0, 800);
+      }
+      function writeBlockedFriendIds(ids) {
+        const list = Array.isArray(ids) ? ids : [];
+        const next = Array.from(new Set(list.map((x) => String(x || "").trim().toUpperCase()).filter(Boolean))).slice(0, 800);
+        writeUiPrefs({ blockedFriendIds: next });
+        friendsState.blockedIds = next;
+      }
+      friendsState.blockedIds = readBlockedFriendIds();
       const chatUI = {
         panel: document.getElementById("chatPanel"),
         close: document.getElementById("chatCloseBtn"),
@@ -8406,17 +8560,19 @@
 
         if (!friendsUI.list || !friendsUI.count) return;
         const list = Array.isArray(friendsState.friends) ? friendsState.friends : [];
+        const blocked = new Set(Array.isArray(friendsState.blockedIds) ? friendsState.blockedIds : []);
+        const visibleList = blocked.size ? list.filter((f) => f && typeof f.id === "string" && !blocked.has(f.id)) : list;
         const q = String(friendsState.search || "").trim().toLowerCase();
         const filtered = q
-          ? list.filter((f) => {
+          ? visibleList.filter((f) => {
               const name = String(f && f.firstName ? f.firstName : "").toLowerCase();
               const id = String(f && f.id ? f.id : "").toLowerCase();
               return name.includes(q) || id.includes(q);
             })
-          : list;
-        friendsUI.count.textContent = filtered.length ? (q ? `${filtered.length} / ${list.length}` : `${filtered.length} لاعب`) : "";
+          : visibleList;
+        friendsUI.count.textContent = filtered.length ? (q ? `${filtered.length} / ${visibleList.length}` : `${filtered.length} لاعب`) : "";
 
-        if (!list.length) {
+        if (!visibleList.length) {
           friendsUI.list.innerHTML = `<div class="friendsTiny">اضغط زر الأصدقاء لعرض القائمة.</div>`;
           if (friendsUI.actions) friendsUI.actions.style.display = "none";
           return;
@@ -8456,13 +8612,13 @@
           .join("");
 
         if (!friendsUI.actions) return;
-        if (!friendsState.selectedId) {
+        if (!friendsState.selectedId || blocked.has(friendsState.selectedId)) {
+          if (blocked.has(friendsState.selectedId)) friendsState.selectedId = "";
           friendsUI.actions.style.display = "none";
           return;
         }
 
-        const sel = list.find((x) => x.id === friendsState.selectedId);
-        const details = friendsState.details;
+        const sel = visibleList.find((x) => x.id === friendsState.selectedId);
         const canGift = !!(sel && sel.canGift);
         const giftAvailableAt = sel && sel.giftAvailableAt ? Number(sel.giftAvailableAt) : 0;
         const giftNote =
@@ -8472,56 +8628,15 @@
         const friendAvatarLetter = sel && sel.firstName ? String(sel.firstName).trim().slice(0, 1).toUpperCase() : "P";
         const friendPhoto = sel && typeof sel.photo === "string" && /^data:image\/(png|jpeg|webp);base64,/i.test(sel.photo) ? sel.photo : "";
         const friendAvatarHtml = friendPhoto ? `<img alt="" loading="lazy" decoding="async" src="${escapeHtml(friendPhoto)}" />` : escapeHtml(friendAvatarLetter);
-        const detailsHtml =
-          details && details.id === friendsState.selectedId
-            ? (() => {
-                const s = details.stats || {};
-                const wins = typeof s.wins === "number" ? s.wins : 0;
-                const winStreak = typeof s.winStreak === "number" ? s.winStreak : 0;
-                const bestWinStreak = typeof s.bestWinStreak === "number" ? s.bestWinStreak : 0;
-                const streakNoHint = typeof s.streak === "number" ? s.streak : 0;
-                const completed = typeof s.completed === "number" ? s.completed : 0;
-                const unlocked = typeof s.unlocked === "number" ? s.unlocked : 1;
-                const coins = typeof details.coins === "number" ? Math.max(0, Math.floor(details.coins)) : 0;
-                const lv = typeof details.level === "number" ? Math.max(1, Math.floor(details.level)) : 1;
-                const createdAt = details.createdAt ? new Date(details.createdAt).toLocaleDateString() : "—";
-                const winsNormal = typeof s.winsNormal === "number" ? s.winsNormal : 0;
-                const winsTimed = typeof s.winsTimed === "number" ? s.winsTimed : 0;
-                const winsLimited = typeof s.winsLimited === "number" ? s.winsLimited : 0;
-                const winsDaily = typeof s.winsDaily === "number" ? s.winsDaily : 0;
-                const winsOnline = typeof s.winsOnline === "number" ? s.winsOnline : 0;
-                return `<div class="friendsTiny" style="margin-top:6px">LV ${escapeHtml(String(lv))} • تاريخ التسجيل: ${escapeHtml(createdAt)}</div>
-                  <div class="profileGrid" style="margin-top:10px">
-                    <div class="profileCard"><div class="k">العملات الحالية</div><div class="v">${escapeHtml(String(coins))}</div></div>
-                    <div class="profileCard"><div class="k">الفوز</div><div class="v">${escapeHtml(String(wins))}</div></div>
-                    <div class="profileCard"><div class="k">ستريك الفوز</div><div class="v">${escapeHtml(String(winStreak))}</div></div>
-                    <div class="profileCard"><div class="k">أفضل ستريك فوز</div><div class="v">${escapeHtml(String(bestWinStreak))}</div></div>
-                    <div class="profileCard"><div class="k">سلسلة بدون تلميح</div><div class="v">${escapeHtml(String(streakNoHint))}</div></div>
-                    <div class="profileCard"><div class="k">المكتملة</div><div class="v">${escapeHtml(String(completed))}</div></div>
-                    <div class="profileCard"><div class="k">المرحلة</div><div class="v">${escapeHtml(String(unlocked))}</div></div>
-                    <div class="profileCard wide">
-                      <div class="k">الفوز حسب النمط</div>
-                      <div class="profileSplit">
-                        <div><div class="k">عادي</div><div class="v">${escapeHtml(String(winsNormal))}</div></div>
-                        <div><div class="k">مؤقت</div><div class="v">${escapeHtml(String(winsTimed))}</div></div>
-                        <div><div class="k">محاولات</div><div class="v">${escapeHtml(String(winsLimited))}</div></div>
-                        <div><div class="k">يومي</div><div class="v">${escapeHtml(String(winsDaily))}</div></div>
-                        <div><div class="k">اونلاين</div><div class="v">${escapeHtml(String(winsOnline))}</div></div>
-                      </div>
-                    </div>
-                  </div>`;
-              })()
-            : ``;
 
         friendsUI.actions.innerHTML = `
           <div class="friendsActionRow">
             <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>اهداء</button>
-            <button id="friendsRemoveBtn" class="btn danger" type="button">حذف صديق</button>
+            <button id="friendsRemoveBtn" class="btn danger" type="button">حذف/حظر</button>
             <button id="friendsDetailsBtn" class="btn" type="button">تفاصيل اللاعب</button>
             <div class="avatarSquare friendsFriendAvatar">${friendAvatarHtml}</div>
           </div>
           ${giftNote}
-          ${detailsHtml}
         `;
         friendsUI.actions.style.display = "";
       }
@@ -8539,7 +8654,7 @@
             friendsState.friends = [];
             friendsState.gifts = [];
             friendsState.selectedId = "";
-            friendsState.details = null;
+            friendsState.detailsById = {};
             renderFriends();
             return;
           }
@@ -8553,7 +8668,7 @@
             friendsState.friends = [];
             friendsState.gifts = [];
             friendsState.selectedId = "";
-            friendsState.details = null;
+            friendsState.detailsById = {};
             renderFriends();
             return;
           }
@@ -8606,7 +8721,7 @@
         const selectedMissing = friendsState.selectedId && !friendsState.friends.some((x) => x.id === friendsState.selectedId);
         if (selectedMissing) {
           friendsState.selectedId = "";
-          friendsState.details = null;
+          friendsState.detailsById = {};
         }
         const shouldRerender = selectedMissing || nextFriendsSig !== prevFriendsSig || nextGiftsSig !== prevGiftsSig;
         if (shouldRerender) renderFriends();
@@ -8809,6 +8924,14 @@
           closeAvatarViewer();
           return;
         }
+        if (e.key === "Escape" && el.friendRemoveBlockBackdrop && el.friendRemoveBlockBackdrop.classList.contains("show")) {
+          closeFriendRemoveBlockModal();
+          return;
+        }
+        if (e.key === "Escape" && el.friendDetailsBackdrop && el.friendDetailsBackdrop.classList.contains("show")) {
+          closeFriendDetailsModal();
+          return;
+        }
         if (e.key === "Escape" && el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show")) {
           closeProfileDrop();
           return;
@@ -8839,9 +8962,108 @@
           if (!btn) return;
           const id = btn.getAttribute("data-id") || "";
           friendsState.selectedId = id;
-          friendsState.details = null;
           renderFriends();
         });
+      }
+
+      function renderFriendDetailsBody(details) {
+        if (!details || typeof details !== "object") return "";
+        const s = details.stats || {};
+        const wins = typeof s.wins === "number" ? s.wins : 0;
+        const winStreak = typeof s.winStreak === "number" ? s.winStreak : 0;
+        const bestWinStreak = typeof s.bestWinStreak === "number" ? s.bestWinStreak : 0;
+        const streakNoHint = typeof s.streak === "number" ? s.streak : 0;
+        const completed = typeof s.completed === "number" ? s.completed : 0;
+        const unlocked = typeof s.unlocked === "number" ? s.unlocked : 1;
+        const coins = typeof details.coins === "number" ? Math.max(0, Math.floor(details.coins)) : 0;
+        const lv = typeof details.level === "number" ? Math.max(1, Math.floor(details.level)) : 1;
+        const createdAt = details.createdAt ? new Date(details.createdAt).toLocaleDateString() : "—";
+        const winsNormal = typeof s.winsNormal === "number" ? s.winsNormal : 0;
+        const winsTimed = typeof s.winsTimed === "number" ? s.winsTimed : 0;
+        const winsLimited = typeof s.winsLimited === "number" ? s.winsLimited : 0;
+        const winsDaily = typeof s.winsDaily === "number" ? s.winsDaily : 0;
+        const winsOnline = typeof s.winsOnline === "number" ? s.winsOnline : 0;
+        const winsOnlineEasy = typeof s.winsOnlineEasy === "number" ? s.winsOnlineEasy : 0;
+        const winsOnlineMedium = typeof s.winsOnlineMedium === "number" ? s.winsOnlineMedium : 0;
+        const winsOnlineHard = typeof s.winsOnlineHard === "number" ? s.winsOnlineHard : 0;
+        const name = String(details.firstName || "Player");
+        const id = String(details.id || "");
+        return `
+          <div style="display:flex; gap:12px; align-items:center">
+            <div id="friendDetailsAvatarBox" class="avatarSquare" style="width:64px; height:64px; border-radius:18px"></div>
+            <div style="flex:1; min-width:0">
+              <div class="profileNameRow" style="justify-content:space-between">
+                <div class="profileName">${escapeHtml(name)}</div>
+                <div class="friendsTiny">LV ${escapeHtml(String(lv))}</div>
+              </div>
+              <div class="profileLine"><span class="profileK">ID</span> <span class="profileV">${escapeHtml(id)}</span></div>
+              <div class="profileLine"><span class="profileK">تاريخ التسجيل</span> <span class="profileV">${escapeHtml(createdAt)}</span></div>
+            </div>
+          </div>
+          <div class="profileGrid" style="margin-top:12px">
+            <div class="profileCard"><div class="k">العملات الحالية</div><div class="v">${escapeHtml(String(coins))}</div></div>
+            <div class="profileCard"><div class="k">الفوز</div><div class="v">${escapeHtml(String(wins))}</div></div>
+            <div class="profileCard"><div class="k">ستريك الفوز</div><div class="v">${escapeHtml(String(winStreak))}</div></div>
+            <div class="profileCard"><div class="k">أفضل ستريك فوز</div><div class="v">${escapeHtml(String(bestWinStreak))}</div></div>
+            <div class="profileCard"><div class="k">سلسلة بدون تلميح</div><div class="v">${escapeHtml(String(streakNoHint))}</div></div>
+            <div class="profileCard"><div class="k">المكتملة</div><div class="v">${escapeHtml(String(completed))}</div></div>
+            <div class="profileCard"><div class="k">المرحلة</div><div class="v">${escapeHtml(String(unlocked))}</div></div>
+            <div class="profileCard wide">
+              <div class="k">الفوز حسب النمط</div>
+              <div class="profileSplit">
+                <div><div class="k">عادي</div><div class="v">${escapeHtml(String(winsNormal))}</div></div>
+                <div><div class="k">مؤقت</div><div class="v">${escapeHtml(String(winsTimed))}</div></div>
+                <div><div class="k">محاولات</div><div class="v">${escapeHtml(String(winsLimited))}</div></div>
+                <div><div class="k">يومي</div><div class="v">${escapeHtml(String(winsDaily))}</div></div>
+                <div><div class="k">اونلاين</div><div class="v">${escapeHtml(String(winsOnline))}</div></div>
+              </div>
+            </div>
+            <div class="profileCard wide">
+              <div class="k">اونلاين حسب الصعوبة</div>
+              <div class="profileSplit">
+                <div><div class="k">سهل</div><div class="v">${escapeHtml(String(winsOnlineEasy))}</div></div>
+                <div><div class="k">متوسط</div><div class="v">${escapeHtml(String(winsOnlineMedium))}</div></div>
+                <div><div class="k">صعب</div><div class="v">${escapeHtml(String(winsOnlineHard))}</div></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function openFriendDetailsModal(details) {
+        if (!el.friendDetailsBackdrop || !el.friendDetailsBody) return;
+        const name = details && details.firstName ? String(details.firstName) : "Player";
+        if (el.friendDetailsTitle) el.friendDetailsTitle.textContent = `تفاصيل اللاعب • ${name}`;
+        el.friendDetailsBody.innerHTML = renderFriendDetailsBody(details);
+        const avBox = el.friendDetailsBody.querySelector ? el.friendDetailsBody.querySelector("#friendDetailsAvatarBox") : null;
+        if (avBox) {
+          const letter = String(name || "P").trim().slice(0, 1).toUpperCase() || "P";
+          const photo = details && typeof details.photo === "string" ? details.photo : "";
+          setAvatarSquare(avBox, photo, letter);
+        }
+        el.friendDetailsBackdrop.classList.add("show");
+        el.friendDetailsBackdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closeFriendDetailsModal() {
+        if (!el.friendDetailsBackdrop || !el.friendDetailsBody) return;
+        el.friendDetailsBackdrop.classList.remove("show");
+        el.friendDetailsBackdrop.setAttribute("aria-hidden", "true");
+        el.friendDetailsBody.innerHTML = "";
+      }
+
+      function openFriendRemoveBlockModal(id) {
+        if (!el.friendRemoveBlockBackdrop) return;
+        el.friendRemoveBlockBackdrop.dataset.id = String(id || "");
+        el.friendRemoveBlockBackdrop.classList.add("show");
+        el.friendRemoveBlockBackdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closeFriendRemoveBlockModal() {
+        if (!el.friendRemoveBlockBackdrop) return;
+        el.friendRemoveBlockBackdrop.classList.remove("show");
+        el.friendRemoveBlockBackdrop.setAttribute("aria-hidden", "true");
+        el.friendRemoveBlockBackdrop.dataset.id = "";
       }
 
       if (friendsUI.actions) {
@@ -8862,20 +9084,23 @@
 
           if (t.id === "friendsDetailsBtn") {
             setFriendsMsg("");
+            const cached = friendsState.detailsById && typeof friendsState.detailsById === "object" ? friendsState.detailsById[id] : null;
+            if (cached && cached.id) {
+              openFriendDetailsModal(cached);
+              return;
+            }
             const r = await friendsJson(`/api/friends/player?id=${encodeURIComponent(id)}`, { method: "GET" });
-            if (r.ok && r.data && r.data.id) friendsState.details = r.data;
-            else setFriendsMsg((r.data && r.data.error) || "فشل تحميل التفاصيل.");
-            renderFriends();
+            if (r.ok && r.data && r.data.id) {
+              friendsState.detailsById[id] = r.data;
+              openFriendDetailsModal(r.data);
+            } else {
+              setFriendsMsg((r.data && r.data.error) || "فشل تحميل التفاصيل.");
+            }
             return;
           }
 
           if (t.id === "friendsRemoveBtn") {
-            const ok = confirm(`حذف الصديق؟\n${id}`);
-            if (!ok) return;
-            setFriendsMsg("");
-            const r = await friendsJson(`/api/friends/remove?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-            if (!r.ok) setFriendsMsg((r.data && r.data.error) || "فشل حذف الصديق.");
-            await loadFriendsData();
+            openFriendRemoveBlockModal(id);
             return;
           }
 
@@ -8910,6 +9135,40 @@
           }
         });
       }
+
+      if (el.friendDetailsClose) el.friendDetailsClose.addEventListener("click", () => closeFriendDetailsModal());
+      if (el.friendDetailsBackdrop)
+        el.friendDetailsBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.friendDetailsBackdrop) closeFriendDetailsModal();
+        });
+
+      if (el.friendRemoveBlockBackdrop)
+        el.friendRemoveBlockBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.friendRemoveBlockBackdrop) closeFriendRemoveBlockModal();
+        });
+      if (el.friendConfirmRemoveBtn)
+        el.friendConfirmRemoveBtn.addEventListener("click", async () => {
+          const id = el.friendRemoveBlockBackdrop ? String(el.friendRemoveBlockBackdrop.dataset.id || "") : "";
+          if (!id) return;
+          closeFriendRemoveBlockModal();
+          setFriendsMsg("");
+          const r = await friendsJson(`/api/friends/remove?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+          if (!r.ok) setFriendsMsg((r.data && r.data.error) || "فشل حذف الصديق.");
+          await loadFriendsData(true);
+        });
+      if (el.friendConfirmBlockBtn)
+        el.friendConfirmBlockBtn.addEventListener("click", async () => {
+          const id = el.friendRemoveBlockBackdrop ? String(el.friendRemoveBlockBackdrop.dataset.id || "") : "";
+          if (!id) return;
+          closeFriendRemoveBlockModal();
+          setFriendsMsg("");
+          await friendsJson(`/api/friends/remove?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+          writeBlockedFriendIds((friendsState.blockedIds || []).concat([id]));
+          friendsState.selectedId = "";
+          closeFriendDetailsModal();
+          renderFriends();
+          await loadFriendsData(true);
+        });
 
       if (friendsUI.addBtn && friendsUI.addInput) {
         friendsUI.addBtn.addEventListener("click", async () => {

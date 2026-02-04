@@ -49,13 +49,40 @@ export function getProfileStats(state: unknown) {
   const winsOnlineRaw = stats.winsOnline;
   const winsOnline = typeof winsOnlineRaw === "number" && Number.isFinite(winsOnlineRaw) ? Math.max(0, Math.floor(winsOnlineRaw)) : 0;
 
+  const winsOnlineEasyRaw = stats.winsOnlineEasy;
+  const winsOnlineEasy =
+    typeof winsOnlineEasyRaw === "number" && Number.isFinite(winsOnlineEasyRaw) ? Math.max(0, Math.floor(winsOnlineEasyRaw)) : 0;
+
+  const winsOnlineMediumRaw = stats.winsOnlineMedium;
+  const winsOnlineMedium =
+    typeof winsOnlineMediumRaw === "number" && Number.isFinite(winsOnlineMediumRaw) ? Math.max(0, Math.floor(winsOnlineMediumRaw)) : 0;
+
+  const winsOnlineHardRaw = stats.winsOnlineHard;
+  const winsOnlineHard =
+    typeof winsOnlineHardRaw === "number" && Number.isFinite(winsOnlineHardRaw) ? Math.max(0, Math.floor(winsOnlineHardRaw)) : 0;
+
   const unlockedRaw = s.unlocked;
   const unlocked = typeof unlockedRaw === "number" && Number.isFinite(unlockedRaw) ? Math.max(1, Math.floor(unlockedRaw)) : 1;
 
   const completedRaw = s.completed;
   const completed = Array.isArray(completedRaw) ? completedRaw.filter((n) => Number.isInteger(n)).length : 0;
 
-  return { streak, wins, winStreak, bestWinStreak, winsNormal, winsTimed, winsLimited, winsDaily, winsOnline, unlocked, completed };
+  return {
+    streak,
+    wins,
+    winStreak,
+    bestWinStreak,
+    winsNormal,
+    winsTimed,
+    winsLimited,
+    winsDaily,
+    winsOnline,
+    winsOnlineEasy,
+    winsOnlineMedium,
+    winsOnlineHard,
+    unlocked,
+    completed,
+  };
 }
 
 export function getProfileLevel(state: unknown) {
