@@ -1686,20 +1686,28 @@
       .onlinePack {
         border-radius: 18px;
         border: 1px solid var(--panel-border);
-        background: rgba(255, 255, 255, 0.05);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
         padding: 14px;
         display: grid;
-        gap: 10px;
-        text-align: right;
-        min-height: 120px;
-        transition: transform 180ms ease;
+        gap: 12px;
+        text-align: center;
+        min-height: 140px;
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        cursor: pointer;
+        user-select: none;
       }
       .onlinePack:hover {
         transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      .onlinePack:active {
+        transform: translateY(0px) scale(0.995);
       }
       .onlinePack .t {
         font-weight: 900;
-        letter-spacing: 0.2px;
+        letter-spacing: 0.3px;
+        font-size: 20px;
       }
       .onlinePack .sub {
         color: var(--muted);
@@ -1707,10 +1715,133 @@
       }
       .onlinePack .price {
         font-weight: 900;
-        font-size: 18px;
+        font-size: 22px;
+        letter-spacing: 0.2px;
       }
-      .onlinePack .btn {
-        width: 100%;
+      .onlinePack .cta {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.92);
+        font-weight: 800;
+      }
+      .coinChip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(0, 0, 0, 0.18);
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        white-space: nowrap;
+      }
+      .onlineEndRow {
+        display: grid;
+        grid-template-columns: 1fr 160px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+      @media (max-width: 680px) {
+        .onlineEndRow {
+          grid-template-columns: 1fr;
+        }
+      }
+      .onlineEndCard {
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(0, 0, 0, 0.14);
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 54px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+      .onlineEndMeta {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+      .onlineEndName {
+        font-weight: 900;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .onlineEndTag {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .onlineEndBridge {
+        display: grid;
+        gap: 6px;
+        justify-items: center;
+      }
+      .onlineEndLane {
+        width: 160px;
+        height: 32px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        position: relative;
+        overflow: hidden;
+        --chip-w: 78px;
+      }
+      .onlineEndLane .coinChip {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: var(--chip-w);
+      }
+      .onlineEndLane.ltr .coinChip {
+        left: 8px;
+        animation: coinMoveLTR 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+      .onlineEndLane.rtl .coinChip {
+        right: 8px;
+        animation: coinMoveRTL 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+      @keyframes coinMoveLTR {
+        0% {
+          transform: translateY(-50%) translateX(0) scale(1);
+          filter: saturate(1);
+        }
+        65% {
+          transform: translateY(-50%) translateX(calc(160px - var(--chip-w) - 16px)) scale(1.08);
+          filter: saturate(1.2);
+        }
+        100% {
+          transform: translateY(-50%) translateX(calc(160px - var(--chip-w) - 16px)) scale(1);
+          filter: saturate(1.2);
+        }
+      }
+      @keyframes coinMoveRTL {
+        0% {
+          transform: translateY(-50%) translateX(0) scale(1);
+          filter: saturate(1);
+        }
+        65% {
+          transform: translateY(-50%) translateX(calc(-1 * (160px - var(--chip-w) - 16px))) scale(1.08);
+          filter: saturate(1.2);
+        }
+        100% {
+          transform: translateY(-50%) translateX(calc(-1 * (160px - var(--chip-w) - 16px))) scale(1);
+          filter: saturate(1.2);
+        }
+      }
+      .onlineWin {
+        border-color: rgba(59, 130, 246, 0.55);
+        background: rgba(59, 130, 246, 0.14);
+      }
+      .onlineLose {
+        border-color: rgba(239, 68, 68, 0.5);
+        background: rgba(239, 68, 68, 0.12);
       }
       .onlineMatchRow {
         display: grid;
@@ -5516,6 +5647,8 @@
         renderSlotsForStage(stage);
         clearSlots();
         resetSession();
+        if (el.winBox) el.winBox.classList.remove("show", "onlineWin", "onlineLose");
+        if (el.winSub) el.winSub.textContent = "";
         el.checkBtn.disabled = false;
         app.session.usedAnyHint = false;
         app.session.usedPaidHint = false;
@@ -6533,6 +6666,11 @@
         codeLen: 0,
         queueId: "",
         matchId: "",
+        meEmail: "",
+        meName: "",
+        mePhoto: "",
+        oppName: "",
+        oppPhoto: "",
         searchingStartedAt: 0,
         pollQueueId: null,
         pollMatchId: null,
@@ -6540,6 +6678,7 @@
         lastMaskedAt: 0,
         busy: false,
         forfeitSent: false,
+        stateFetchBusy: false,
       };
 
       function onlineCfg(mode) {
@@ -6560,6 +6699,141 @@
         onlineState.pollMatchId = null;
       }
 
+      function onlineRenderEndScreen(fee, winnerIsMe, endedReason, forfeitedBy) {
+        if (!el.winBox || !el.winSub || !el.winTitle) return;
+        const pot = Math.max(0, Math.floor(fee)) * 2;
+        const myName = onlineState.meName || "لاعب";
+        const myPhoto = onlineState.mePhoto || "";
+        const oppName = onlineState.oppName || "خصم";
+        const oppPhoto = onlineState.oppPhoto || "";
+
+        const loserIsMe = !winnerIsMe;
+        const loserName = loserIsMe ? myName : oppName;
+        const loserPhoto = loserIsMe ? myPhoto : oppPhoto;
+        const winnerName = winnerIsMe ? myName : oppName;
+        const winnerPhoto = winnerIsMe ? myPhoto : oppPhoto;
+
+        el.winBox.classList.toggle("onlineWin", winnerIsMe);
+        el.winBox.classList.toggle("onlineLose", !winnerIsMe);
+        el.winTitle.textContent = winnerIsMe ? "فزت!" : "خسرت";
+
+        const subLine =
+          endedReason === "forfeit"
+            ? forfeitedBy === "them"
+              ? "الخصم انسحب"
+              : forfeitedBy === "me"
+                ? "انسحبت"
+                : ""
+            : "";
+
+        el.winSub.innerHTML = `<div class="onlineWrap">
+          ${subLine ? `<div class="tiny">${escapeHtml(subLine)}</div>` : ``}
+          <div class="onlineEndRow">
+            <div class="onlineEndCard">
+              <div id="onlineEndLoserAvatar" class="onlineAvatar">L</div>
+              <div class="onlineEndMeta">
+                <div class="onlineEndName">${escapeHtml(loserName)}</div>
+                <div class="onlineEndTag"><span class="coinChip">-${fee}🪙</span></div>
+              </div>
+            </div>
+            <div class="onlineEndBridge">
+              <div class="onlineEndLane ltr"><span class="coinChip">${fee}🪙</span></div>
+              <div class="onlineEndTag">المجموع <span class="coinChip">${pot}🪙</span></div>
+            </div>
+            <div class="onlineEndCard">
+              <div id="onlineEndWinnerAvatar" class="onlineAvatar">W</div>
+              <div class="onlineEndMeta">
+                <div class="onlineEndName">${escapeHtml(winnerName)}</div>
+                <div class="onlineEndTag"><span class="coinChip">+${pot}🪙</span></div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+        const loserAv = document.getElementById("onlineEndLoserAvatar");
+        const winnerAv = document.getElementById("onlineEndWinnerAvatar");
+        if (loserAv) setAvatarSquare(loserAv, loserPhoto, String(loserName || "L").slice(0, 1).toUpperCase());
+        if (winnerAv) setAvatarSquare(winnerAv, winnerPhoto, String(winnerName || "W").slice(0, 1).toUpperCase());
+      }
+
+      function onlineApplyMatchState(m, meEmail, fee) {
+        if (!m) return;
+        if (m.opponent && typeof m.opponent === "object") {
+          onlineState.oppName = m.opponent.firstName || onlineState.oppName || "خصم";
+          onlineState.oppPhoto = m.opponent.photo || onlineState.oppPhoto || "";
+          if (el.onlineOppName) el.onlineOppName.textContent = onlineState.oppName;
+          if (el.onlineOppAvatar) setAvatarSquare(el.onlineOppAvatar, onlineState.oppPhoto, String((onlineState.oppName || "O")).slice(0, 1).toUpperCase());
+          if (el.onlineOppSub) el.onlineOppSub.textContent = "اونلاين";
+        }
+
+        if (typeof m.myCoins === "number") {
+          app.state.coins = Math.max(0, Math.floor(m.myCoins));
+          saveStateSilent(app.state);
+          updateCoinsUI();
+          updateSettingsUI();
+        }
+
+        const turn = m.turn;
+        const timeLeftMs = typeof m.timeLeftMs === "number" ? Math.max(0, Math.floor(m.timeLeftMs)) : 0;
+        const pct = Math.min(100, Math.max(0, Math.floor((timeLeftMs / 18000) * 100)));
+        if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
+        if (el.onlineTurnText) el.onlineTurnText.textContent = turn === "me" ? "دورك الآن" : turn === "them" ? "دور الخصم" : "انتهى التحدي";
+        if (el.onlineMeAvatar) el.onlineMeAvatar.classList.toggle("active", turn === "me");
+        if (el.onlineOppAvatar) el.onlineOppAvatar.classList.toggle("active", turn === "them");
+
+        const locked = turn !== "me";
+        if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
+        for (const input of app.inputs) {
+          input.disabled = locked;
+          input.placeholder = locked ? "M" : "";
+          if (locked) input.value = "";
+        }
+
+        if (Array.isArray(m.myHistory)) {
+          const my = m.myHistory
+            .filter((x) => x && typeof x === "object" && typeof x.guess === "string" && Array.isArray(x.result))
+            .map((x) => ({ guess: x.guess, result: x.result }));
+          app.history = my;
+          app.attempts = my.length;
+          if (el.attemptsNum) el.attemptsNum.textContent = String(app.attempts);
+          renderHistory();
+        }
+
+        if (m.lastMasked && m.lastMasked.by && m.lastMasked.at && m.lastMasked.by !== meEmail) {
+          if (m.lastMasked.at > onlineState.lastMaskedAt) {
+            onlineState.lastMaskedAt = m.lastMasked.at;
+            if (el.onlineOppLast) el.onlineOppLast.innerHTML = `الخصم لعب: <span class="maskM">${escapeHtml(m.lastMasked.value || "")}</span>`;
+          }
+        }
+
+        if (turn === "ended") {
+          stopOnlineMatchPolling();
+          app.session.over = true;
+          const winnerIsMe = m.winner === "me";
+          onlineRenderEndScreen(fee, winnerIsMe, m.endedReason, m.forfeitedBy);
+          if (el.nextBtn) {
+            el.nextBtn.disabled = false;
+            el.nextBtn.textContent = "الرئيسية";
+          }
+          if (el.mapBtn2) el.mapBtn2.style.display = "none";
+          if (el.shareBtn) el.shareBtn.style.display = "none";
+          if (el.winBox) el.winBox.classList.add("show");
+        }
+      }
+
+      async function onlineFetchMatchStateOnce(meEmail, fee) {
+        if (!onlineState.matchId) return;
+        if (onlineState.stateFetchBusy) return;
+        onlineState.stateFetchBusy = true;
+        try {
+          const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(onlineState.matchId)}`, { method: "GET" });
+          if (!r.ok || !r.data || !r.data.match) return;
+          onlineApplyMatchState(r.data.match, meEmail, fee);
+        } finally {
+          onlineState.stateFetchBusy = false;
+        }
+      }
+
       function renderOnlineSelect() {
         if (!el.onlineContent) return;
         onlineState.open = true;
@@ -6570,22 +6844,21 @@
 
         const card = (mode, title, sub) => {
           const cfg = onlineCfg(mode);
-          return `<div class="onlinePack">
+          return `<button class="onlinePack" type="button" data-online-mode="${escapeHtml(mode)}" aria-label="${escapeHtml(title)}">
             <div class="t">${escapeHtml(title)}</div>
             <div class="sub">${escapeHtml(sub)}</div>
-            <div class="price">${cfg.fee}🪙</div>
-            <button class="btn primary" type="button" data-online-mode="${escapeHtml(mode)}">ابدأ</button>
-          </div>`;
+            <div class="price"><span class="coinChip">${cfg.fee}🪙</span></div>
+            <div class="cta">اضغط للبدء</div>
+          </button>`;
         };
 
         el.onlineContent.innerHTML = `<div class="onlineWrap">
-          <div class="tiny">اختر القيم ثم نبحث لك عن خصم بنفس القيم.</div>
+          <div class="tiny">اختر القيم.</div>
           <div class="onlinePacks">
             ${card("easy", "سهل", "3 أرقام")}
             ${card("medium", "متوسط", "4 أرقام")}
             ${card("hard", "صعب", "5 أرقام")}
           </div>
-          <div class="tiny" style="color:var(--muted)">الفائز يأخذ مجموع القيمتين.</div>
         </div>`;
       }
 
@@ -6615,8 +6888,7 @@
             <div class="onlinePlayerCard">
               <div id="onlineSearchOppAvatar" class="onlineAvatar">?</div>
               <div class="onlineMeta">
-                <div id="onlineSearchOppName" class="onlineName">نبحث…</div>
-                <div class="onlineTiny">على حسب النت</div>
+                <div id="onlineSearchOppName" class="onlineName">يتم البحث عن خصم…</div>
               </div>
             </div>
           </div>
@@ -6638,7 +6910,7 @@
         onlineState.spinId = setInterval(() => {
           const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
           onlineSetSearchAvatar(oppAv, "", letter);
-          if (oppName) oppName.textContent = "نبحث…";
+          if (oppName) oppName.textContent = "يتم البحث عن خصم…";
           const elapsed = Date.now() - onlineState.searchingStartedAt;
           const p = Math.min(100, Math.max(4, Math.floor((elapsed / 30_000) * 100)));
           if (bar) bar.style.width = `${p}%`;
@@ -6712,7 +6984,7 @@
                 stopOnlineQueuePolling();
                 renderOnlineSelect();
               }
-            }, 1200);
+            }, 750);
           }
         } finally {
           onlineState.busy = false;
@@ -6726,11 +6998,16 @@
         onlineState.codeLen = codeLen;
         onlineState.lastMaskedAt = 0;
         onlineState.forfeitSent = false;
+        onlineState.stateFetchBusy = false;
 
         openStage({ kind: "online", id: 0, matchId, mode, fee, codeLen });
 
         const myName = (me && me.firstName) || "لاعب";
         const myPhoto = me && typeof me.photo === "string" ? me.photo : "";
+        const myEmail = (me && typeof me.email === "string" ? me.email : "") || "";
+        onlineState.meName = myName;
+        onlineState.mePhoto = myPhoto;
+        onlineState.meEmail = myEmail;
         if (el.onlineMeName) el.onlineMeName.textContent = myName;
         if (el.onlineMeSub) el.onlineMeSub.textContent = `${fee}🪙 • ${codeLen} أرقام`;
         if (el.onlineMeAvatar) setAvatarSquare(el.onlineMeAvatar, myPhoto, String(myName).slice(0, 1).toUpperCase());
@@ -6739,80 +7016,14 @@
         if (opp && el.onlineOppName) el.onlineOppName.textContent = opp.firstName || "خصم";
         if (opp && el.onlineOppSub) el.onlineOppSub.textContent = "اونلاين";
         if (opp && el.onlineOppAvatar) setAvatarSquare(el.onlineOppAvatar, opp.photo || "", String((opp.firstName || "O")).slice(0, 1).toUpperCase());
+        onlineState.oppName = opp && typeof opp.firstName === "string" ? opp.firstName : onlineState.oppName;
+        onlineState.oppPhoto = opp && typeof opp.photo === "string" ? opp.photo : onlineState.oppPhoto;
 
         stopOnlineMatchPolling();
+        await onlineFetchMatchStateOnce(myEmail, fee);
         onlineState.pollMatchId = setInterval(async () => {
-          if (!onlineState.matchId) return;
-          const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(onlineState.matchId)}`, { method: "GET" });
-          if (!r.ok || !r.data || !r.data.match) return;
-          const m = r.data.match;
-          if (m.opponent && el.onlineOppName) {
-            el.onlineOppName.textContent = m.opponent.firstName || "خصم";
-            if (el.onlineOppAvatar) setAvatarSquare(el.onlineOppAvatar, m.opponent.photo || "", String((m.opponent.firstName || "O")).slice(0, 1).toUpperCase());
-            if (el.onlineOppSub) el.onlineOppSub.textContent = "اونلاين";
-          }
-          if (typeof m.myCoins === "number") {
-            app.state.coins = Math.max(0, Math.floor(m.myCoins));
-            saveStateSilent(app.state);
-            updateCoinsUI();
-            updateSettingsUI();
-          }
-
-          const turn = m.turn;
-          const timeLeftMs = typeof m.timeLeftMs === "number" ? Math.max(0, Math.floor(m.timeLeftMs)) : 0;
-          const pct = Math.min(100, Math.max(0, Math.floor((timeLeftMs / 18000) * 100)));
-          if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
-          if (el.onlineTurnText) el.onlineTurnText.textContent = turn === "me" ? "دورك الآن" : turn === "them" ? "دور الخصم" : "انتهى التحدي";
-          if (el.onlineMeAvatar) el.onlineMeAvatar.classList.toggle("active", turn === "me");
-          if (el.onlineOppAvatar) el.onlineOppAvatar.classList.toggle("active", turn === "them");
-
-          const locked = turn !== "me";
-          if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
-          for (const input of app.inputs) {
-            input.disabled = locked;
-            input.placeholder = locked ? "M" : "";
-            if (locked) input.value = "";
-          }
-
-          if (Array.isArray(m.myHistory)) {
-            const my = m.myHistory
-              .filter((x) => x && typeof x === "object" && typeof x.guess === "string" && Array.isArray(x.result))
-              .map((x) => ({ guess: x.guess, result: x.result }));
-            app.history = my;
-            app.attempts = my.length;
-            if (el.attemptsNum) el.attemptsNum.textContent = String(app.attempts);
-            renderHistory();
-          }
-
-          if (m.lastMasked && m.lastMasked.by && m.lastMasked.at && m.lastMasked.by !== (me && me.email)) {
-            if (m.lastMasked.at > onlineState.lastMaskedAt) {
-              onlineState.lastMaskedAt = m.lastMasked.at;
-              if (el.onlineOppLast) el.onlineOppLast.innerHTML = `الخصم لعب: <span class="maskM">${escapeHtml(m.lastMasked.value || "")}</span>`;
-            }
-          }
-
-          if (turn === "ended") {
-            stopOnlineMatchPolling();
-            app.session.over = true;
-            if (el.winTitle) el.winTitle.textContent = m.winner === "me" ? "فزت!" : "خسرت";
-            if (el.winSub) {
-              if (m.endedReason === "forfeit") {
-                if (m.forfeitedBy === "them" && m.winner === "me") el.winSub.textContent = `الخصم انسحب • +${fee * 2}🪙`;
-                else if (m.forfeitedBy === "me" && m.winner === "them") el.winSub.textContent = "انسحبت";
-                else el.winSub.textContent = m.winner === "me" ? `+${fee * 2}🪙` : "حاول مرة ثانية";
-              } else {
-                el.winSub.textContent = m.winner === "me" ? `+${fee * 2}🪙` : "حاول مرة ثانية";
-              }
-            }
-            if (el.nextBtn) {
-              el.nextBtn.disabled = false;
-              el.nextBtn.textContent = "الرئيسية";
-            }
-            if (el.mapBtn2) el.mapBtn2.style.display = "none";
-            if (el.shareBtn) el.shareBtn.style.display = "none";
-            if (el.winBox) el.winBox.classList.add("show");
-          }
-        }, 900);
+          await onlineFetchMatchStateOnce(myEmail, fee);
+        }, 550);
 
         requestAnimationFrame(() => {
           if (app.inputs && app.inputs[0]) app.inputs[0].focus();
@@ -6849,6 +7060,7 @@
             }
           }
           clearGuessOnly();
+          await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
         } finally {
           onlineState.busy = false;
         }
