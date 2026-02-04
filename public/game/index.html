@@ -1684,6 +1684,8 @@
         }
       }
       .onlinePack {
+        -webkit-appearance: none;
+        appearance: none;
         border-radius: 18px;
         border: 1px solid var(--panel-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
@@ -1695,6 +1697,8 @@
         transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         cursor: pointer;
         user-select: none;
+        color: var(--text);
+        font-family: inherit;
       }
       .onlinePack:hover {
         transform: translateY(-2px);
@@ -1708,6 +1712,7 @@
         font-weight: 900;
         letter-spacing: 0.3px;
         font-size: 20px;
+        color: var(--text);
       }
       .onlinePack .sub {
         color: var(--muted);
@@ -1717,6 +1722,7 @@
         font-weight: 900;
         font-size: 22px;
         letter-spacing: 0.2px;
+        color: var(--text);
       }
       .onlinePack .cta {
         display: inline-flex;
@@ -1727,7 +1733,7 @@
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(255, 255, 255, 0.06);
-        color: rgba(255, 255, 255, 0.92);
+        color: var(--text);
         font-weight: 800;
       }
       .coinChip {
@@ -1738,9 +1744,15 @@
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.16);
         background: rgba(0, 0, 0, 0.18);
+        color: rgba(255, 255, 255, 0.92);
         font-weight: 900;
         letter-spacing: 0.2px;
         white-space: nowrap;
+      }
+      html[data-theme="cream"] .coinChip {
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        color: rgba(18, 22, 26, 0.92);
       }
       .onlineEndRow {
         display: grid;
