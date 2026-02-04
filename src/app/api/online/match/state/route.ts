@@ -6,7 +6,7 @@ import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/prof
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
-const TURN_MS = 18_000;
+const TURN_MS = 30_000;
 
 function readDisplayNameFromState(state: unknown) {
   if (!state || typeof state !== "object") return "";

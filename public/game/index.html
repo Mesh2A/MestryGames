@@ -1876,6 +1876,12 @@
         grid-template-columns: 54px 1fr;
         gap: 12px;
         align-items: center;
+        transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      }
+      .onlinePlayerCard.turnActive {
+        border-color: rgba(34, 197, 94, 0.7);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+        background: rgba(34, 197, 94, 0.12);
       }
       .onlineAvatar {
         width: 54px;
@@ -1925,7 +1931,23 @@
         height: 100%;
         width: 0%;
         background: linear-gradient(90deg, rgba(34, 197, 94, 0.9), rgba(59, 130, 246, 0.9));
-        transition: width 220ms ease;
+        transition: width 60ms linear;
+      }
+      .coinFxLayer {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 4000;
+      }
+      .flyCoin {
+        position: fixed;
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.4));
+        will-change: transform, opacity;
       }
       .slot input::placeholder {
         color: rgba(255, 255, 255, 0.42);
@@ -6683,6 +6705,9 @@
         mePhoto: "",
         oppName: "",
         oppPhoto: "",
+        turnEndAt: 0,
+        barRafId: 0,
+        endAnimKey: "",
         searchingStartedAt: 0,
         pollQueueId: null,
         pollMatchId: null,
@@ -6692,6 +6717,8 @@
         forfeitSent: false,
         stateFetchBusy: false,
       };
+
+      const ONLINE_TURN_MS = 30_000;
 
       function onlineCfg(mode) {
         if (mode === "easy") return { fee: 29, codeLen: 3 };
@@ -6709,6 +6736,25 @@
       function stopOnlineMatchPolling() {
         if (onlineState.pollMatchId) clearInterval(onlineState.pollMatchId);
         onlineState.pollMatchId = null;
+        if (onlineState.barRafId) cancelAnimationFrame(onlineState.barRafId);
+        onlineState.barRafId = 0;
+      }
+
+      function startOnlineTurnBarLoop() {
+        if (onlineState.barRafId) return;
+        const tick = () => {
+          if (!onlineState.matchId || !app.stage || app.stage.kind !== "online" || (app.session && app.session.over)) {
+            onlineState.barRafId = 0;
+            return;
+          }
+          const endAt = typeof onlineState.turnEndAt === "number" ? onlineState.turnEndAt : 0;
+          const now = Date.now();
+          const left = endAt > 0 ? Math.max(0, endAt - now) : 0;
+          const pct = endAt > 0 ? Math.min(100, Math.max(0, (left / ONLINE_TURN_MS) * 100)) : 0;
+          if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
+          onlineState.barRafId = requestAnimationFrame(tick);
+        };
+        onlineState.barRafId = requestAnimationFrame(tick);
       }
 
       function onlineRenderEndScreen(fee, winnerIsMe, endedReason, forfeitedBy) {
@@ -6745,18 +6791,18 @@
               <div id="onlineEndLoserAvatar" class="onlineAvatar">L</div>
               <div class="onlineEndMeta">
                 <div class="onlineEndName">${escapeHtml(loserName)}</div>
-                <div class="onlineEndTag"><span class="coinChip">-${fee}🪙</span></div>
+                <div class="onlineEndTag"><span id="onlineLoserAmt" class="coinChip">${fee}🪙</span></div>
               </div>
             </div>
             <div class="onlineEndBridge">
-              <div class="onlineEndLane ltr"><span class="coinChip">${fee}🪙</span></div>
-              <div class="onlineEndTag">المجموع <span class="coinChip">${pot}🪙</span></div>
+              <div class="onlineEndTag">الرهان <span class="coinChip">${fee}🪙</span> + <span class="coinChip">${fee}🪙</span></div>
+              <div class="onlineEndTag">المجموع <span id="onlinePotAmt" class="coinChip">${pot}🪙</span></div>
             </div>
             <div class="onlineEndCard">
               <div id="onlineEndWinnerAvatar" class="onlineAvatar">W</div>
               <div class="onlineEndMeta">
                 <div class="onlineEndName">${escapeHtml(winnerName)}</div>
-                <div class="onlineEndTag"><span class="coinChip">+${pot}🪙</span></div>
+                <div class="onlineEndTag"><span id="onlineWinnerAmt" class="coinChip">${fee}🪙</span></div>
               </div>
             </div>
           </div>
@@ -6766,6 +6812,98 @@
         const winnerAv = document.getElementById("onlineEndWinnerAvatar");
         if (loserAv) setAvatarSquare(loserAv, loserPhoto, String(loserName || "L").slice(0, 1).toUpperCase());
         if (winnerAv) setAvatarSquare(winnerAv, winnerPhoto, String(winnerName || "W").slice(0, 1).toUpperCase());
+
+        requestAnimationFrame(() => onlineAnimatePayout(fee, winnerIsMe));
+      }
+
+      function formatCoin(n) {
+        return `${Math.max(0, Math.floor(n))}🪙`;
+      }
+
+      function animateCoinCount(elm, from, to, ms) {
+        if (!elm) return;
+        const start = performance.now();
+        const a = Math.max(0, Math.floor(from));
+        const b = Math.max(0, Math.floor(to));
+        const step = (t) => {
+          const p = Math.min(1, Math.max(0, (t - start) / Math.max(1, ms)));
+          const eased = 1 - Math.pow(1 - p, 3);
+          const v = Math.round(a + (b - a) * eased);
+          elm.textContent = formatCoin(v);
+          if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }
+
+      function onlineAnimatePayout(fee, winnerIsMe) {
+        if (!el.winBox || !el.winBox.classList.contains("show")) return;
+        const reduce = document.documentElement && document.documentElement.getAttribute("data-reduce-motion") === "1";
+        const pot = Math.max(0, Math.floor(fee)) * 2;
+        const key = `${onlineState.matchId}|${winnerIsMe ? "W" : "L"}|${fee}`;
+        if (onlineState.endAnimKey === key) return;
+        onlineState.endAnimKey = key;
+
+        const loserAmt = document.getElementById("onlineLoserAmt");
+        const winnerAmt = document.getElementById("onlineWinnerAmt");
+        const potAmt = document.getElementById("onlinePotAmt");
+        if (!loserAmt || !winnerAmt || !potAmt) return;
+
+        loserAmt.textContent = formatCoin(fee);
+        winnerAmt.textContent = formatCoin(fee);
+        potAmt.textContent = formatCoin(pot);
+        if (reduce) {
+          loserAmt.textContent = formatCoin(0);
+          winnerAmt.textContent = formatCoin(pot);
+          return;
+        }
+
+        const layer = document.createElement("div");
+        layer.className = "coinFxLayer";
+        document.body.appendChild(layer);
+
+        const a = loserAmt.getBoundingClientRect();
+        const b = winnerAmt.getBoundingClientRect();
+        const sx = a.left + a.width / 2;
+        const sy = a.top + a.height / 2;
+        const ex = b.left + b.width / 2;
+        const ey = b.top + b.height / 2;
+        const dx = ex - sx;
+        const dy = ey - sy;
+
+        const coins = Math.min(14, Math.max(8, Math.floor(fee / 4)));
+        const dur = 900;
+        for (let i = 0; i < coins; i++) {
+          const c = document.createElement("div");
+          c.className = "flyCoin";
+          c.textContent = "🪙";
+          c.style.left = `${sx - 9}px`;
+          c.style.top = `${sy - 9}px`;
+          layer.appendChild(c);
+
+          const jitterX = (Math.random() - 0.5) * 24;
+          const jitterY = (Math.random() - 0.5) * 24;
+          const arc = -80 - Math.random() * 60;
+          const delay = i * 24;
+
+          c.animate(
+            [
+              { transform: "translate(0px,0px) scale(0.9)", opacity: 0.0 },
+              { transform: `translate(${jitterX}px,${jitterY}px) scale(1.0)`, opacity: 1.0, offset: 0.15 },
+              { transform: `translate(${dx * 0.55 + jitterX}px,${dy * 0.55 + arc}px) scale(1.15)`, opacity: 1.0, offset: 0.6 },
+              { transform: `translate(${dx + jitterX}px,${dy + jitterY}px) scale(0.92)`, opacity: 0.0 },
+            ],
+            { duration: dur, delay, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
+          );
+        }
+
+        animateCoinCount(loserAmt, fee, 0, dur + 200);
+        animateCoinCount(winnerAmt, fee, pot, dur + 220);
+
+        window.setTimeout(() => {
+          try {
+            layer.remove();
+          } catch {}
+        }, dur + coins * 24 + 200);
       }
 
       function onlineApplyMatchState(m, meEmail, fee) {
@@ -6787,11 +6925,17 @@
 
         const turn = m.turn;
         const timeLeftMs = typeof m.timeLeftMs === "number" ? Math.max(0, Math.floor(m.timeLeftMs)) : 0;
-        const pct = Math.min(100, Math.max(0, Math.floor((timeLeftMs / 18000) * 100)));
+        onlineState.turnEndAt = turn === "ended" ? 0 : Date.now() + timeLeftMs;
+        const pct = onlineState.turnEndAt ? Math.min(100, Math.max(0, Math.floor((timeLeftMs / ONLINE_TURN_MS) * 100))) : 0;
         if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
         if (el.onlineTurnText) el.onlineTurnText.textContent = turn === "me" ? "دورك الآن" : turn === "them" ? "دور الخصم" : "انتهى التحدي";
         if (el.onlineMeAvatar) el.onlineMeAvatar.classList.toggle("active", turn === "me");
         if (el.onlineOppAvatar) el.onlineOppAvatar.classList.toggle("active", turn === "them");
+        const meCard = el.onlineMeAvatar && el.onlineMeAvatar.closest ? el.onlineMeAvatar.closest(".onlinePlayerCard") : null;
+        const oppCard = el.onlineOppAvatar && el.onlineOppAvatar.closest ? el.onlineOppAvatar.closest(".onlinePlayerCard") : null;
+        if (meCard) meCard.classList.toggle("turnActive", turn === "me");
+        if (oppCard) oppCard.classList.toggle("turnActive", turn === "them");
+        if (turn !== "ended") startOnlineTurnBarLoop();
 
         const locked = turn !== "me";
         if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
@@ -6996,7 +7140,7 @@
                 stopOnlineQueuePolling();
                 renderOnlineSelect();
               }
-            }, 750);
+            }, 650);
           }
         } finally {
           onlineState.busy = false;
@@ -7035,7 +7179,7 @@
         await onlineFetchMatchStateOnce(myEmail, fee);
         onlineState.pollMatchId = setInterval(async () => {
           await onlineFetchMatchStateOnce(myEmail, fee);
-        }, 550);
+        }, 450);
 
         requestAnimationFrame(() => {
           if (app.inputs && app.inputs[0]) app.inputs[0].focus();
