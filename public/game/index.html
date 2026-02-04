@@ -1880,8 +1880,22 @@
       }
       .onlinePlayerCard.turnActive {
         border-color: rgba(34, 197, 94, 0.7);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(34, 197, 94, 0.35), 0 0 22px rgba(34, 197, 94, 0.22);
         background: rgba(34, 197, 94, 0.12);
+      }
+      .onlinePlayerCard.flash {
+        animation: cardFlash 420ms ease-out 1;
+      }
+      @keyframes cardFlash {
+        0% {
+          box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+        }
+        35% {
+          box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 0 26px rgba(34, 197, 94, 0.22);
+        }
+        100% {
+          box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+        }
       }
       .onlineAvatar {
         width: 54px;
@@ -1901,8 +1915,7 @@
         display: block;
       }
       .onlineAvatar.active {
-        outline: 3px solid rgba(34, 197, 94, 0.85);
-        outline-offset: 2px;
+        outline: none;
       }
       .onlineMeta {
         display: grid;
@@ -6708,6 +6721,7 @@
         turnEndAt: 0,
         barRafId: 0,
         endAnimKey: "",
+        oppFlashKey: "",
         searchingStartedAt: 0,
         pollQueueId: null,
         pollMatchId: null,
@@ -6738,6 +6752,18 @@
         onlineState.pollMatchId = null;
         if (onlineState.barRafId) cancelAnimationFrame(onlineState.barRafId);
         onlineState.barRafId = 0;
+      }
+
+      function flashPlayerCard(card) {
+        if (!card || !card.classList) return;
+        card.classList.remove("flash");
+        void card.offsetWidth;
+        card.classList.add("flash");
+        window.setTimeout(() => {
+          try {
+            card.classList.remove("flash");
+          } catch {}
+        }, 520);
       }
 
       function startOnlineTurnBarLoop() {
@@ -6908,12 +6934,21 @@
 
       function onlineApplyMatchState(m, meEmail, fee) {
         if (!m) return;
+        const meCard = el.onlineMeAvatar && el.onlineMeAvatar.closest ? el.onlineMeAvatar.closest(".onlinePlayerCard") : null;
+        const oppCard = el.onlineOppAvatar && el.onlineOppAvatar.closest ? el.onlineOppAvatar.closest(".onlinePlayerCard") : null;
         if (m.opponent && typeof m.opponent === "object") {
+          const prevKey = onlineState.oppFlashKey;
+          const nextKey = String(m.opponent.id || "");
           onlineState.oppName = m.opponent.firstName || onlineState.oppName || "خصم";
           onlineState.oppPhoto = m.opponent.photo || onlineState.oppPhoto || "";
           if (el.onlineOppName) el.onlineOppName.textContent = onlineState.oppName;
           if (el.onlineOppAvatar) setAvatarSquare(el.onlineOppAvatar, onlineState.oppPhoto, String((onlineState.oppName || "O")).slice(0, 1).toUpperCase());
-          if (el.onlineOppSub) el.onlineOppSub.textContent = "اونلاين";
+          const oppLevel = typeof m.opponent.level === "number" ? m.opponent.level : null;
+          if (el.onlineOppSub) el.onlineOppSub.textContent = oppLevel ? `LV ${oppLevel} • ${fee}🪙` : `${fee}🪙`;
+          if (nextKey && nextKey !== prevKey) {
+            onlineState.oppFlashKey = nextKey;
+            if (oppCard) flashPlayerCard(oppCard);
+          }
         }
 
         if (typeof m.myCoins === "number") {
@@ -6929,13 +6964,12 @@
         const pct = onlineState.turnEndAt ? Math.min(100, Math.max(0, Math.floor((timeLeftMs / ONLINE_TURN_MS) * 100))) : 0;
         if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
         if (el.onlineTurnText) el.onlineTurnText.textContent = turn === "me" ? "دورك الآن" : turn === "them" ? "دور الخصم" : "انتهى التحدي";
-        if (el.onlineMeAvatar) el.onlineMeAvatar.classList.toggle("active", turn === "me");
-        if (el.onlineOppAvatar) el.onlineOppAvatar.classList.toggle("active", turn === "them");
-        const meCard = el.onlineMeAvatar && el.onlineMeAvatar.closest ? el.onlineMeAvatar.closest(".onlinePlayerCard") : null;
-        const oppCard = el.onlineOppAvatar && el.onlineOppAvatar.closest ? el.onlineOppAvatar.closest(".onlinePlayerCard") : null;
         if (meCard) meCard.classList.toggle("turnActive", turn === "me");
         if (oppCard) oppCard.classList.toggle("turnActive", turn === "them");
         if (turn !== "ended") startOnlineTurnBarLoop();
+
+        const myLevel = typeof m.myLevel === "number" ? m.myLevel : null;
+        if (el.onlineMeSub) el.onlineMeSub.textContent = myLevel ? `LV ${myLevel} • ${fee}🪙` : `${fee}🪙`;
 
         const locked = turn !== "me";
         if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
@@ -7030,21 +7064,23 @@
         onlineState.fee = cfg.fee;
         onlineState.codeLen = cfg.codeLen;
         onlineState.searchingStartedAt = Date.now();
+        const diff = mode === "easy" ? "سهل" : mode === "medium" ? "متوسط" : "صعب";
 
         el.onlineContent.innerHTML = `<div class="onlineWrap">
+          <div class="tiny">تحدي اون لاين ${escapeHtml(diff)} ${escapeHtml(String(cfg.codeLen))} ارقام</div>
           <div class="onlineMatchRow">
             <div class="onlinePlayerCard">
               <div id="onlineSearchMeAvatar" class="onlineAvatar">P</div>
               <div class="onlineMeta">
                 <div class="onlineName">${escapeHtml((me && me.firstName) || "لاعب")}</div>
-                <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙 • ${escapeHtml(String(cfg.codeLen))} أرقام</div>
+                <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
               </div>
             </div>
             <div class="onlineVs">VS</div>
             <div class="onlinePlayerCard">
               <div id="onlineSearchOppAvatar" class="onlineAvatar">?</div>
               <div class="onlineMeta">
-                <div id="onlineSearchOppName" class="onlineName">يتم البحث عن خصم…</div>
+                <div id="onlineSearchOppName" class="onlineName">يتم البحث عن خصم<span id="onlineSearchDots"></span></div>
               </div>
             </div>
           </div>
@@ -7056,7 +7092,7 @@
 
         const meAv = document.getElementById("onlineSearchMeAvatar");
         const oppAv = document.getElementById("onlineSearchOppAvatar");
-        const oppName = document.getElementById("onlineSearchOppName");
+        const dots = document.getElementById("onlineSearchDots");
         const bar = document.getElementById("onlineSearchBar");
 
         onlineSetSearchAvatar(meAv, me && me.photo ? me.photo : "", String((me && me.firstName) || "P").slice(0, 1).toUpperCase());
@@ -7066,8 +7102,9 @@
         onlineState.spinId = setInterval(() => {
           const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
           onlineSetSearchAvatar(oppAv, "", letter);
-          if (oppName) oppName.textContent = "يتم البحث عن خصم…";
           const elapsed = Date.now() - onlineState.searchingStartedAt;
+          const d = Math.floor(elapsed / 260) % 4;
+          if (dots) dots.textContent = ".".repeat(d);
           const p = Math.min(100, Math.max(4, Math.floor((elapsed / 30_000) * 100)));
           if (bar) bar.style.width = `${p}%`;
         }, 320);
@@ -7104,12 +7141,14 @@
         if (onlineState.busy) return;
         onlineState.busy = true;
         try {
-          const me = await ensureMeLoaded();
+          const mePromise = ensureMeLoaded();
+          renderOnlineSearching(mode, friendsState.me || null);
           const r = await friendsJson("/api/online/queue/join", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mode }),
           });
+          const me = await mePromise;
           if (!r.ok) {
             const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
             if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
@@ -7126,7 +7165,6 @@
           }
           if (r.data.status === "waiting" && r.data.queueId) {
             onlineState.queueId = r.data.queueId;
-            renderOnlineSearching(r.data.mode, me);
             stopOnlineQueuePolling();
             onlineState.pollQueueId = setInterval(async () => {
               const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
@@ -7165,12 +7203,12 @@
         onlineState.mePhoto = myPhoto;
         onlineState.meEmail = myEmail;
         if (el.onlineMeName) el.onlineMeName.textContent = myName;
-        if (el.onlineMeSub) el.onlineMeSub.textContent = `${fee}🪙 • ${codeLen} أرقام`;
+        if (el.onlineMeSub) el.onlineMeSub.textContent = `${fee}🪙`;
         if (el.onlineMeAvatar) setAvatarSquare(el.onlineMeAvatar, myPhoto, String(myName).slice(0, 1).toUpperCase());
 
         const opp = opponentFromJoin;
         if (opp && el.onlineOppName) el.onlineOppName.textContent = opp.firstName || "خصم";
-        if (opp && el.onlineOppSub) el.onlineOppSub.textContent = "اونلاين";
+        if (opp && el.onlineOppSub) el.onlineOppSub.textContent = `${fee}🪙`;
         if (opp && el.onlineOppAvatar) setAvatarSquare(el.onlineOppAvatar, opp.photo || "", String((opp.firstName || "O")).slice(0, 1).toUpperCase());
         onlineState.oppName = opp && typeof opp.firstName === "string" ? opp.firstName : onlineState.oppName;
         onlineState.oppPhoto = opp && typeof opp.photo === "string" ? opp.photo : onlineState.oppPhoto;

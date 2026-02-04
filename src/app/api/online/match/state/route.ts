@@ -108,6 +108,7 @@ export async function GET(req: NextRequest) {
       const myProfile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true, publicId: true } });
       const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
       const myCoins = readCoinsFromState(myState);
+      const myLevel = getProfileLevel(myProfile?.state).level;
 
       const timeLeftMs = m.endedAt ? 0 : Math.max(0, TURN_MS - (Date.now() - Number(m.turnStartedAt || 0)));
 
@@ -133,6 +134,7 @@ export async function GET(req: NextRequest) {
           myRole,
           myId: myProfile?.publicId || null,
           myCoins,
+          myLevel,
           turn: m.endedAt ? "ended" : m.turnEmail === email ? "me" : "them",
           timeLeftMs,
           winner: m.winnerEmail ? (m.winnerEmail === email ? "me" : "them") : null,
