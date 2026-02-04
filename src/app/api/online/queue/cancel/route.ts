@@ -48,9 +48,12 @@ export async function POST(req: NextRequest) {
       const profile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
       const state = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
       const coins = readCoinsFromState(state);
-      const nextState = { ...state, coins: coins + Math.max(0, Math.floor(row.fee)) };
+      const peakRaw = state.coinsPeak;
+      const peak = typeof peakRaw === "number" && Number.isFinite(peakRaw) ? Math.max(0, Math.floor(peakRaw)) : coins;
+      const nextCoins = coins + Math.max(0, Math.floor(row.fee));
+      const nextState = { ...state, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins) };
       await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
-      return { ok: true as const, refunded: true as const, coins: coins + Math.max(0, Math.floor(row.fee)) };
+      return { ok: true as const, refunded: true as const, coins: nextCoins };
     });
 
     if (!out.ok) return NextResponse.json(out, { status: 404, headers: { "Cache-Control": "no-store" } });

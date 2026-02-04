@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
           p.state && typeof p.state === "object" && typeof (p.state as Record<string, unknown>).displayName === "string"
             ? String((p.state as Record<string, unknown>).displayName).trim()
             : "";
-        const name = displayName ? displayName.split(/\s+/).filter(Boolean)[0] || displayName : firstNameFromEmail(p.email);
+        const name = displayName || firstNameFromEmail(p.email);
         return [p.email, { id: p.publicId || "", name }];
       })
     );
@@ -51,4 +51,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

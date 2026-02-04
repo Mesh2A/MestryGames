@@ -29,7 +29,7 @@ function readLastSeenAtFromState(state: unknown) {
 
 function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
   const name = String(displayName || "").trim();
-  if (name) return name.split(/\s+/).filter(Boolean)[0] || name;
+  if (name) return name;
   return firstNameFromEmail(email);
 }
 

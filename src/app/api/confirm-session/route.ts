@@ -56,6 +56,14 @@ export async function GET(req: NextRequest) {
       const existingCoins =
         typeof existingCoinsRaw === "number" && Number.isFinite(existingCoinsRaw) ? Math.max(0, Math.floor(existingCoinsRaw)) : 0;
 
+      const existingEarnedRaw = existingState.coinsEarnedTotal;
+      const existingEarned =
+        typeof existingEarnedRaw === "number" && Number.isFinite(existingEarnedRaw) ? Math.max(0, Math.floor(existingEarnedRaw)) : 0;
+
+      const existingPeakRaw = existingState.coinsPeak;
+      const existingPeak =
+        typeof existingPeakRaw === "number" && Number.isFinite(existingPeakRaw) ? Math.max(0, Math.floor(existingPeakRaw)) : existingCoins;
+
       const processedRaw = existingState.processedSessions;
       const processedSessions = Array.isArray(processedRaw) ? processedRaw.filter((x) => typeof x === "string") : [];
 
@@ -67,7 +75,7 @@ export async function GET(req: NextRequest) {
         await tx.gameProfile.create({
           data: {
             email,
-            state: { coins: existingCoins, processedSessions, lastWriteAt: 0 },
+            state: { coins: existingCoins, coinsEarnedTotal: existingEarned, coinsPeak: existingPeak, processedSessions, lastWriteAt: 0 },
           },
         });
       }
@@ -94,6 +102,8 @@ export async function GET(req: NextRequest) {
 
       const totalCoins = existingCoins + coins;
       const nextProcessed = processedSessions.concat(sessionId).slice(-50);
+      const nextEarned = existingEarned + coins;
+      const nextPeak = Math.max(existingPeak, totalCoins);
 
       const existingNameChangeRaw = existingState.nameChange;
       const existingNameChange =
@@ -117,6 +127,8 @@ export async function GET(req: NextRequest) {
       const nextState = {
         ...existingState,
         coins: totalCoins,
+        coinsEarnedTotal: nextEarned,
+        coinsPeak: nextPeak,
         processedSessions: nextProcessed,
         nameChange: nextNameChange,
         lastWriteAt: Date.now(),

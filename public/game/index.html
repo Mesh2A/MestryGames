@@ -456,8 +456,18 @@
         color: rgba(255, 255, 255, 0.86);
       }
       @media (max-width: 520px) {
+        .profileGrid {
+          grid-template-columns: 1fr;
+        }
+        .profileCard .v {
+          font-size: 16px;
+        }
         .profileSplit {
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .friendDetailsCard {
+          top: 12px;
+          max-height: calc(100vh - 24px);
         }
       }
       .profileSplit .k {
@@ -3374,6 +3384,16 @@
       </div>
     </div>
 
+    <div id="onlineWithdrawBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="confirmMiniCard" role="dialog" aria-modal="true">
+        <div class="confirmMiniQ">هل تريد الانسحاب؟</div>
+        <div class="confirmMiniRow">
+          <button id="onlineWithdrawYesBtn" class="btn danger" type="button">انسحاب</button>
+          <button id="onlineWithdrawNoBtn" class="btn" type="button">عودة</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toastHost" class="toastHost" aria-hidden="true"></div>
     <div id="avatarViewer" class="avatarViewer" aria-hidden="true">
       <div id="avatarViewerBackdrop" class="avatarViewerBackdrop"></div>
@@ -3452,6 +3472,7 @@
           lang: "ar",
           coins: 0,
           coinsEarnedTotal: 0,
+          coinsPeak: 0,
           hintTokens: 0,
           displayName: "",
           photo: "",
@@ -3528,6 +3549,7 @@
         base.coins = typeof s.coins === "number" && Number.isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : 0;
         base.coinsEarnedTotal =
           typeof s.coinsEarnedTotal === "number" && Number.isFinite(s.coinsEarnedTotal) ? Math.max(0, Math.floor(s.coinsEarnedTotal)) : 0;
+        base.coinsPeak = typeof s.coinsPeak === "number" && Number.isFinite(s.coinsPeak) ? Math.max(0, Math.floor(s.coinsPeak)) : 0;
         base.hintTokens = typeof s.hintTokens === "number" && Number.isFinite(s.hintTokens) ? Math.max(0, Math.floor(s.hintTokens)) : 0;
         base.displayName = typeof s.displayName === "string" ? String(s.displayName).replace(/\s+/g, " ").trim().slice(0, 18) : "";
         base.photo =
@@ -3766,7 +3788,7 @@
 
       function updateUserCenter() {
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
-        const name = firstNameFromDisplayName(displayName) || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
+        const name = displayName || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
         if (el.playerName) el.playerName.textContent = name;
         if (el.playerAvatar) {
           const letter = String(name || "P")
@@ -3867,7 +3889,7 @@
         const isVisible = el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show");
         if (!isVisible) return;
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
-        const name = firstNameFromDisplayName(displayName) || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
+        const name = displayName || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
         if (el.profileName) el.profileName.textContent = name;
         if (el.profileFlag) el.profileFlag.textContent = flagEmojiFromRegion(getCountryCode());
         if (el.profileAvatar) {
@@ -4270,6 +4292,9 @@
         friendRemoveBlockBackdrop: document.getElementById("friendRemoveBlockBackdrop"),
         friendConfirmRemoveBtn: document.getElementById("friendConfirmRemoveBtn"),
         friendConfirmBlockBtn: document.getElementById("friendConfirmBlockBtn"),
+        onlineWithdrawBackdrop: document.getElementById("onlineWithdrawBackdrop"),
+        onlineWithdrawYesBtn: document.getElementById("onlineWithdrawYesBtn"),
+        onlineWithdrawNoBtn: document.getElementById("onlineWithdrawNoBtn"),
         progressText: document.getElementById("progressText"),
         pathInner: document.getElementById("pathInner"),
         mapPrevBtn: document.getElementById("mapPrevBtn"),
@@ -5318,14 +5343,31 @@
         saveState(app.state);
       }
 
+      function setCoinsTotal(nextCoins, earnedDelta, silent) {
+        const prev = typeof app.state.coins === "number" && Number.isFinite(app.state.coins) ? Math.max(0, Math.floor(app.state.coins)) : 0;
+        const next = Math.max(0, Math.floor(nextCoins || 0));
+        const peakPrev =
+          typeof app.state.coinsPeak === "number" && Number.isFinite(app.state.coinsPeak) ? Math.max(0, Math.floor(app.state.coinsPeak)) : 0;
+        const earnedPrev =
+          typeof app.state.coinsEarnedTotal === "number" && Number.isFinite(app.state.coinsEarnedTotal)
+            ? Math.max(0, Math.floor(app.state.coinsEarnedTotal))
+            : 0;
+        const delta = Math.max(0, next - prev);
+        const add =
+          typeof earnedDelta === "number" && Number.isFinite(earnedDelta) ? Math.max(0, Math.floor(earnedDelta)) : delta;
+        app.state.coins = next;
+        app.state.coinsPeak = Math.max(peakPrev, next);
+        app.state.coinsEarnedTotal = earnedPrev + (delta ? add : 0);
+        if (silent) saveStateSilent(app.state);
+        else saveState(app.state);
+        updateCoinsUI();
+        updateSettingsUI();
+      }
+
       function awardCoins(amount) {
         const n = Math.max(0, Math.floor(amount || 0));
         if (!n) return;
-        app.state.coins = (app.state.coins || 0) + n;
-        app.state.coinsEarnedTotal = (app.state.coinsEarnedTotal || 0) + n;
-        saveState(app.state);
-        updateCoinsUI();
-        updateSettingsUI();
+        setCoinsTotal((app.state.coins || 0) + n, n, false);
       }
 
       function ymdNow() {
@@ -5935,7 +5977,7 @@
         app.session.usedPaidHint = false;
         updateLevelFeaturesUI();
         if (el.onlineHud) el.onlineHud.style.display = stage.kind === "online" ? "" : "none";
-        if (el.backToMapBtn) el.backToMapBtn.textContent = stage.kind === "online" ? "خروج" : t("backToMapBtn");
+        if (el.backToMapBtn) el.backToMapBtn.textContent = stage.kind === "online" ? "انسحاب" : t("backToMapBtn");
         if (el.assistBtn) el.assistBtn.style.display = stage.kind === "online" ? "none" : "";
 
         if (stage.kind === "level") {
@@ -6234,10 +6276,7 @@
               body: JSON.stringify({ id: queueId }),
             }).then((r) => {
               if (r && r.ok && r.data && r.data.refunded) {
-                app.state.coins = typeof r.data.coins === "number" ? r.data.coins : app.state.coins;
-                saveStateSilent(app.state);
-                updateCoinsUI();
-                updateSettingsUI();
+                if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
               }
             });
           }
@@ -6733,14 +6772,13 @@
           app.state.processedSessions.push(sessionId);
           app.state.processedSessions = app.state.processedSessions.slice(-50);
           const totalCoins = typeof data.totalCoins === "number" && Number.isFinite(data.totalCoins) ? Math.max(0, Math.floor(data.totalCoins)) : null;
-          if (totalCoins !== null) app.state.coins = totalCoins;
           if (data && typeof data.totalNameChangeCredits === "number" && Number.isFinite(data.totalNameChangeCredits)) {
             app.state.nameChange = app.state.nameChange && typeof app.state.nameChange === "object" ? app.state.nameChange : { freeUsed: false, credits: 0 };
             app.state.nameChange.credits = Math.max(0, Math.floor(data.totalNameChangeCredits));
           }
           const added = Math.max(0, Math.floor(data.coinsAdded));
           const nameAdded = Math.max(0, Math.floor(typeof data.nameChangeCreditsAdded === "number" ? data.nameChangeCreditsAdded : 0));
-          if (added && totalCoins !== null) app.state.coinsEarnedTotal = (app.state.coinsEarnedTotal || 0) + added;
+          if (totalCoins !== null) setCoinsTotal(totalCoins, added, true);
           saveState(app.state);
           if (added) {
             if (totalCoins === null) awardCoins(added);
@@ -7199,10 +7237,7 @@
         }
 
         if (typeof m.myCoins === "number") {
-          app.state.coins = Math.max(0, Math.floor(m.myCoins));
-          saveStateSilent(app.state);
-          updateCoinsUI();
-          updateSettingsUI();
+          setCoinsTotal(m.myCoins, null, true);
         }
 
         const turn = m.turn;
@@ -7370,10 +7405,7 @@
               body: JSON.stringify({ id: onlineState.queueId }),
             });
             if (r.ok && r.data && r.data.refunded) {
-              app.state.coins = typeof r.data.coins === "number" ? r.data.coins : app.state.coins;
-              saveStateSilent(app.state);
-              updateCoinsUI();
-              updateSettingsUI();
+              if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
             }
             renderOnlineSelect();
           });
@@ -7578,7 +7610,7 @@
       }
       el.backToMapBtn.addEventListener("click", () => {
         if (app.stage && app.stage.kind === "online") {
-          onlineExitMatch();
+          openOnlineWithdrawModal();
           return;
         }
         goMap();
@@ -8395,9 +8427,8 @@
         if (screen === "level") {
           let changed = false;
           if (typeof remote.coins === "number" && remote.coins !== app.state.coins) {
-            app.state.coins = remote.coins;
+            setCoinsTotal(remote.coins, null, true);
             changed = true;
-            updateCoinsUI();
           }
           if (typeof remote.hintTokens === "number" && remote.hintTokens !== app.state.hintTokens) {
             app.state.hintTokens = remote.hintTokens;
@@ -8924,6 +8955,10 @@
           closeAvatarViewer();
           return;
         }
+        if (e.key === "Escape" && el.onlineWithdrawBackdrop && el.onlineWithdrawBackdrop.classList.contains("show")) {
+          closeOnlineWithdrawModal();
+          return;
+        }
         if (e.key === "Escape" && el.friendRemoveBlockBackdrop && el.friendRemoveBlockBackdrop.classList.contains("show")) {
           closeFriendRemoveBlockModal();
           return;
@@ -8975,7 +9010,8 @@
         const streakNoHint = typeof s.streak === "number" ? s.streak : 0;
         const completed = typeof s.completed === "number" ? s.completed : 0;
         const unlocked = typeof s.unlocked === "number" ? s.unlocked : 1;
-        const coins = typeof details.coins === "number" ? Math.max(0, Math.floor(details.coins)) : 0;
+        const coinsEarnedTotal = typeof details.coinsEarnedTotal === "number" ? Math.max(0, Math.floor(details.coinsEarnedTotal)) : 0;
+        const coinsPeak = typeof details.coinsPeak === "number" ? Math.max(0, Math.floor(details.coinsPeak)) : 0;
         const lv = typeof details.level === "number" ? Math.max(1, Math.floor(details.level)) : 1;
         const createdAt = details.createdAt ? new Date(details.createdAt).toLocaleDateString() : "—";
         const winsNormal = typeof s.winsNormal === "number" ? s.winsNormal : 0;
@@ -9001,7 +9037,8 @@
             </div>
           </div>
           <div class="profileGrid" style="margin-top:12px">
-            <div class="profileCard"><div class="k">العملات الحالية</div><div class="v">${escapeHtml(String(coins))}</div></div>
+            <div class="profileCard"><div class="k">إجمالي العملات المكتسبة</div><div class="v">${escapeHtml(String(coinsEarnedTotal))}</div></div>
+            <div class="profileCard"><div class="k">أعلى رصيد وصل له</div><div class="v">${escapeHtml(String(coinsPeak))}</div></div>
             <div class="profileCard"><div class="k">الفوز</div><div class="v">${escapeHtml(String(wins))}</div></div>
             <div class="profileCard"><div class="k">ستريك الفوز</div><div class="v">${escapeHtml(String(winStreak))}</div></div>
             <div class="profileCard"><div class="k">أفضل ستريك فوز</div><div class="v">${escapeHtml(String(bestWinStreak))}</div></div>
@@ -9064,6 +9101,18 @@
         el.friendRemoveBlockBackdrop.classList.remove("show");
         el.friendRemoveBlockBackdrop.setAttribute("aria-hidden", "true");
         el.friendRemoveBlockBackdrop.dataset.id = "";
+      }
+
+      function openOnlineWithdrawModal() {
+        if (!el.onlineWithdrawBackdrop) return;
+        el.onlineWithdrawBackdrop.classList.add("show");
+        el.onlineWithdrawBackdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closeOnlineWithdrawModal() {
+        if (!el.onlineWithdrawBackdrop) return;
+        el.onlineWithdrawBackdrop.classList.remove("show");
+        el.onlineWithdrawBackdrop.setAttribute("aria-hidden", "true");
       }
 
       if (friendsUI.actions) {
@@ -9168,6 +9217,17 @@
           closeFriendDetailsModal();
           renderFriends();
           await loadFriendsData(true);
+        });
+
+      if (el.onlineWithdrawBackdrop)
+        el.onlineWithdrawBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.onlineWithdrawBackdrop) closeOnlineWithdrawModal();
+        });
+      if (el.onlineWithdrawNoBtn) el.onlineWithdrawNoBtn.addEventListener("click", () => closeOnlineWithdrawModal());
+      if (el.onlineWithdrawYesBtn)
+        el.onlineWithdrawYesBtn.addEventListener("click", () => {
+          closeOnlineWithdrawModal();
+          if (app.stage && app.stage.kind === "online") onlineExitMatch();
         });
 
       if (friendsUI.addBtn && friendsUI.addInput) {
@@ -9347,8 +9407,11 @@
           cloudPut(app.state).catch(() => {});
         }
 
-        if (u && u.name && !String(app.state.displayName || "").trim()) {
-          app.state.displayName = u.name;
+        if (u && u.email && !String(app.state.displayName || "").trim()) {
+          const local = String(u.email || "").split("@")[0] || "";
+          const cleaned = local.replace(/[^a-zA-Z0-9_ .-]+/g, " ").trim();
+          const token = cleaned.split(/[\s._-]+/g).filter(Boolean)[0] || local;
+          app.state.displayName = (token.slice(0, 1).toUpperCase() + token.slice(1)).trim().slice(0, 18);
           saveStateSilent(app.state);
           if (cloud.enabled) cloudPut(app.state).catch(() => {});
         }
@@ -9359,6 +9422,10 @@
         }
         if (!app.state.coinsEarnedTotal && (app.state.coins || 0) > 0) {
           app.state.coinsEarnedTotal = app.state.coins || 0;
+          saveStateSilent(app.state);
+        }
+        if (!app.state.coinsPeak && (app.state.coins || 0) > 0) {
+          app.state.coinsPeak = app.state.coins || 0;
           saveStateSilent(app.state);
         }
 

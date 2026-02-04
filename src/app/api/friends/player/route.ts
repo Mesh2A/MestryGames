@@ -1,5 +1,5 @@
 import { authOptions } from "@/lib/auth";
-import { ensureGameProfile, readCoinsFromState } from "@/lib/gameProfile";
+import { ensureGameProfile, readCoinsEarnedTotalFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
@@ -15,6 +15,12 @@ function readPhotoFromState(state: unknown) {
   if (typeof v !== "string") return "";
   const s = v.trim();
   return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
+}
+
+function readDisplayNameFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).displayName;
+  return typeof v === "string" ? v.trim() : "";
 }
 
 export async function GET(req: NextRequest) {
@@ -42,10 +48,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         id: target.publicId,
-        firstName: firstNameFromEmail(target.email),
+        firstName: readDisplayNameFromState(target.state) || firstNameFromEmail(target.email),
         createdAt: target.createdAt.toISOString(),
         photo: readPhotoFromState(target.state),
-        coins: readCoinsFromState(target.state),
+        coinsEarnedTotal: readCoinsEarnedTotalFromState(target.state),
+        coinsPeak: readCoinsPeakFromState(target.state),
         stats: getProfileStats(target.state),
         level: getProfileLevel(target.state).level,
       },

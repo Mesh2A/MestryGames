@@ -1,6 +1,6 @@
 import { authOptions } from "@/lib/auth";
 import { ensureDbReady } from "@/lib/ensureDb";
-import { ensureGameProfile, readCoinsFromState } from "@/lib/gameProfile";
+import { ensureGameProfile, readCoinsEarnedTotalFromState, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -172,6 +172,8 @@ export async function POST(req: NextRequest) {
 
         const wState = winnerProfile?.state && typeof winnerProfile.state === "object" ? (winnerProfile.state as Record<string, unknown>) : {};
         const wCoins = readCoinsFromState(wState);
+        const wEarned = readCoinsEarnedTotalFromState(wState);
+        const wPeak = readCoinsPeakFromState(wState);
         const wStats = ensureStats(wState);
         wStats.wins += 1;
         wStats.winsOnline += 1;
@@ -180,7 +182,15 @@ export async function POST(req: NextRequest) {
         else if (m.mode === "hard") wStats.winsOnlineHard += 1;
         wStats.winStreak += 1;
         wStats.bestWinStreak = Math.max(wStats.bestWinStreak, wStats.winStreak);
-        const wUpdated = { ...wState, coins: wCoins + pot, stats: wStats, lastWriteAt: now };
+        const wNextCoins = wCoins + pot;
+        const wUpdated = {
+          ...wState,
+          coins: wNextCoins,
+          coinsEarnedTotal: wEarned + pot,
+          coinsPeak: Math.max(wPeak, wNextCoins),
+          stats: wStats,
+          lastWriteAt: now,
+        };
 
         const lState = loserProfile?.state && typeof loserProfile.state === "object" ? (loserProfile.state as Record<string, unknown>) : {};
         const lStats = ensureStats(lState);
@@ -192,7 +202,7 @@ export async function POST(req: NextRequest) {
           tx.gameProfile.update({ where: { email: loserEmail }, data: { state: lUpdated } }),
         ]);
 
-        return { ok: true as const, solved: true as const, result, pot, coins: wCoins + pot };
+        return { ok: true as const, solved: true as const, result, pot, coins: wNextCoins };
       }
 
       const nextTurn = m.aEmail === email ? m.bEmail : m.aEmail;

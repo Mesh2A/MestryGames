@@ -1,5 +1,5 @@
 import { authOptions } from "@/lib/auth";
-import { ensureGameProfile, readCoinsFromState } from "@/lib/gameProfile";
+import { ensureGameProfile, readCoinsEarnedTotalFromState, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -57,8 +57,16 @@ export async function POST(req: NextRequest) {
       const receiverState =
         receiver && receiver.state && typeof receiver.state === "object" ? (receiver.state as Record<string, unknown>) : {};
       const prevCoins = readCoinsFromState(receiverState);
+      const prevEarned = readCoinsEarnedTotalFromState(receiverState);
+      const prevPeak = readCoinsPeakFromState(receiverState);
       const nextCoins = prevCoins + giftCoins;
-      const nextState = { ...receiverState, coins: nextCoins, lastWriteAt: now };
+      const nextState = {
+        ...receiverState,
+        coins: nextCoins,
+        coinsEarnedTotal: prevEarned + giftCoins,
+        coinsPeak: Math.max(prevPeak, nextCoins),
+        lastWriteAt: now,
+      };
 
       await tx.gameProfile.update({ where: { email: target.email }, data: { state: nextState } });
       await tx.friendGiftEvent.create({ data: { fromEmail: email, toEmail: target.email, coins: giftCoins } });

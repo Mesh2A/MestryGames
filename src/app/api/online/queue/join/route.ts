@@ -43,7 +43,7 @@ function readPhotoFromState(state: unknown) {
 
 function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
   const name = String(displayName || "").trim();
-  if (name) return name.split(/\s+/).filter(Boolean)[0] || name;
+  if (name) return name;
   return firstNameFromEmail(email);
 }
 
@@ -100,7 +100,10 @@ export async function POST(req: NextRequest) {
       const coins = readCoinsFromState(stateObj);
       if (coins < fee) return { status: "error" as const, error: "insufficient_coins" as const, coins };
 
-      const nextState = { ...stateObj, coins: coins - fee };
+      const peakRaw = stateObj.coinsPeak;
+      const peak = typeof peakRaw === "number" && Number.isFinite(peakRaw) ? Math.max(0, Math.floor(peakRaw)) : coins;
+      const nextCoins = coins - fee;
+      const nextState = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins) };
       await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
 
       const opponent = await tx.$queryRaw<{ id: string; email: string; fee: number; codeLen: number }[]>`

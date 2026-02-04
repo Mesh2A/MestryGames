@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     const users = rows.map((r) => {
       const displayName = readDisplayNameFromState(r.state);
-      const firstName = displayName ? displayName.split(/\s+/).filter(Boolean)[0] || firstNameFromEmail(r.email) : firstNameFromEmail(r.email);
+      const firstName = displayName || firstNameFromEmail(r.email);
       return {
         email: r.email,
         id: r.publicId || "",

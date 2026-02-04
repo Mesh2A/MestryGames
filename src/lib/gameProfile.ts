@@ -14,6 +14,28 @@ export function readCoinsFromState(state: unknown) {
   return Math.max(0, coins);
 }
 
+function readIntFromState(state: unknown, key: string) {
+  if (!state || typeof state !== "object") return 0;
+  const raw = (state as Record<string, unknown>)[key];
+  const n =
+    typeof raw === "number" && Number.isFinite(raw)
+      ? Math.floor(raw)
+      : typeof raw === "string"
+        ? Math.floor(parseInt(raw, 10) || 0)
+        : 0;
+  return Math.max(0, n);
+}
+
+export function readCoinsEarnedTotalFromState(state: unknown) {
+  return readIntFromState(state, "coinsEarnedTotal");
+}
+
+export function readCoinsPeakFromState(state: unknown) {
+  const peak = readIntFromState(state, "coinsPeak");
+  const coins = readCoinsFromState(state);
+  return Math.max(peak, coins);
+}
+
 export async function ensureGameProfile(email: string) {
   return prisma.$transaction(async (tx) => {
     const admin = isAdminEmail(email);
