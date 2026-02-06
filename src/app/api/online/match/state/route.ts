@@ -175,7 +175,10 @@ export async function GET(req: NextRequest) {
       const myCoins = readCoinsFromState(myState);
       const myLevel = getProfileLevel(myProfile?.state).level;
 
-      const timeLeftMs = m.endedAt ? 0 : Math.max(0, TURN_MS - (Date.now() - Number(m.turnStartedAt || 0)));
+      const serverNowMs = Date.now();
+      const turnStartedAtMs = Number(m.turnStartedAt || 0);
+      const elapsedMs = turnStartedAtMs > 0 ? Math.max(0, serverNowMs - turnStartedAtMs) : 0;
+      const timeLeftMs = m.endedAt ? 0 : Math.max(0, TURN_MS - elapsedMs);
 
       const lastMasked =
         state.lastMasked &&
@@ -221,6 +224,8 @@ export async function GET(req: NextRequest) {
           myLevel,
           turn: m.endedAt ? "ended" : state.phase === "setup" ? "setup" : m.turnEmail === email ? "me" : "them",
           timeLeftMs: state.phase === "setup" ? 0 : timeLeftMs,
+          serverNowMs,
+          turnStartedAtMs,
           winner: m.winnerEmail ? (m.winnerEmail === email ? "me" : "them") : null,
           endedAt: m.endedAt ? m.endedAt.toISOString() : null,
           endedReason: state.endedReason,

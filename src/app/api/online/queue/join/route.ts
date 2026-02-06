@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
       const aEmail = aStarts ? email : opp.email;
       const bEmail = aStarts ? opp.email : email;
       const turnEmail = aStarts ? email : opp.email;
-      const turnStartedAt = nowMs();
+      const turnStartedAt = kind === "custom" ? nowMs() : nowMs() + 5000;
 
       await tx.$executeRaw`
         UPDATE "OnlineQueue"

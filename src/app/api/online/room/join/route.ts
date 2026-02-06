@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       const aEmail = aStarts ? room.hostEmail : email;
       const bEmail = aStarts ? email : room.hostEmail;
       const turnEmail = aStarts ? room.hostEmail : email;
-      const turnStartedAt = nowMs();
+      const turnStartedAt = parsed.kind === "custom" ? nowMs() : nowMs() + 5000;
 
       const initialState =
         parsed.kind === "custom"

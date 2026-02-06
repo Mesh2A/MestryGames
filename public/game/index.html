@@ -7333,6 +7333,7 @@
         if (el.winBox) el.winBox.classList.remove("show", "onlineWin", "onlineLose");
         if (el.winSub) el.winSub.textContent = "";
         el.checkBtn.disabled = false;
+        if (el.backToMapBtn) el.backToMapBtn.disabled = false;
         app.session.usedAnyHint = false;
         app.session.usedPaidHint = false;
         updateLevelFeaturesUI();
@@ -8467,14 +8468,26 @@
         if (onlineState.spinId) clearInterval(onlineState.spinId);
         onlineState.spinId = null;
 
+        let serverNowMs = 0;
+        let turnStartedAtMs = 0;
         let opponent = opponentFromJoin && typeof opponentFromJoin === "object" ? opponentFromJoin : null;
-        if (!opponent) {
-          try {
-            const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(id)}`, { method: "GET" });
-            if (r && r.ok && r.data && r.data.match && r.data.match.opponent) opponent = r.data.match.opponent;
-            if (r && r.ok && r.data && r.data.match && typeof r.data.match.kind === "string") kind = r.data.match.kind === "custom" ? "custom" : "normal";
-          } catch {}
-        }
+        try {
+          const t0 = Date.now();
+          const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(id)}`, { method: "GET" });
+          const t1 = Date.now();
+          const m = r && r.ok && r.data && r.data.match ? r.data.match : null;
+          if (m) {
+            if (!opponent && m.opponent) opponent = m.opponent;
+            if (typeof m.kind === "string") kind = m.kind === "custom" ? "custom" : "normal";
+            if (typeof m.serverNowMs === "number" && Number.isFinite(m.serverNowMs)) serverNowMs = Math.floor(m.serverNowMs);
+            if (typeof m.turnStartedAtMs === "number" && Number.isFinite(m.turnStartedAtMs)) turnStartedAtMs = Math.floor(m.turnStartedAtMs);
+            if (serverNowMs > 0 && turnStartedAtMs > 0) {
+              const mid = Math.floor((t0 + t1) / 2);
+              const offset = serverNowMs - mid;
+              onlineState.preEnterUntil = Math.max(Date.now(), turnStartedAtMs - offset + 60);
+            }
+          }
+        } catch {}
 
         const oppName =
           opponent && typeof opponent.firstName === "string" && String(opponent.firstName || "").trim() ? String(opponent.firstName).trim() : "خصم";
@@ -8484,7 +8497,7 @@
         if (countdownEl) countdownEl.style.display = "";
 
         onlineState.preEnterMatchId = id;
-        onlineState.preEnterUntil = Date.now() + 5000;
+        if (!onlineState.preEnterUntil || onlineState.preEnterUntil <= Date.now()) onlineState.preEnterUntil = Date.now() + 5000;
         if (onlineState.preEnterId) clearInterval(onlineState.preEnterId);
         onlineState.preEnterId = setInterval(() => {
           const curName = document.getElementById("onlineSearchOppName");
@@ -8508,7 +8521,11 @@
           const pct = Math.min(100, Math.max(0, Math.floor((rem / 5000) * 100)));
           curBar.style.width = `${pct}%`;
         }, 110);
-        if (countdownEl) countdownEl.textContent = `يبدأ خلال 5`;
+        {
+          const rem0 = (onlineState.preEnterUntil || 0) - Date.now();
+          const sec0 = Math.max(1, Math.ceil(rem0 / 1000));
+          if (countdownEl) countdownEl.textContent = `يبدأ خلال ${sec0}`;
+        }
         if (barEl) barEl.style.width = `100%`;
       }
 
@@ -9449,6 +9466,7 @@
         onlineState.customFocused = false;
         onlineState.oppFlashKey = "";
         onlineState.endAnimKey = "";
+        if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.style.display = "";
 
         onlineState.oppName = "";
         onlineState.oppPhoto = "";
