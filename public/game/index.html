@@ -7624,6 +7624,9 @@
         const queueId = closingOnline ? onlineState.queueId : "";
         if (closingOnline) {
           stopOnlineQueuePolling();
+          stopOnlineCoinsSync();
+          stopOnlineAutoReturn();
+          stopOnlineHiddenForfeitTimer();
           onlineState.queueId = "";
           onlineState.open = false;
           if (queueId) {
@@ -8366,6 +8369,7 @@
         barRafId: 0,
         endAnimKey: "",
         endCoinsSyncDone: false,
+        autoReturnId: null,
         oppFlashKey: "",
         searchingStartedAt: 0,
         pollQueueId: null,
@@ -8373,6 +8377,8 @@
         pollMatchEvery: 0,
         pollRoomId: null,
         spinId: null,
+        coinsSyncId: null,
+        coinsSyncBusy: false,
         hiddenForfeitId: null,
         lastMaskedAt: 0,
         busy: false,
@@ -8417,6 +8423,41 @@
       function stopOnlineHiddenForfeitTimer() {
         if (onlineState.hiddenForfeitId) clearTimeout(onlineState.hiddenForfeitId);
         onlineState.hiddenForfeitId = null;
+      }
+
+      function stopOnlineAutoReturn() {
+        if (onlineState.autoReturnId) clearTimeout(onlineState.autoReturnId);
+        onlineState.autoReturnId = null;
+      }
+
+      function stopOnlineCoinsSync() {
+        if (onlineState.coinsSyncId) clearInterval(onlineState.coinsSyncId);
+        onlineState.coinsSyncId = null;
+        onlineState.coinsSyncBusy = false;
+      }
+
+      async function onlineCoinsSyncOnce() {
+        if (!cloud.enabled) return;
+        if (onlineState.coinsSyncBusy) return;
+        onlineState.coinsSyncBusy = true;
+        try {
+          const r = await friendsJson("/api/game-state", { method: "GET" });
+          const s = r && r.ok && r.data && r.data.state && typeof r.data.state === "object" ? r.data.state : null;
+          const coins = s && typeof s.coins === "number" && Number.isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : null;
+          if (typeof coins === "number") setCoinsTotal(coins, 0, true);
+        } finally {
+          onlineState.coinsSyncBusy = false;
+        }
+      }
+
+      function startOnlineCoinsSync() {
+        if (onlineState.coinsSyncId) return;
+        onlineState.coinsSyncId = setInterval(() => {
+          if (!onlineState.open) return;
+          if (app.stage && app.stage.kind === "online" && onlineState.matchId) return;
+          onlineCoinsSyncOnce();
+        }, 2500);
+        onlineCoinsSyncOnce();
       }
 
       function startOnlineMatchPolling(myEmail, fee, everyMs) {
@@ -8663,8 +8704,8 @@
         if (meCard) meCard.classList.toggle("turnActive", turn === "me");
         if (oppCard) oppCard.classList.toggle("turnActive", turn === "them");
         if (turn === "me" || turn === "them") startOnlineTurnBarLoop();
-        if (turn === "setup") startOnlineMatchPolling(meEmail, fee, 240);
-        else startOnlineMatchPolling(meEmail, fee, 450);
+        if (turn === "setup") startOnlineMatchPolling(meEmail, fee, 220);
+        else startOnlineMatchPolling(meEmail, fee, 400);
 
         const myLevel = typeof m.myLevel === "number" ? m.myLevel : null;
         if (el.onlineMeSub) el.onlineMeSub.textContent = myLevel ? `LV ${myLevel} • ${fee}🪙` : `${fee}🪙`;
@@ -8777,6 +8818,14 @@
               vibrate([0, 30, 40]);
             }
           }
+          if (m.endedReason === "forfeit" && m.forfeitedBy === "them" && !onlineState.autoReturnId) {
+            enqueueToast({ title: t("onlineBtn"), body: "الخصم انسحب", autoMs: 1800 });
+            onlineState.autoReturnId = setTimeout(() => {
+              onlineState.autoReturnId = null;
+              if (!app.stage || app.stage.kind !== "online") return;
+              onlineReturnToModeSelect();
+            }, 1400);
+          }
         }
       }
 
@@ -8799,6 +8848,8 @@
       function renderOnlineSelect() {
         if (!el.onlineContent) return;
         onlineState.open = true;
+        startOnlineCoinsSync();
+        stopOnlineAutoReturn();
         onlineState.queueId = "";
         onlineState.matchId = "";
         onlineState.roomCode = "";
@@ -8868,6 +8919,7 @@
         onlineState.fee = cfg.fee;
         onlineState.codeLen = cfg.codeLen;
         onlineState.searchingStartedAt = Date.now();
+        startOnlineCoinsSync();
         const diff = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
         const kindLabel = kind === "custom" ? t("onlineModeCustom") : t("onlineModeNormal");
 
@@ -8957,6 +9009,7 @@
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
         onlineState.roomCode = "";
+        startOnlineCoinsSync();
 
         const card = (mode, title, sub) => {
           const cfg = onlineCfg(mode);
@@ -9098,7 +9151,7 @@
           }
         };
         tick();
-        onlineState.pollRoomId = setInterval(tick, 350);
+        onlineState.pollRoomId = setInterval(tick, 300);
       }
 
       function renderRoomJoin(kind) {
@@ -9115,6 +9168,7 @@
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
         onlineState.roomCode = "";
+        startOnlineCoinsSync();
 
         el.onlineContent.innerHTML = `<div class="onlineWrap">
           <div class="tiny">انضم لغرفة خاصة</div>
@@ -9154,47 +9208,56 @@
       }
 
       async function joinRoomFromInput(kind) {
+        if (onlineState.busy) return;
+        onlineState.busy = true;
+        const joinBtn = document.getElementById("roomJoinConfirmBtn");
+        if (joinBtn) joinBtn.disabled = true;
         const inp = document.getElementById("roomCodeInput");
         const code = normalizeRoomCode(inp && inp.value ? inp.value : "");
-        if (!code) {
-          enqueueToast({ title: t("onlineBtn"), body: "اكتب كود صحيح.", autoMs: 2000 });
-          return;
+        try {
+          if (!code) {
+            enqueueToast({ title: t("onlineBtn"), body: "اكتب كود صحيح.", autoMs: 2000 });
+            return;
+          }
+          await fetchOnlineEnabledOnce(true).catch(() => {});
+          if (!onlineFeature.enabled) {
+            enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+            renderOnlineSelect();
+            return;
+          }
+          const r = await friendsJson("/api/online/room/join", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code, kind }),
+          });
+          if (!r.ok || !r.data) {
+            const msg =
+              r.data && r.data.error === "room_not_found"
+                ? "لم يتم العثور على الغرفة."
+                : r.data && r.data.error === "room_full"
+                  ? "الغرفة ممتلئة."
+                  : r.data && r.data.error === "cannot_join_own"
+                    ? "لا يمكنك الانضمام لغرفتك."
+                    : r.data && r.data.error === "room_kind_mismatch"
+                      ? "نوع الغرفة مختلف."
+                    : r.data && r.data.error === "insufficient_coins"
+                      ? "عملاتك غير كافية."
+                      : r.data && r.data.error === "online_disabled"
+                        ? "الأونلاين متوقف حالياً."
+                        : "تعذر الانضمام.";
+            enqueueToast({ title: t("onlineBtn"), body: msg, autoMs: 2600 });
+            return;
+          }
+          const me = await ensureMeLoaded();
+          if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+          stopOnlineQueuePolling();
+          stopOnlineRoomPolling();
+          closeHowTo();
+          startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null, r.data.kind || kind);
+        } finally {
+          onlineState.busy = false;
+          if (joinBtn) joinBtn.disabled = false;
         }
-        await fetchOnlineEnabledOnce(true).catch(() => {});
-        if (!onlineFeature.enabled) {
-          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
-          renderOnlineSelect();
-          return;
-        }
-        const r = await friendsJson("/api/online/room/join", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code, kind }),
-        });
-        if (!r.ok || !r.data) {
-          const msg =
-            r.data && r.data.error === "room_not_found"
-              ? "لم يتم العثور على الغرفة."
-              : r.data && r.data.error === "room_full"
-                ? "الغرفة ممتلئة."
-                : r.data && r.data.error === "cannot_join_own"
-                  ? "لا يمكنك الانضمام لغرفتك."
-                  : r.data && r.data.error === "room_kind_mismatch"
-                    ? "نوع الغرفة مختلف."
-                  : r.data && r.data.error === "insufficient_coins"
-                    ? "عملاتك غير كافية."
-                    : r.data && r.data.error === "online_disabled"
-                      ? "الأونلاين متوقف حالياً."
-                      : "تعذر الانضمام.";
-          enqueueToast({ title: t("onlineBtn"), body: msg, autoMs: 2600 });
-          return;
-        }
-        const me = await ensureMeLoaded();
-        if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
-        stopOnlineQueuePolling();
-        stopOnlineRoomPolling();
-        closeHowTo();
-        startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null, r.data.kind || kind);
       }
 
       async function onlineJoin(mode, kind) {
@@ -9261,7 +9324,7 @@
               }
             };
             tick();
-            onlineState.pollQueueId = setInterval(tick, 350);
+            onlineState.pollQueueId = setInterval(tick, 300);
           }
         } finally {
           onlineState.busy = false;
@@ -9384,8 +9447,25 @@
         }
       }
 
+      function onlineReturnToModeSelect() {
+        stopOnlineAutoReturn();
+        stopOnlineMatchPolling();
+        stopOnlineQueuePolling();
+        stopOnlineRoomPolling();
+        stopOnlineHiddenForfeitTimer();
+        closeOnlineSetupModal();
+        closeOnlineWithdrawModal();
+        if (el.winBox) el.winBox.classList.remove("show", "onlineWin", "onlineLose");
+        if (el.mapBtn2) el.mapBtn2.style.display = "";
+        if (el.shareBtn) el.shareBtn.style.display = "";
+        goHome();
+        renderOnlineSelect();
+        openModal("online");
+      }
+
       async function onlineExitMatch() {
         if (!app.stage || app.stage.kind !== "online") return;
+        stopOnlineAutoReturn();
         stopOnlineMatchPolling();
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
@@ -9398,14 +9478,7 @@
             body: JSON.stringify({ id: matchId }),
           });
         }
-        if (el.mapBtn2) el.mapBtn2.style.display = "";
-        if (el.shareBtn) el.shareBtn.style.display = "";
-        if (el.winBox) el.winBox.classList.remove("show");
-        closeOnlineSetupModal();
-        closeOnlineWithdrawModal();
-        goHome();
-        renderOnlineSelect();
-        openModal("online");
+        onlineReturnToModeSelect();
       }
 
       function onlineForfeitBestEffort() {
@@ -9521,19 +9594,7 @@
 
       el.nextBtn.addEventListener("click", () => {
         if (app.stage.kind === "online") {
-          try {
-            closeOnlineSetupModal();
-          } catch {}
-          if (el.winBox) el.winBox.classList.remove("show", "onlineWin", "onlineLose");
-          if (el.mapBtn2) el.mapBtn2.style.display = "";
-          if (el.shareBtn) el.shareBtn.style.display = "";
-          stopOnlineMatchPolling();
-          stopOnlineQueuePolling();
-          stopOnlineRoomPolling();
-          closeOnlineWithdrawModal();
-          goHome();
-          renderOnlineSelect();
-          openModal("online");
+          onlineReturnToModeSelect();
           return;
         }
         if (app.stage.kind !== "level") {
