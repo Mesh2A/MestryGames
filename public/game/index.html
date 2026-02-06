@@ -8365,6 +8365,7 @@
         turnEndAt: 0,
         barRafId: 0,
         endAnimKey: "",
+        endCoinsSyncDone: false,
         oppFlashKey: "",
         searchingStartedAt: 0,
         pollQueueId: null,
@@ -8372,6 +8373,7 @@
         pollMatchEvery: 0,
         pollRoomId: null,
         spinId: null,
+        hiddenForfeitId: null,
         lastMaskedAt: 0,
         busy: false,
         forfeitSent: false,
@@ -8410,6 +8412,11 @@
         onlineState.pollMatchEvery = 0;
         if (onlineState.barRafId) cancelAnimationFrame(onlineState.barRafId);
         onlineState.barRafId = 0;
+      }
+
+      function stopOnlineHiddenForfeitTimer() {
+        if (onlineState.hiddenForfeitId) clearTimeout(onlineState.hiddenForfeitId);
+        onlineState.hiddenForfeitId = null;
       }
 
       function startOnlineMatchPolling(myEmail, fee, everyMs) {
@@ -8723,10 +8730,19 @@
 
         if (turn === "ended") {
           stopOnlineMatchPolling();
+          stopOnlineHiddenForfeitTimer();
           app.session.over = true;
           closeOnlineWithdrawModal();
           if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.style.display = "none";
           if (el.backToMapBtn) el.backToMapBtn.disabled = true;
+          if (!onlineState.endCoinsSyncDone) {
+            onlineState.endCoinsSyncDone = true;
+            setTimeout(() => {
+              try {
+                onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+              } catch {}
+            }, 260);
+          }
           const winner = m.winner === "me" || m.winner === "them" ? m.winner : null;
           const sol = typeof m.solution === "string" ? String(m.solution || "").trim() : "";
           if (sol && app.inputs && Array.isArray(app.inputs) && sol.length === app.inputs.length) {
@@ -8790,6 +8806,7 @@
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
         stopOnlineMatchPolling();
+        stopOnlineHiddenForfeitTimer();
         closeOnlineSetupModal();
         closeOnlineWithdrawModal();
 
@@ -9264,6 +9281,8 @@
         onlineState.setupPendingUntil = 0;
         onlineState.setupPendingValue = null;
         onlineState.setupPendingMatchId = "";
+        onlineState.endCoinsSyncDone = false;
+        stopOnlineHiddenForfeitTimer();
         onlineState.selectKind = kind === "custom" ? "custom" : "normal";
         onlineState.customFocused = false;
         onlineState.oppFlashKey = "";
@@ -9370,6 +9389,7 @@
         stopOnlineMatchPolling();
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
+        stopOnlineHiddenForfeitTimer();
         const matchId = app.stage.matchId;
         if (matchId) {
           await friendsJson("/api/online/match/forfeit", {
@@ -9476,7 +9496,15 @@
       el.shareBtn.addEventListener("click", () => shareResult());
       window.addEventListener("pagehide", () => onlineForfeitBestEffort());
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden) onlineForfeitBestEffort();
+        if (document.hidden) {
+          stopOnlineHiddenForfeitTimer();
+          onlineState.hiddenForfeitId = setTimeout(() => {
+            onlineState.hiddenForfeitId = null;
+            onlineForfeitBestEffort();
+          }, 12000);
+          return;
+        }
+        stopOnlineHiddenForfeitTimer();
       });
 
       el.goStageBtn.addEventListener("click", () => {
@@ -11274,6 +11302,8 @@
 
       function openOnlineWithdrawModal() {
         if (!el.onlineWithdrawBackdrop) return;
+        if (!app.stage || app.stage.kind !== "online") return;
+        if (app.session && app.session.over) return;
         el.onlineWithdrawBackdrop.classList.add("show");
         el.onlineWithdrawBackdrop.setAttribute("aria-hidden", "false");
       }
@@ -11473,6 +11503,7 @@
       if (el.onlineWithdrawYesBtn)
         el.onlineWithdrawYesBtn.addEventListener("click", () => {
           closeOnlineWithdrawModal();
+          if (app.session && app.session.over) return;
           if (app.stage && app.stage.kind === "online") onlineExitMatch();
         });
 
