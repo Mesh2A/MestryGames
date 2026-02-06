@@ -8415,6 +8415,10 @@
         if (onlineState.pollMatchId) clearInterval(onlineState.pollMatchId);
         onlineState.pollMatchEvery = ms;
         onlineState.pollMatchId = setInterval(async () => {
+          if (!onlineState.matchId || !app.stage || app.stage.kind !== "online" || (app.session && app.session.over)) {
+            stopOnlineMatchPolling();
+            return;
+          }
           await onlineFetchMatchStateOnce(myEmail, fee);
         }, ms);
       }
@@ -8701,6 +8705,9 @@
         if (turn === "ended") {
           stopOnlineMatchPolling();
           app.session.over = true;
+          closeOnlineWithdrawModal();
+          if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.style.display = "none";
+          if (el.backToMapBtn) el.backToMapBtn.disabled = true;
           const winner = m.winner === "me" || m.winner === "them" ? m.winner : null;
           const sol = typeof m.solution === "string" ? String(m.solution || "").trim() : "";
           if (sol && app.inputs && Array.isArray(app.inputs) && sol.length === app.inputs.length) {
@@ -8739,12 +8746,15 @@
       }
 
       async function onlineFetchMatchStateOnce(meEmail, fee) {
-        if (!onlineState.matchId) return;
+        const id = onlineState.matchId;
+        if (!id) return;
         if (onlineState.stateFetchBusy) return;
         onlineState.stateFetchBusy = true;
         try {
-          const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(onlineState.matchId)}`, { method: "GET" });
+          const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(id)}`, { method: "GET" });
           if (!r.ok || !r.data || !r.data.match) return;
+          if (onlineState.matchId !== id) return;
+          if (!app.stage || app.stage.kind !== "online" || app.stage.matchId !== id) return;
           onlineApplyMatchState(r.data.match, meEmail, fee);
         } finally {
           onlineState.stateFetchBusy = false;
@@ -8760,6 +8770,9 @@
         onlineState.busy = false;
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
+        stopOnlineMatchPolling();
+        closeOnlineSetupModal();
+        closeOnlineWithdrawModal();
 
         if (!onlineFeature.enabled) {
           el.onlineContent.innerHTML = `<div class="onlineWrap">
@@ -9141,6 +9154,7 @@
           return;
         }
         const me = await ensureMeLoaded();
+        if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
         closeHowTo();
@@ -9186,6 +9200,7 @@
             return;
           }
           if (!r.data) return;
+          if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
           if (r.data.status === "matched" && r.data.matchId) {
             stopOnlineQueuePolling();
             closeHowTo();
@@ -9331,6 +9346,8 @@
       async function onlineExitMatch() {
         if (!app.stage || app.stage.kind !== "online") return;
         stopOnlineMatchPolling();
+        stopOnlineQueuePolling();
+        stopOnlineRoomPolling();
         const matchId = app.stage.matchId;
         if (matchId) {
           await friendsJson("/api/online/match/forfeit", {
@@ -9342,7 +9359,11 @@
         if (el.mapBtn2) el.mapBtn2.style.display = "";
         if (el.shareBtn) el.shareBtn.style.display = "";
         if (el.winBox) el.winBox.classList.remove("show");
+        closeOnlineSetupModal();
+        closeOnlineWithdrawModal();
         goHome();
+        renderOnlineSelect();
+        openModal("online");
       }
 
       function onlineForfeitBestEffort() {
@@ -9419,6 +9440,7 @@
       if (el.homePrivacyBtn) el.homePrivacyBtn.addEventListener("click", () => openPrivacyModal());
       el.backToMapBtn.addEventListener("click", () => {
         if (app.stage && app.stage.kind === "online") {
+          if (app.session && app.session.over) return;
           openOnlineWithdrawModal();
           return;
         }
@@ -9456,6 +9478,9 @@
           if (el.mapBtn2) el.mapBtn2.style.display = "";
           if (el.shareBtn) el.shareBtn.style.display = "";
           stopOnlineMatchPolling();
+          stopOnlineQueuePolling();
+          stopOnlineRoomPolling();
+          closeOnlineWithdrawModal();
           goHome();
           renderOnlineSelect();
           openModal("online");
@@ -11141,7 +11166,10 @@
           el.onlineSetupReadyBtn.textContent = myReady ? t("onlineSetupCancelReadyBtn") : t("onlineSetupReadyBtn");
           el.onlineSetupReadyBtn.disabled = false;
         }
-        if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.textContent = t("onlineSetupForfeitBtn");
+        if (el.onlineSetupForfeitBtn) {
+          el.onlineSetupForfeitBtn.textContent = t("onlineSetupForfeitBtn");
+          el.onlineSetupForfeitBtn.style.display = app.session && app.session.over ? "none" : "";
+        }
         if (el.onlineSetupStatus) {
           const meLabel = myReady ? t("onlineSetupMeReady") : t("onlineSetupMeNotReady");
           const oppLabel = oppReady ? t("onlineSetupOppReady") : t("onlineSetupOppNotReady");
@@ -11185,7 +11213,11 @@
         });
         if (!r.ok) {
           if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = false;
-          enqueueToast({ title: t("onlineSetupTitle"), body: t("onlineSetupFailed"), autoMs: 2400 });
+          enqueueToast({
+            title: t("onlineSetupTitle"),
+            body: r.status === 0 ? "ضعف اتصال. حاول مرة ثانية." : t("onlineSetupFailed"),
+            autoMs: 2400,
+          });
           return;
         }
         await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);

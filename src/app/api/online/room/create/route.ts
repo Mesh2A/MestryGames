@@ -81,8 +81,11 @@ export async function POST(req: NextRequest) {
       `;
       if (existing && existing[0]) {
         const r = existing[0];
+        const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+        const stateObj = profileRow?.state && typeof profileRow.state === "object" ? (profileRow.state as Record<string, unknown>) : {};
+        const coins = readCoinsFromState(stateObj);
         const parsed = parseRoomModeKey(r.mode);
-        return { status: "waiting" as const, code: r.code, mode: parsed.mode, kind: parsed.kind, fee: r.fee, codeLen: r.codeLen };
+        return { status: "waiting" as const, code: r.code, mode: parsed.mode, kind: parsed.kind, fee: r.fee, codeLen: r.codeLen, coins };
       }
 
       const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });

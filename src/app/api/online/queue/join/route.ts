@@ -115,8 +115,11 @@ export async function POST(req: NextRequest) {
       >`SELECT "id", "status", "matchId", "mode", "fee", "codeLen" FROM "OnlineQueue" WHERE "email" = ${email} AND "status" = 'waiting' ORDER BY "createdAt" DESC LIMIT 1`;
       if (existing && existing[0]) {
         const row = existing[0];
+        const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+        const stateObj = profileRow?.state && typeof profileRow.state === "object" ? (profileRow.state as Record<string, unknown>) : {};
+        const coins = readCoinsFromState(stateObj);
         const parsed = parseQueueModeKey(row.mode);
-        return { status: "waiting" as const, queueId: row.id, fee: row.fee, codeLen: row.codeLen, mode: parsed.mode, kind: parsed.kind };
+        return { status: "waiting" as const, queueId: row.id, fee: row.fee, codeLen: row.codeLen, mode: parsed.mode, kind: parsed.kind, coins };
       }
 
       const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
@@ -145,7 +148,7 @@ export async function POST(req: NextRequest) {
           INSERT INTO "OnlineQueue" ("id", "email", "mode", "fee", "codeLen", "status", "createdAt", "updatedAt")
           VALUES (${queueId}, ${email}, ${modeKey}, ${fee}, ${codeLen}, 'waiting', NOW(), NOW())
         `;
-        return { status: "waiting" as const, queueId, fee, codeLen, mode, kind };
+        return { status: "waiting" as const, queueId, fee, codeLen, mode, kind, coins: nextCoins };
       }
 
       const opp = opponent[0];
@@ -187,6 +190,7 @@ export async function POST(req: NextRequest) {
         codeLen,
         mode,
         kind,
+        coins: nextCoins,
         opponent: oppProfile
           ? {
               id: oppProfile.publicId,

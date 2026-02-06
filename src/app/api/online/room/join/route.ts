@@ -156,6 +156,7 @@ export async function POST(req: NextRequest) {
         codeLen: room.codeLen,
         mode: parsed.mode,
         kind: parsed.kind,
+        coins: nextCoins,
         opponent: hostProfile
           ? {
               id: hostProfile.publicId,
