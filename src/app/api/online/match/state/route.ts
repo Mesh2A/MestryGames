@@ -116,31 +116,49 @@ export async function GET(req: NextRequest) {
   const onlineEnabled = await getOnlineEnabled();
 
   try {
-    const out = await prisma.$transaction(async (tx) => {
-      await ensureGameProfile(email);
+    await ensureGameProfile(email);
 
-      const rows = await tx.$queryRaw<
-        {
-          id: string;
-          mode: string;
-          fee: number;
-          codeLen: number;
-          aEmail: string;
-          bEmail: string;
-          answer: string;
-          turnEmail: string;
-          turnStartedAt: bigint;
-          winnerEmail: string | null;
-          endedAt: Date | null;
-          state: unknown;
-        }[]
-      >`SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
-      const m = rows && rows[0] ? rows[0] : null;
-      if (!m) return { ok: false as const, error: "not_found" as const };
-      if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
+    type MatchRow = {
+      id: string;
+      mode: string;
+      fee: number;
+      codeLen: number;
+      aEmail: string;
+      bEmail: string;
+      answer: string;
+      turnEmail: string;
+      turnStartedAt: bigint;
+      winnerEmail: string | null;
+      endedAt: Date | null;
+      state: unknown;
+    };
 
-      if (!onlineEnabled && !m.endedAt) {
-        const nextState = normalizeStateForDisabled(m.state);
+    const baseRows = await prisma.$queryRaw<MatchRow[]>`
+      SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+      FROM "OnlineMatch"
+      WHERE "id" = ${matchId}
+      LIMIT 1
+    `;
+    let m = baseRows && baseRows[0] ? baseRows[0] : null;
+    if (!m) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    if (m.aEmail !== email && m.bEmail !== email)
+      return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+
+    if (!onlineEnabled && !m.endedAt) {
+      m = await prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<MatchRow[]>`
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          FROM "OnlineMatch"
+          WHERE "id" = ${matchId}
+          LIMIT 1
+          FOR UPDATE
+        `;
+        const locked = rows && rows[0] ? rows[0] : null;
+        if (!locked) return null;
+        if (locked.aEmail !== email && locked.bEmail !== email) return null;
+        if (locked.endedAt) return locked;
+
+        const nextState = normalizeStateForDisabled(locked.state);
         await tx.$executeRaw`
           UPDATE "OnlineMatch"
           SET "winnerEmail" = NULL, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
@@ -152,111 +170,140 @@ export async function GET(req: NextRequest) {
           const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
           const coins = readCoinsFromState(stateObj);
           const peak = readCoinsPeakFromState(stateObj);
-          const fee = Math.max(0, Math.floor(m.fee));
+          const fee = Math.max(0, Math.floor(locked.fee));
           const nextCoins = coins + fee;
           const next = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
           await tx.gameProfile.update({ where: { email: who }, data: { state: next } });
         };
-        await refund(m.aEmail);
-        await refund(m.bEmail);
+        await refund(locked.aEmail);
+        await refund(locked.bEmail);
 
-        m.winnerEmail = null;
-        m.endedAt = new Date();
-        m.state = nextState;
-      }
-
-      const stateForTurn = safeState(m.state);
-      const now = Date.now();
-      const turnStartedAt = Number(m.turnStartedAt || 0);
-      const expired = stateForTurn.phase === "play" && !m.endedAt && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS;
-      if (expired) {
-        const nextTurn = m.turnEmail === m.aEmail ? m.bEmail : m.aEmail;
-        await tx.$executeRaw`
-          UPDATE "OnlineMatch"
-          SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "updatedAt" = NOW()
-          WHERE "id" = ${matchId}
-        `;
-        m.turnEmail = nextTurn;
-        m.turnStartedAt = BigInt(now);
-      }
-
-      let state = stateForTurn;
-      if (state.kind === "custom" && state.phase === "setup" && state.readyA && state.readyB && !m.endedAt) {
-        const now2 = Date.now();
-        const aStarts = (now2 & 1) === 1;
-        const turnEmail2 = aStarts ? m.aEmail : m.bEmail;
-        const nextState = { ...(m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {}), phase: "play" };
-        await tx.$executeRaw`
-          UPDATE "OnlineMatch"
-          SET "turnEmail" = ${turnEmail2}, "turnStartedAt" = ${now2}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
-          WHERE "id" = ${matchId}
-        `;
-        m.turnEmail = turnEmail2;
-        m.turnStartedAt = BigInt(now2);
-        m.state = nextState;
-        state = safeState(m.state);
-      }
-      if (state.kind === "props" && state.phase === "cards" && state.pickA !== null && state.pickB !== null && !m.endedAt) {
-        const now2 = Date.now();
-        const aStarts = (now2 & 1) === 1;
-        const turnEmail2 = aStarts ? m.aEmail : m.bEmail;
-        const nextState = { ...(m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {}), phase: "play" };
-        await tx.$executeRaw`
-          UPDATE "OnlineMatch"
-          SET "turnEmail" = ${turnEmail2}, "turnStartedAt" = ${now2 + 5000}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
-          WHERE "id" = ${matchId}
-        `;
-        m.turnEmail = turnEmail2;
-        m.turnStartedAt = BigInt(now2 + 5000);
-        m.state = nextState;
-        state = safeState(m.state);
-      }
-
-      const myRole = m.aEmail === email ? "a" : "b";
-      const myHistory = (myRole === "a" ? state.a : state.b).filter((x) => x && typeof x === "object").slice(-120);
-
-      const oppEmail = m.aEmail === email ? m.bEmail : m.aEmail;
-      const oppProfile = await tx.gameProfile.findUnique({
-        where: { email: oppEmail },
-        select: { email: true, publicId: true, state: true, createdAt: true },
+        return { ...locked, winnerEmail: null, endedAt: new Date(), state: nextState };
       });
 
-      const myProfile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true, publicId: true } });
-      const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
-      const myCoins = readCoinsFromState(myState);
-      const myLevel = getProfileLevel(myProfile?.state).level;
+      if (!m)
+        return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
 
-      const serverNowMs = Date.now();
-      const turnStartedAtMs = Number(m.turnStartedAt || 0);
-      const elapsedMs = turnStartedAtMs > 0 ? Math.max(0, serverNowMs - turnStartedAtMs) : 0;
-      const timeLeftMs = m.endedAt || state.phase !== "play" ? 0 : Math.max(0, TURN_MS - elapsedMs);
+    const state0 = safeState(m.state);
+    const now = Date.now();
+    const turnStartedAt0 = Number(m.turnStartedAt || 0);
+    const needExpire = state0.phase === "play" && !m.endedAt && turnStartedAt0 > 0 && now - turnStartedAt0 >= TURN_MS;
+    const needCustomStart = state0.kind === "custom" && state0.phase === "setup" && state0.readyA && state0.readyB && !m.endedAt;
+    const needPropsStart = state0.kind === "props" && state0.phase === "cards" && state0.pickA !== null && state0.pickB !== null && !m.endedAt;
 
-      const lastMasked =
-        state.lastMasked &&
-        typeof state.lastMasked.by === "string" &&
-        typeof state.lastMasked.at === "number" &&
-        typeof state.lastMasked.len === "number"
-          ? {
-              by: state.lastMasked.by,
-              at: state.lastMasked.at,
-              value: maskDigits(state.lastMasked.len),
-            }
-          : null;
+    if (needExpire || needCustomStart || needPropsStart) {
+      const updated = await prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<MatchRow[]>`
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          FROM "OnlineMatch"
+          WHERE "id" = ${matchId}
+          LIMIT 1
+          FOR UPDATE
+        `;
+        const locked = rows && rows[0] ? rows[0] : null;
+        if (!locked) return null;
+        if (locked.aEmail !== email && locked.bEmail !== email) return null;
 
-      let solution: string | null = null;
-      const isEnded = !!m.endedAt || !!m.winnerEmail;
-      const isDisabled = state.endedReason === "disabled";
-      if (isEnded && !isDisabled) {
-        if (state.kind === "custom") {
-          if (m.winnerEmail === m.aEmail) solution = state.secretB || null;
-          else if (m.winnerEmail === m.bEmail) solution = state.secretA || null;
-        } else {
-          const ans = typeof m.answer === "string" ? m.answer : "";
-          solution = ans ? ans : null;
+        const stateForTurn = safeState(locked.state);
+        const now2 = Date.now();
+        const turnStartedAt = Number(locked.turnStartedAt || 0);
+        const expired = stateForTurn.phase === "play" && !locked.endedAt && turnStartedAt > 0 && now2 - turnStartedAt >= TURN_MS;
+        if (expired) {
+          const nextTurn = locked.turnEmail === locked.aEmail ? locked.bEmail : locked.aEmail;
+          await tx.$executeRaw`
+            UPDATE "OnlineMatch"
+            SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now2}, "updatedAt" = NOW()
+            WHERE "id" = ${matchId}
+          `;
+          locked.turnEmail = nextTurn;
+          locked.turnStartedAt = BigInt(now2);
         }
-      }
 
-      return {
+        let nextStateForReturn: unknown = locked.state;
+        let stateAfter = stateForTurn;
+        if (stateAfter.kind === "custom" && stateAfter.phase === "setup" && stateAfter.readyA && stateAfter.readyB && !locked.endedAt) {
+          const now3 = Date.now();
+          const aStarts = (now3 & 1) === 1;
+          const turnEmail2 = aStarts ? locked.aEmail : locked.bEmail;
+          const nextState = { ...(locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {}), phase: "play" };
+          await tx.$executeRaw`
+            UPDATE "OnlineMatch"
+            SET "turnEmail" = ${turnEmail2}, "turnStartedAt" = ${now3}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+            WHERE "id" = ${matchId}
+          `;
+          locked.turnEmail = turnEmail2;
+          locked.turnStartedAt = BigInt(now3);
+          nextStateForReturn = nextState;
+          stateAfter = safeState(nextStateForReturn);
+        }
+        if (stateAfter.kind === "props" && stateAfter.phase === "cards" && stateAfter.pickA !== null && stateAfter.pickB !== null && !locked.endedAt) {
+          const now3 = Date.now();
+          const aStarts = (now3 & 1) === 1;
+          const turnEmail2 = aStarts ? locked.aEmail : locked.bEmail;
+          const nextState = { ...(locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {}), phase: "play" };
+          await tx.$executeRaw`
+            UPDATE "OnlineMatch"
+            SET "turnEmail" = ${turnEmail2}, "turnStartedAt" = ${now3 + 5000}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+            WHERE "id" = ${matchId}
+          `;
+          locked.turnEmail = turnEmail2;
+          locked.turnStartedAt = BigInt(now3 + 5000);
+          nextStateForReturn = nextState;
+        }
+
+        locked.state = nextStateForReturn;
+        return locked;
+      });
+      if (updated) m = updated;
+    }
+
+    const state = safeState(m.state);
+    const myRole = m.aEmail === email ? "a" : "b";
+    const myHistory = (myRole === "a" ? state.a : state.b).filter((x) => x && typeof x === "object").slice(-120);
+
+    const oppEmail = m.aEmail === email ? m.bEmail : m.aEmail;
+    const [oppProfile, myProfile] = await Promise.all([
+      prisma.gameProfile.findUnique({ where: { email: oppEmail }, select: { email: true, publicId: true, state: true, createdAt: true } }),
+      prisma.gameProfile.findUnique({ where: { email }, select: { state: true, publicId: true } }),
+    ]);
+
+    const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
+    const myCoins = readCoinsFromState(myState);
+    const myLevel = getProfileLevel(myProfile?.state).level;
+
+    const serverNowMs = Date.now();
+    const turnStartedAtMs = Number(m.turnStartedAt || 0);
+    const elapsedMs = turnStartedAtMs > 0 ? Math.max(0, serverNowMs - turnStartedAtMs) : 0;
+    const timeLeftMs = m.endedAt || state.phase !== "play" ? 0 : Math.max(0, TURN_MS - elapsedMs);
+
+    const lastMasked =
+      state.lastMasked &&
+      typeof state.lastMasked.by === "string" &&
+      typeof state.lastMasked.at === "number" &&
+      typeof state.lastMasked.len === "number"
+        ? {
+            by: state.lastMasked.by,
+            at: state.lastMasked.at,
+            value: maskDigits(state.lastMasked.len),
+          }
+        : null;
+
+    let solution: string | null = null;
+    const isEnded = !!m.endedAt || !!m.winnerEmail;
+    const isDisabled = state.endedReason === "disabled";
+    if (isEnded && !isDisabled) {
+      if (state.kind === "custom") {
+        if (m.winnerEmail === m.aEmail) solution = state.secretB || null;
+        else if (m.winnerEmail === m.bEmail) solution = state.secretA || null;
+      } else {
+        const ans = typeof m.answer === "string" ? m.answer : "";
+        solution = ans ? ans : null;
+      }
+    }
+
+    return NextResponse.json(
+      {
         ok: true as const,
         match: {
           id: m.id,
@@ -272,8 +319,26 @@ export async function GET(req: NextRequest) {
           deck: state.kind === "props" ? state.deck : null,
           myPick: state.kind === "props" ? (myRole === "a" ? state.pickA : state.pickB) : null,
           oppPick: state.kind === "props" ? (myRole === "a" ? state.pickB : state.pickA) : null,
-          myCard: state.kind === "props" ? (myRole === "a" ? (state.pickA !== null ? state.deck[state.pickA] || null : null) : state.pickB !== null ? state.deck[state.pickB] || null : null) : null,
-          oppCard: state.kind === "props" ? (myRole === "a" ? (state.pickB !== null ? state.deck[state.pickB] || null : null) : state.pickA !== null ? state.deck[state.pickA] || null : null) : null,
+          myCard:
+            state.kind === "props"
+              ? myRole === "a"
+                ? state.pickA !== null
+                  ? state.deck[state.pickA] || null
+                  : null
+                : state.pickB !== null
+                  ? state.deck[state.pickB] || null
+                  : null
+              : null,
+          oppCard:
+            state.kind === "props"
+              ? myRole === "a"
+                ? state.pickB !== null
+                  ? state.deck[state.pickB] || null
+                  : null
+                : state.pickA !== null
+                  ? state.deck[state.pickA] || null
+                  : null
+              : null,
           myUsed: state.kind === "props" ? (myRole === "a" ? state.usedA : state.usedB) : null,
           oppUsed: state.kind === "props" ? (myRole === "a" ? state.usedB : state.usedA) : null,
           myRole,
@@ -302,11 +367,9 @@ export async function GET(req: NextRequest) {
           myHistory,
           lastMasked,
         },
-      };
-    });
-
-    if (!out.ok) return NextResponse.json(out, { status: out.error === "forbidden" ? 403 : 404, headers: { "Cache-Control": "no-store" } });
-    return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
+      },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }

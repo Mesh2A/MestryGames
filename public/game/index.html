@@ -2779,34 +2779,31 @@
         box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
       }
       .propsPickCard {
-        width: min(520px, calc(100vw - 24px));
+        width: min(560px, calc(100vw - 24px));
       }
       .propsCardsGrid {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 10px;
-        margin-top: 12px;
-      }
-      @media (max-width: 520px) {
-        .propsCardsGrid {
-          grid-template-columns: repeat(3, 1fr);
-        }
+        grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+        gap: 12px;
+        margin: 12px auto 0;
+        max-width: 540px;
       }
       .propsCardBtn {
         border: 0;
         padding: 0;
         background: transparent;
         cursor: pointer;
+        width: 100%;
       }
       .propsCardBtn:disabled {
         cursor: not-allowed;
         opacity: 0.7;
       }
       .propsCard {
-        height: 92px;
+        width: 100%;
+        aspect-ratio: 5 / 7;
         border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.14);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.18));
         box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
         position: relative;
         transform-style: preserve-3d;
@@ -2828,6 +2825,24 @@
         backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
         border-radius: 14px;
+        overflow: hidden;
+      }
+      .propsFace::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("cards/cards.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        opacity: 0.95;
+      }
+      .propsFace::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.22));
+        opacity: 1;
       }
       .propsFace.back {
         transform: rotateY(0deg);
@@ -2837,9 +2852,19 @@
         transform: rotateY(180deg);
         text-align: center;
         font-weight: 900;
-        font-size: 12px;
+        font-size: 12.5px;
         line-height: 1.5;
         color: rgba(255, 255, 255, 0.92);
+      }
+      .propsText {
+        position: relative;
+        z-index: 2;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.34);
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
+        max-width: 100%;
       }
       .propsLogo {
         width: 26px;
@@ -2852,6 +2877,8 @@
         justify-content: center;
         font-weight: 1000;
         letter-spacing: 0.4px;
+        position: relative;
+        z-index: 2;
       }
       .propsHudRow {
         display: flex;
@@ -2869,7 +2896,10 @@
         min-height: 56px;
         border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.14);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.18));
+        background-image: url("cards/cards.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2877,6 +2907,21 @@
         font-weight: 900;
         font-size: 13px;
         text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .propsHudCard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.36);
+      }
+      .propsHudCard {
+        color: rgba(255, 255, 255, 0.92);
+      }
+      .propsHudCard > * {
+        position: relative;
+        z-index: 1;
       }
       .setupCheck {
         width: 18px;
@@ -8543,6 +8588,8 @@
         propsPendingPickIndex: -1,
         propsMyCard: "",
         propsMyUsed: false,
+        actionInFlight: {},
+        actionCooldownUntil: {},
       };
 
       const ONLINE_TURN_MS = 30_000;
@@ -8551,6 +8598,31 @@
         if (mode === "easy") return { fee: 29, codeLen: 3 };
         if (mode === "medium") return { fee: 45, codeLen: 4 };
         return { fee: 89, codeLen: 5 };
+      }
+
+      function onlineCanRunAction(key) {
+        const k = String(key || "");
+        const now = Date.now();
+        const inflight = onlineState.actionInFlight && typeof onlineState.actionInFlight === "object" ? onlineState.actionInFlight : {};
+        const cooldown = onlineState.actionCooldownUntil && typeof onlineState.actionCooldownUntil === "object" ? onlineState.actionCooldownUntil : {};
+        return !(inflight[k] === true) && !(typeof cooldown[k] === "number" && now < cooldown[k]);
+      }
+
+      async function onlineRunAction(key, fn, cooldownMs) {
+        const k = String(key || "");
+        const cdMs = Math.max(0, Math.floor(cooldownMs || 0));
+        onlineState.actionInFlight = onlineState.actionInFlight && typeof onlineState.actionInFlight === "object" ? onlineState.actionInFlight : {};
+        onlineState.actionCooldownUntil =
+          onlineState.actionCooldownUntil && typeof onlineState.actionCooldownUntil === "object" ? onlineState.actionCooldownUntil : {};
+        if (!onlineCanRunAction(k)) return;
+        onlineState.actionInFlight[k] = true;
+        onlineState.actionCooldownUntil[k] = Date.now() + (cdMs || 350);
+        try {
+          await fn();
+        } finally {
+          onlineState.actionInFlight[k] = false;
+          onlineState.actionCooldownUntil[k] = Math.max(Number(onlineState.actionCooldownUntil[k] || 0), Date.now() + 120);
+        }
       }
 
       function stopOnlineQueuePolling() {
@@ -8700,16 +8772,17 @@
 
       function startOnlineMatchPolling(myEmail, fee, everyMs) {
         const ms = Math.max(180, Math.min(1500, Math.floor(everyMs || 0)));
-        if (onlineState.pollMatchId && onlineState.pollMatchEvery === ms) return;
+        const effectiveMs = document.hidden ? Math.max(1000, ms) : ms;
+        if (onlineState.pollMatchId && onlineState.pollMatchEvery === effectiveMs) return;
         if (onlineState.pollMatchId) clearInterval(onlineState.pollMatchId);
-        onlineState.pollMatchEvery = ms;
+        onlineState.pollMatchEvery = effectiveMs;
         onlineState.pollMatchId = setInterval(async () => {
           if (!onlineState.matchId || !app.stage || app.stage.kind !== "online" || (app.session && app.session.over)) {
             stopOnlineMatchPolling();
             return;
           }
           await onlineFetchMatchStateOnce(myEmail, fee);
-        }, ms);
+        }, effectiveMs);
       }
 
       function flashPlayerCard(card) {
@@ -9256,20 +9329,27 @@
         const cancelBtn = document.getElementById("onlineCancelBtn");
         if (cancelBtn) {
           cancelBtn.addEventListener("click", async () => {
-            if (!onlineState.queueId) {
-              renderOnlineSelect();
-              return;
-            }
-            stopOnlineQueuePolling();
-            const r = await friendsJson("/api/online/queue/cancel", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: onlineState.queueId }),
-            });
-            if (r.ok && r.data && r.data.refunded) {
-              if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
-            }
-            renderOnlineSelect();
+            await onlineRunAction(
+              "queue_cancel",
+              async () => {
+                cancelBtn.disabled = true;
+                if (!onlineState.queueId) {
+                  renderOnlineSelect();
+                  return;
+                }
+                stopOnlineQueuePolling();
+                const r = await friendsJson("/api/online/queue/cancel", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id: onlineState.queueId }),
+                });
+                if (r.ok && r.data && r.data.refunded) {
+                  if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+                }
+                renderOnlineSelect();
+              },
+              450
+            );
           });
         }
       }
@@ -9333,50 +9413,56 @@
       }
 
       async function onlineCreateRoom(mode, kind) {
-        await fetchOnlineEnabledOnce(true).catch(() => {});
-        if (!onlineFeature.enabled) {
-          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
-          renderOnlineSelect();
-          return;
-        }
+        await onlineRunAction(
+          "create_room",
+          async () => {
+            fetchOnlineEnabledOnce(false).catch(() => {});
+            if (onlineFeature.fetched && !onlineFeature.enabled) {
+              enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+              renderOnlineSelect();
+              return;
+            }
 
-        const r = await friendsJson("/api/online/room/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode, kind }),
-        });
-        if (!r.ok || !r.data) {
-          const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
-          if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
-          else if (code === "online_disabled") {
-            onlineFeature.enabled = false;
-            updateOnlineBtnUI();
-            enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2600 });
-          } else enqueueToast({ title: t("onlineBtn"), body: "تعذر إنشاء الغرفة.", autoMs: 2600 });
-          renderOnlineSelect();
-          return;
-        }
+            const r = await friendsJson("/api/online/room/create", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mode, kind }),
+            });
+            if (!r.ok || !r.data) {
+              const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
+              if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
+              else if (code === "online_disabled") {
+                onlineFeature.enabled = false;
+                updateOnlineBtnUI();
+                enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2600 });
+              } else enqueueToast({ title: t("onlineBtn"), body: "تعذر إنشاء الغرفة.", autoMs: 2600 });
+              renderOnlineSelect();
+              return;
+            }
 
-        const roomCode = normalizeRoomCode(r.data.code);
-        const modeResolved = r.data && typeof r.data.mode === "string" ? String(r.data.mode).trim() : mode;
-        const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(modeResolved).fee;
-        const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(modeResolved).codeLen;
-        const kindResolved =
-          r.data && typeof r.data.kind === "string"
-            ? String(r.data.kind).trim() === "custom"
-              ? "custom"
-              : String(r.data.kind).trim() === "props"
-                ? "props"
-                : "normal"
-            : kind;
-        if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
-        if (!roomCode) {
-          renderOnlineSelect();
-          return;
-        }
-        onlineState.roomCode = roomCode;
-        renderRoomWaiting(roomCode, modeResolved, fee, codeLen, kindResolved);
-        startRoomPolling(roomCode);
+            const roomCode = normalizeRoomCode(r.data.code);
+            const modeResolved = r.data && typeof r.data.mode === "string" ? String(r.data.mode).trim() : mode;
+            const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(modeResolved).fee;
+            const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(modeResolved).codeLen;
+            const kindResolved =
+              r.data && typeof r.data.kind === "string"
+                ? String(r.data.kind).trim() === "custom"
+                  ? "custom"
+                  : String(r.data.kind).trim() === "props"
+                    ? "props"
+                    : "normal"
+                : kind;
+            if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+            if (!roomCode) {
+              renderOnlineSelect();
+              return;
+            }
+            onlineState.roomCode = roomCode;
+            renderRoomWaiting(roomCode, modeResolved, fee, codeLen, kindResolved);
+            startRoomPolling(roomCode);
+          },
+          450
+        );
       }
 
       function renderRoomWaiting(roomCode, mode, fee, codeLen, kind) {
@@ -9414,15 +9500,23 @@
       }
 
       async function cancelRoom(code) {
-        stopOnlineRoomPolling();
-        onlineState.roomCode = "";
-        const r = await friendsJson("/api/online/room/cancel", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code }),
-        });
-        if (r.ok && r.data && r.data.refunded && typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
-        renderOnlineSelect();
+        await onlineRunAction(
+          "cancel_room",
+          async () => {
+            const cancelBtn = document.getElementById("roomCancelBtn");
+            if (cancelBtn) cancelBtn.disabled = true;
+            stopOnlineRoomPolling();
+            onlineState.roomCode = "";
+            const r = await friendsJson("/api/online/room/cancel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code }),
+            });
+            if (r.ok && r.data && r.data.refunded && typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+            renderOnlineSelect();
+          },
+          450
+        );
       }
 
       function startRoomPolling(code) {
@@ -9451,7 +9545,7 @@
           }
         };
         tick();
-        onlineState.pollRoomId = setInterval(tick, 300);
+        onlineState.pollRoomId = setInterval(tick, document.hidden ? 1000 : 300);
       }
 
       function renderRoomJoin(kind) {
@@ -9519,8 +9613,8 @@
             enqueueToast({ title: t("onlineBtn"), body: "اكتب كود صحيح.", autoMs: 2000 });
             return;
           }
-          await fetchOnlineEnabledOnce(true).catch(() => {});
-          if (!onlineFeature.enabled) {
+          fetchOnlineEnabledOnce(false).catch(() => {});
+          if (onlineFeature.fetched && !onlineFeature.enabled) {
             enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
             renderOnlineSelect();
             return;
@@ -9560,79 +9654,93 @@
       }
 
       async function onlineJoin(mode, kind) {
-        if (!cloud.enabled) {
-          enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
-          return;
-        }
-        await fetchOnlineEnabledOnce(true).catch(() => {});
-        if (!onlineFeature.enabled) {
-          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
-          renderOnlineSelect();
-          return;
-        }
-        if (onlineState.busy) return;
-        onlineState.busy = true;
-        try {
-          const mePromise = ensureMeLoaded();
-          onlineState.selectKind = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
-          renderOnlineSearching(mode, friendsState.me || null, onlineState.selectKind);
-          const r = await friendsJson("/api/online/queue/join", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mode, kind: onlineState.selectKind }),
-          });
-          const me = await mePromise;
-          if (!r.ok) {
-            const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
-            if (code === "online_disabled") {
-              onlineFeature.enabled = false;
-              updateOnlineBtnUI();
-              enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2600 });
+        await onlineRunAction(
+          "queue_join",
+          async () => {
+            if (!cloud.enabled) {
+              enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
+              return;
+            }
+            fetchOnlineEnabledOnce(false).catch(() => {});
+            if (onlineFeature.fetched && !onlineFeature.enabled) {
+              enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
               renderOnlineSelect();
               return;
             }
-            if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
-            else if (r.status === 0) enqueueToast({ title: t("onlineBtn"), body: "ضعف اتصال. حاول مرة ثانية.", autoMs: 2600 });
-            else enqueueToast({ title: t("onlineBtn"), body: "تعذر بدء البحث.", autoMs: 2600 });
-            renderOnlineSelect();
-            return;
-          }
-          if (!r.data) return;
-          if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
-          if (r.data.status === "matched" && r.data.matchId) {
-            stopOnlineQueuePolling();
-            await onlinePreEnterMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null, r.data.kind || onlineState.selectKind);
-            return;
-          }
-          if (r.data.status === "waiting" && r.data.queueId) {
-            onlineState.queueId = r.data.queueId;
-            stopOnlineQueuePolling();
-            const tick = async () => {
-              if (onlineState.pollQueueBusy) return;
-              onlineState.pollQueueBusy = true;
-              try {
-                const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
-                if (!s.ok || !s.data) return;
-                if (s.data.status === "matched" && s.data.matchId) {
-                  stopOnlineQueuePolling();
-                  await onlinePreEnterMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind || onlineState.selectKind);
-                }
-                if (s.data.status === "cancelled") {
-                  stopOnlineQueuePolling();
-                  if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
+            if (onlineState.busy) return;
+            onlineState.busy = true;
+            try {
+              const mePromise = ensureMeLoaded();
+              onlineState.selectKind = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
+              renderOnlineSearching(mode, friendsState.me || null, onlineState.selectKind);
+              const r = await friendsJson("/api/online/queue/join", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode, kind: onlineState.selectKind }),
+              });
+              const me = await mePromise;
+              if (!r.ok) {
+                const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
+                if (code === "online_disabled") {
+                  onlineFeature.enabled = false;
+                  updateOnlineBtnUI();
+                  enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2600 });
                   renderOnlineSelect();
+                  return;
                 }
-              } catch {
-              } finally {
-                onlineState.pollQueueBusy = false;
+                if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
+                else if (r.status === 0) enqueueToast({ title: t("onlineBtn"), body: "ضعف اتصال. حاول مرة ثانية.", autoMs: 2600 });
+                else enqueueToast({ title: t("onlineBtn"), body: "تعذر بدء البحث.", autoMs: 2600 });
+                renderOnlineSelect();
+                return;
               }
-            };
-            tick();
-            onlineState.pollQueueId = setInterval(tick, 300);
-          }
-        } finally {
-          onlineState.busy = false;
-        }
+              if (!r.data) return;
+              if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+              if (r.data.status === "matched" && r.data.matchId) {
+                stopOnlineQueuePolling();
+                await onlinePreEnterMatch(
+                  r.data.matchId,
+                  r.data.mode,
+                  r.data.fee,
+                  r.data.codeLen,
+                  me,
+                  r.data.opponent || null,
+                  r.data.kind || onlineState.selectKind
+                );
+                return;
+              }
+              if (r.data.status === "waiting" && r.data.queueId) {
+                onlineState.queueId = r.data.queueId;
+                stopOnlineQueuePolling();
+                const tick = async () => {
+                  if (onlineState.pollQueueBusy) return;
+                  onlineState.pollQueueBusy = true;
+                  try {
+                    const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
+                    if (!s.ok || !s.data) return;
+                    if (s.data.status === "matched" && s.data.matchId) {
+                      stopOnlineQueuePolling();
+                      await onlinePreEnterMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind || onlineState.selectKind);
+                    }
+                    if (s.data.status === "cancelled") {
+                      stopOnlineQueuePolling();
+                      if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
+                      renderOnlineSelect();
+                    }
+                  } catch {
+                  } finally {
+                    onlineState.pollQueueBusy = false;
+                  }
+                };
+                tick();
+                onlineState.pollQueueId = setInterval(tick, document.hidden ? 1000 : 300);
+              }
+            } finally {
+              onlineState.busy = false;
+            }
+          },
+          450
+        );
       }
 
       async function startOnlineMatch(matchId, mode, fee, codeLen, me, opponentFromJoin, kind) {
@@ -9781,22 +9889,29 @@
       }
 
       async function onlineExitMatch() {
-        if (!app.stage || app.stage.kind !== "online") return;
-        stopOnlineAutoReturn();
-        stopOnlinePreEnter();
-        stopOnlineMatchPolling();
-        stopOnlineQueuePolling();
-        stopOnlineRoomPolling();
-        stopOnlineHiddenForfeitTimer();
-        const matchId = app.stage.matchId;
-        if (matchId) {
-          await friendsJson("/api/online/match/forfeit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: matchId }),
-          });
-        }
-        onlineReturnToModeSelect();
+        await onlineRunAction(
+          "exit_match",
+          async () => {
+            if (!app.stage || app.stage.kind !== "online") return;
+            stopOnlineAutoReturn();
+            stopOnlinePreEnter();
+            stopOnlineMatchPolling();
+            stopOnlineQueuePolling();
+            stopOnlineRoomPolling();
+            stopOnlineHiddenForfeitTimer();
+            const matchId = app.stage.matchId;
+            if (matchId && !onlineState.forfeitSent) {
+              onlineState.forfeitSent = true;
+              await friendsJson("/api/online/match/forfeit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: matchId }),
+              });
+            }
+            onlineReturnToModeSelect();
+          },
+          600
+        );
       }
 
       function onlineForfeitBestEffort() {
@@ -10132,7 +10247,8 @@
 
       async function friendsJson(url, init) {
         try {
-          const r = await fetch(url, init);
+          const cfg = init && typeof init === "object" ? init : {};
+          const r = await fetch(url, { cache: "no-store", credentials: "include", ...cfg });
           const data = await r.json().catch(() => null);
           return { ok: r.ok, status: r.status, data };
         } catch {
@@ -11656,7 +11772,7 @@
               <div class="propsFace back">
                 <span class="propsLogo">ML</span>
               </div>
-              <div class="propsFace front">${escapeHtml(label)}</div>
+              <div class="propsFace front"><span class="propsText">${escapeHtml(label)}</span></div>
             </div>
           `;
           btn.addEventListener("click", () => submitOnlinePropsPick(i));
