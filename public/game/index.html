@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1020" />
     <title>MestRyLock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <script>
       (() => {
         try {
@@ -192,8 +195,9 @@
       }
       body {
         margin: 0;
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Arabic",
+        font-family: "Cairo", "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Arabic",
           "Noto Sans", "Helvetica Neue", sans-serif;
+        font-weight: 650;
         color: var(--text);
         background: var(--bg-grad-a), var(--bg-grad-b), var(--bg-grad-c);
         overflow: hidden;
@@ -589,14 +593,14 @@
       }
       .btn {
         border: 1px solid var(--btn-border);
-        background: var(--btn-bg);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
         color: var(--text);
         padding: 10px 14px;
         border-radius: 12px;
         cursor: pointer;
         backdrop-filter: blur(var(--ui-blur));
         -webkit-backdrop-filter: blur(var(--ui-blur));
-        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 14px 42px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
         transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
         user-select: none;
         position: relative;
@@ -633,7 +637,7 @@
       }
       .btn:hover {
         transform: translateY(-2px) scale(1.01);
-        background: var(--btn-hover-bg);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)), var(--btn-hover-bg);
         border-color: var(--btn-hover-border);
         box-shadow: 0 16px 46px rgba(0, 0, 0, 0.24);
       }
@@ -674,6 +678,23 @@
         opacity: 0.85;
         pointer-events: none;
         transform: translateZ(0);
+      }
+      html[data-mobile="0"] .btn::after {
+        content: "";
+        position: absolute;
+        top: -60%;
+        left: -80%;
+        width: 60%;
+        height: 220%;
+        background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.35) 45%, transparent 75%);
+        transform: translateX(-120%) rotate(18deg);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 700ms ease, opacity 200ms ease;
+      }
+      html[data-mobile="0"] .btn:hover::after {
+        opacity: 0.55;
+        transform: translateX(320%) rotate(18deg);
       }
       html[data-mobile="0"] .btn.primary::before {
         background: radial-gradient(150px 90px at 28% 18%, var(--shine), transparent 62%),
@@ -1705,6 +1726,51 @@
       .onlineWrap {
         display: grid;
         gap: 14px;
+      }
+      .onlineRoomBox {
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(0, 0, 0, 0.16);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+      }
+      .onlineRoomLabel {
+        font-size: 12px;
+        opacity: 0.82;
+        font-weight: 800;
+      }
+      .onlineRoomHint {
+        font-size: 12px;
+        opacity: 0.78;
+        line-height: 1.7;
+      }
+      .onlineCode {
+        text-align: center;
+        font-weight: 900;
+        letter-spacing: 3px;
+        font-size: 28px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.18));
+      }
+      .roomInput {
+        width: 100%;
+        padding: 12px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        font: inherit;
+        font-weight: 900;
+        letter-spacing: 2px;
+        text-align: center;
+        outline: none;
+      }
+      .roomInput:focus {
+        border-color: rgba(34, 211, 238, 0.6);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
       }
       .onlinePacks {
         display: grid;
@@ -7027,6 +7093,7 @@
         codeLen: 0,
         queueId: "",
         matchId: "",
+        roomCode: "",
         meEmail: "",
         meName: "",
         mePhoto: "",
@@ -7039,6 +7106,7 @@
         searchingStartedAt: 0,
         pollQueueId: null,
         pollMatchId: null,
+        pollRoomId: null,
         spinId: null,
         lastMaskedAt: 0,
         busy: false,
@@ -7059,6 +7127,11 @@
         onlineState.pollQueueId = null;
         if (onlineState.spinId) clearInterval(onlineState.spinId);
         onlineState.spinId = null;
+      }
+
+      function stopOnlineRoomPolling() {
+        if (onlineState.pollRoomId) clearInterval(onlineState.pollRoomId);
+        onlineState.pollRoomId = null;
       }
 
       function stopOnlineMatchPolling() {
@@ -7352,8 +7425,10 @@
         onlineState.open = true;
         onlineState.queueId = "";
         onlineState.matchId = "";
+        onlineState.roomCode = "";
         onlineState.busy = false;
         stopOnlineQueuePolling();
+        stopOnlineRoomPolling();
 
         if (!onlineFeature.enabled) {
           el.onlineContent.innerHTML = `<div class="onlineWrap">
@@ -7379,7 +7454,16 @@
             ${card("medium", "متوسط", "4 أرقام")}
             ${card("hard", "صعب", "5 أرقام")}
           </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
+            <button id="roomCreateBtn" class="btn" type="button">إنشاء غرفة</button>
+            <button id="roomJoinBtn" class="btn" type="button">انضم لغرفة</button>
+          </div>
         </div>`;
+
+        const roomCreateBtn = document.getElementById("roomCreateBtn");
+        if (roomCreateBtn) roomCreateBtn.addEventListener("click", () => renderRoomCreateSelect());
+        const roomJoinBtn = document.getElementById("roomJoinBtn");
+        if (roomJoinBtn) roomJoinBtn.addEventListener("click", () => renderRoomJoin());
       }
 
       function onlineSetSearchAvatar(elm, photo, letter) {
@@ -7458,6 +7542,260 @@
             renderOnlineSelect();
           });
         }
+      }
+
+      function normalizeRoomCode(s) {
+        return String(s || "")
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 10);
+      }
+
+      function renderRoomCreateSelect() {
+        if (!el.onlineContent) return;
+        if (!cloud.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
+          return;
+        }
+        if (!onlineFeature.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+          return;
+        }
+
+        stopOnlineQueuePolling();
+        stopOnlineRoomPolling();
+        onlineState.roomCode = "";
+
+        const card = (mode, title, sub) => {
+          const cfg = onlineCfg(mode);
+          return `<button class="onlinePack" type="button" data-room-create-mode="${escapeHtml(mode)}" aria-label="${escapeHtml(title)}">
+            <div class="t">${escapeHtml(title)}</div>
+            <div class="sub">${escapeHtml(sub)}</div>
+            <div class="price"><span class="coinChip">${cfg.fee}🪙</span></div>
+            <div class="cta">إنشاء</div>
+          </button>`;
+        };
+
+        el.onlineContent.innerHTML = `<div class="onlineWrap">
+          <div class="tiny">إنشاء غرفة خاصة</div>
+          <div class="onlinePacks">
+            ${card("easy", "سهل", "3 أرقام")}
+            ${card("medium", "متوسط", "4 أرقام")}
+            ${card("hard", "صعب", "5 أرقام")}
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
+            <button id="roomBackBtn" class="btn ghost" type="button">رجوع</button>
+          </div>
+        </div>`;
+
+        const backBtn = document.getElementById("roomBackBtn");
+        if (backBtn) backBtn.addEventListener("click", () => renderOnlineSelect());
+        const packs = el.onlineContent.querySelectorAll('button[data-room-create-mode]');
+        for (const p of packs) {
+          p.addEventListener("click", () => {
+            const mode = String(p.dataset.roomCreateMode || "").trim();
+            if (!mode) return;
+            onlineCreateRoom(mode);
+          });
+        }
+      }
+
+      async function onlineCreateRoom(mode) {
+        await fetchOnlineEnabledOnce(true).catch(() => {});
+        if (!onlineFeature.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+          renderOnlineSelect();
+          return;
+        }
+
+        const r = await friendsJson("/api/online/room/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode }),
+        });
+        if (!r.ok || !r.data) {
+          const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
+          if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
+          else if (code === "online_disabled") {
+            onlineFeature.enabled = false;
+            updateOnlineBtnUI();
+            enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2600 });
+          } else enqueueToast({ title: t("onlineBtn"), body: "تعذر إنشاء الغرفة.", autoMs: 2600 });
+          renderOnlineSelect();
+          return;
+        }
+
+        const roomCode = normalizeRoomCode(r.data.code);
+        const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(mode).fee;
+        const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(mode).codeLen;
+        if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+        if (!roomCode) {
+          renderOnlineSelect();
+          return;
+        }
+        onlineState.roomCode = roomCode;
+        renderRoomWaiting(roomCode, mode, fee, codeLen);
+        startRoomPolling(roomCode);
+      }
+
+      function renderRoomWaiting(roomCode, mode, fee, codeLen) {
+        if (!el.onlineContent) return;
+        const diff = mode === "easy" ? "سهل" : mode === "medium" ? "متوسط" : "صعب";
+        el.onlineContent.innerHTML = `<div class="onlineWrap">
+          <div class="tiny">غرفة خاصة (${escapeHtml(diff)} • ${escapeHtml(String(codeLen))} أرقام • <span class="coinChip">${fee}🪙</span>)</div>
+          <div class="onlineRoomBox">
+            <div class="onlineRoomLabel">الكود</div>
+            <div class="onlineCode">${escapeHtml(roomCode)}</div>
+            <div class="onlineRoomHint">ارسل الكود لصديقك ثم انتظر الانضمام.</div>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
+            <button id="roomCancelBtn" class="btn" type="button">إلغاء الغرفة</button>
+            <button id="roomCopyBtn" class="btn primary" type="button">نسخ الكود</button>
+          </div>
+        </div>`;
+
+        const cancelBtn = document.getElementById("roomCancelBtn");
+        const copyBtn = document.getElementById("roomCopyBtn");
+        if (copyBtn) {
+          copyBtn.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(String(roomCode));
+              enqueueToast({ title: "نسخ", body: "تم نسخ الكود.", autoMs: 1600 });
+            } catch {}
+          });
+        }
+        if (cancelBtn) {
+          cancelBtn.addEventListener("click", async () => {
+            await cancelRoom(roomCode);
+          });
+        }
+      }
+
+      async function cancelRoom(code) {
+        stopOnlineRoomPolling();
+        onlineState.roomCode = "";
+        const r = await friendsJson("/api/online/room/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        if (r.ok && r.data && r.data.refunded && typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+        renderOnlineSelect();
+      }
+
+      function startRoomPolling(code) {
+        stopOnlineRoomPolling();
+        onlineState.pollRoomId = setInterval(async () => {
+          const s = await friendsJson(`/api/online/room/status?code=${encodeURIComponent(code)}`, { method: "GET" });
+          if (!s.ok || !s.data) return;
+          if (s.data.status === "matched" && s.data.matchId) {
+            stopOnlineRoomPolling();
+            const me = await ensureMeLoaded();
+            closeHowTo();
+            startOnlineMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null);
+            return;
+          }
+          if (s.data.status === "cancelled") {
+            stopOnlineRoomPolling();
+            if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
+            enqueueToast({ title: t("onlineBtn"), body: "تم إلغاء الغرفة.", autoMs: 2200 });
+            renderOnlineSelect();
+          }
+        }, 650);
+      }
+
+      function renderRoomJoin() {
+        if (!el.onlineContent) return;
+        if (!cloud.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
+          return;
+        }
+        if (!onlineFeature.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+          return;
+        }
+
+        stopOnlineQueuePolling();
+        stopOnlineRoomPolling();
+        onlineState.roomCode = "";
+
+        el.onlineContent.innerHTML = `<div class="onlineWrap">
+          <div class="tiny">انضم لغرفة خاصة</div>
+          <div class="onlineRoomBox">
+            <div class="onlineRoomLabel">كود الغرفة</div>
+            <input id="roomCodeInput" class="roomInput" inputmode="text" autocomplete="off" placeholder="ABCD12" />
+            <div class="onlineRoomHint">اكتب الكود الذي أرسله صديقك.</div>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
+            <button id="roomBackBtn2" class="btn ghost" type="button">رجوع</button>
+            <button id="roomJoinConfirmBtn" class="btn primary" type="button">انضم</button>
+          </div>
+        </div>`;
+
+        const inp = document.getElementById("roomCodeInput");
+        if (inp) {
+          inp.addEventListener("input", () => {
+            inp.value = normalizeRoomCode(inp.value);
+          });
+          setTimeout(() => {
+            try {
+              inp.focus();
+            } catch {}
+          }, 50);
+          inp.addEventListener("keydown", (e) => {
+            if (e && e.key === "Enter") {
+              e.preventDefault();
+              joinRoomFromInput();
+            }
+          });
+        }
+
+        const backBtn = document.getElementById("roomBackBtn2");
+        if (backBtn) backBtn.addEventListener("click", () => renderOnlineSelect());
+        const joinBtn = document.getElementById("roomJoinConfirmBtn");
+        if (joinBtn) joinBtn.addEventListener("click", () => joinRoomFromInput());
+      }
+
+      async function joinRoomFromInput() {
+        const inp = document.getElementById("roomCodeInput");
+        const code = normalizeRoomCode(inp && inp.value ? inp.value : "");
+        if (!code) {
+          enqueueToast({ title: t("onlineBtn"), body: "اكتب كود صحيح.", autoMs: 2000 });
+          return;
+        }
+        await fetchOnlineEnabledOnce(true).catch(() => {});
+        if (!onlineFeature.enabled) {
+          enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
+          renderOnlineSelect();
+          return;
+        }
+        const r = await friendsJson("/api/online/room/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        if (!r.ok || !r.data) {
+          const msg =
+            r.data && r.data.error === "room_not_found"
+              ? "لم يتم العثور على الغرفة."
+              : r.data && r.data.error === "room_full"
+                ? "الغرفة ممتلئة."
+                : r.data && r.data.error === "cannot_join_own"
+                  ? "لا يمكنك الانضمام لغرفتك."
+                  : r.data && r.data.error === "insufficient_coins"
+                    ? "عملاتك غير كافية."
+                    : r.data && r.data.error === "online_disabled"
+                      ? "الأونلاين متوقف حالياً."
+                      : "تعذر الانضمام.";
+          enqueueToast({ title: t("onlineBtn"), body: msg, autoMs: 2600 });
+          return;
+        }
+        const me = await ensureMeLoaded();
+        stopOnlineQueuePolling();
+        stopOnlineRoomPolling();
+        closeHowTo();
+        startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null);
       }
 
       async function onlineJoin(mode) {

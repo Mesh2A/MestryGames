@@ -66,6 +66,34 @@ export async function ensureDbReady() {
             ON "OnlineMatch"("bEmail", "createdAt")
           `);
           await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "OnlineRoom" (
+              "code" TEXT PRIMARY KEY,
+              "mode" TEXT NOT NULL,
+              "fee" INTEGER NOT NULL,
+              "codeLen" INTEGER NOT NULL,
+              "hostEmail" TEXT NOT NULL,
+              "guestEmail" TEXT,
+              "status" TEXT NOT NULL,
+              "matchId" TEXT,
+              "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE UNIQUE INDEX IF NOT EXISTS "OnlineRoom_waiting_hostEmail_key"
+            ON "OnlineRoom"("hostEmail")
+            WHERE "status" = 'waiting'
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE UNIQUE INDEX IF NOT EXISTS "OnlineRoom_waiting_guestEmail_key"
+            ON "OnlineRoom"("guestEmail")
+            WHERE "status" = 'waiting' AND "guestEmail" IS NOT NULL
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE INDEX IF NOT EXISTS "OnlineRoom_status_createdAt_idx"
+            ON "OnlineRoom"("status", "createdAt")
+          `);
+          await prisma.$executeRawUnsafe(`
             CREATE TABLE IF NOT EXISTS "AppConfig" (
               "id" TEXT PRIMARY KEY,
               "onlineEnabled" BOOLEAN NOT NULL DEFAULT TRUE,

@@ -90,6 +90,16 @@ export async function POST(req: NextRequest) {
           await refundCoins(tx, row.email, row.fee);
         }
 
+        const cancelledRooms = await tx.$queryRaw<{ hostEmail: string; fee: number }[]>`
+          UPDATE "OnlineRoom"
+          SET "status" = 'cancelled', "updatedAt" = NOW()
+          WHERE "status" = 'waiting'
+          RETURNING "hostEmail", "fee"
+        `;
+        for (const row of cancelledRooms) {
+          await refundCoins(tx, row.hostEmail, row.fee);
+        }
+
         const matches = await tx.$queryRaw<{ id: string; fee: number; aEmail: string; bEmail: string; state: unknown }[]>`
           SELECT "id", "fee", "aEmail", "bEmail", "state"
           FROM "OnlineMatch"
