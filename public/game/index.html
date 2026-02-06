@@ -8594,7 +8594,17 @@
 
         el.winBox.classList.toggle("onlineWin", hasWinner && winnerIsMe && !isDisabled);
         el.winBox.classList.toggle("onlineLose", hasWinner && !winnerIsMe && !isDisabled);
-        el.winTitle.textContent = isDisabled ? "تم إيقاف الأونلاين" : !hasWinner && isForfeit ? "تم إلغاء المباراة" : winnerIsMe ? "فزت!" : "خسرت";
+        el.winTitle.textContent = isDisabled
+          ? "تم إيقاف الأونلاين"
+          : !hasWinner && isForfeit
+            ? "تم إلغاء المباراة"
+            : isForfeit && forfeitedBy === "them"
+              ? "الخصم انسحب"
+              : isForfeit && forfeitedBy === "me"
+                ? "انسحبت"
+                : winnerIsMe
+                  ? "فزت!"
+                  : "خسرت";
 
         const subLine =
           isDisabled
@@ -8889,14 +8899,7 @@
               vibrate([0, 30, 40]);
             }
           }
-          if (String(m.endedReason || "").startsWith("forfeit") && m.forfeitedBy === "them" && !onlineState.autoReturnId) {
-            enqueueToast({ title: t("onlineBtn"), body: "الخصم انسحب", autoMs: 1800 });
-            onlineState.autoReturnId = setTimeout(() => {
-              onlineState.autoReturnId = null;
-              if (!app.stage || app.stage.kind !== "online") return;
-              onlineReturnToModeSelect();
-            }, 1400);
-          }
+          stopOnlineAutoReturn();
         }
       }
 
