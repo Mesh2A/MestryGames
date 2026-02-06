@@ -198,13 +198,19 @@
         margin: 0;
         font-family: "Cairo", "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Arabic",
           "Noto Sans", "Helvetica Neue", sans-serif;
-        font-weight: 650;
+        font-weight: 600;
         color: var(--text);
         background: var(--bg-grad-a), var(--bg-grad-b), var(--bg-grad-c);
         overflow: hidden;
         text-rendering: optimizeLegibility;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
       }
       html[data-mobile="0"] body::before {
         content: "";
@@ -486,8 +492,8 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .friendDetailsCard {
-          top: 12px;
-          max-height: calc(100vh - 24px);
+          top: calc(12px + var(--safe-top));
+          max-height: calc(100dvh - 24px - var(--safe-bottom));
         }
       }
       .profileSplit .k {
@@ -518,7 +524,7 @@
         top: var(--pTop, 76px);
         left: var(--pLeft, 12px);
         width: min(560px, calc(100vw - 24px));
-        max-height: calc(100vh - var(--pTop, 76px) - 12px);
+        max-height: calc(100dvh - var(--pTop, 76px) - 12px - var(--safe-bottom));
         overflow: auto;
         border-radius: 22px;
         border: 1px solid rgba(255, 255, 255, 0.16);
@@ -797,6 +803,19 @@
         transition: opacity 260ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
         will-change: opacity, transform;
       }
+      html[data-mobile="1"] .screen {
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        padding-bottom: calc(20px + var(--safe-bottom));
+      }
+      html[data-mobile="1"] #mapScreen {
+        overflow: hidden;
+        touch-action: none;
+        padding-bottom: 20px;
+      }
       html[data-reduce-motion="1"] .screen {
         transition: none;
         will-change: auto;
@@ -900,6 +919,8 @@
         margin: 0 0 8px 0;
         font-size: clamp(22px, 3vw, 34px);
         letter-spacing: 0.2px;
+        font-weight: 900;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
       }
       .desc {
         margin: 0 0 20px 0;
@@ -2118,7 +2139,7 @@
       }
       .friendsPanel {
         position: fixed;
-        top: 74px;
+        top: calc(74px + var(--safe-top));
         left: 16px;
         right: auto;
         width: min(380px, calc(100vw - 24px));
@@ -2152,11 +2173,11 @@
       }
       .friendDetailsCard {
         position: absolute;
-        top: 74px;
+        top: calc(74px + var(--safe-top));
         left: 50%;
         transform: translateX(-50%);
         width: min(560px, calc(100vw - 24px));
-        max-height: calc(100vh - 96px);
+        max-height: calc(100dvh - 96px - var(--safe-bottom));
         overflow: auto;
         border-radius: 18px;
         border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2225,7 +2246,7 @@
       }
       .chatPanel {
         position: fixed;
-        top: 74px;
+        top: calc(74px + var(--safe-top));
         left: 16px;
         right: auto;
         width: min(760px, calc(100vw - 24px));
@@ -2249,7 +2270,7 @@
         backdrop-filter: blur(12px);
         padding: 12px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        max-height: calc(100vh - 96px);
+        max-height: calc(100dvh - 96px - var(--safe-bottom));
         overflow: auto;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
@@ -2261,7 +2282,7 @@
         backdrop-filter: blur(12px);
         padding: 12px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        max-height: min(660px, calc(100vh - 96px));
+        max-height: min(660px, calc(100dvh - 96px - var(--safe-bottom)));
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -2302,21 +2323,71 @@
         padding: 10px;
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(0, 0, 0, 0.18);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.12));
         align-content: start;
       }
       .chatFriendRow {
         width: 100%;
-        padding: 8px 10px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
+        padding: 9px 10px;
+        border-radius: 14px;
+        border: 1px solid var(--btn-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
+        color: var(--text);
         cursor: pointer;
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
+        box-shadow: 0 14px 42px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        user-select: none;
+        position: relative;
+        overflow: hidden;
+      }
+      .chatFriendRow:hover {
+        transform: translateY(-1px);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)), var(--btn-hover-bg);
+        border-color: var(--btn-hover-border);
+        box-shadow: 0 18px 56px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        filter: saturate(1.08) brightness(1.03);
+      }
+      .chatFriendRow:active {
+        transform: translateY(0px) scale(0.995);
+      }
+      .chatFriendRow:focus-visible {
+        outline: 2px solid var(--glow-a);
+        outline-offset: 3px;
       }
       .chatFriendRow.active {
-        border-color: rgba(37, 99, 235, 0.7);
-        background: rgba(37, 99, 235, 0.15);
+        border-color: var(--btn-primary-border);
+        background: var(--btn-primary-grad);
+        box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--glow-a) inset;
+      }
+      html[data-mobile="0"] .chatFriendRow::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        background: radial-gradient(140px 80px at 30% 15%, var(--shine), transparent 65%),
+          radial-gradient(160px 120px at 70% 0%, var(--glow-a), transparent 70%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+        opacity: 0.75;
+        pointer-events: none;
+        transform: translateZ(0);
+      }
+      html[data-mobile="0"] .chatFriendRow::after {
+        content: "";
+        position: absolute;
+        top: -60%;
+        left: -80%;
+        width: 60%;
+        height: 220%;
+        background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.35) 45%, transparent 75%);
+        transform: translateX(-120%) rotate(18deg);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 700ms ease, opacity 200ms ease;
+      }
+      html[data-mobile="0"] .chatFriendRow:hover::after {
+        opacity: 0.55;
+        transform: translateX(320%) rotate(18deg);
       }
       .chatRight {
         border-radius: 14px;
@@ -2441,9 +2512,19 @@
         flex: 1 1 auto;
       }
       .friendNameRow {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 8px;
+        min-width: 0;
+        width: 100%;
+      }
+      .friendNameText {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 900;
+        letter-spacing: 0.1px;
       }
       .chatComposer {
         display: flex;
@@ -2545,34 +2626,65 @@
         gap: 6px;
         padding: 6px;
         border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
       }
       .friendsTab {
         flex: 1 1 auto;
         padding: 8px 10px;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
+        border: 1px solid var(--btn-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
+        color: var(--text);
         cursor: pointer;
-        font-weight: 700;
+        font-weight: 800;
         font-size: 12px;
+        transition: transform 140ms ease, filter 140ms ease, border-color 140ms ease, background 140ms ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .friendsTab:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+        border-color: var(--btn-hover-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)), var(--btn-hover-bg);
+      }
+      .friendsTab:active {
+        transform: translateY(0px) scale(0.99);
       }
       .friendsTab.active {
-        border-color: rgba(37, 99, 235, 0.7);
-        background: rgba(37, 99, 235, 0.18);
+        border-color: var(--btn-primary-border);
+        background: var(--btn-primary-grad);
+      }
+      html[data-mobile="0"] .friendsTab::after {
+        content: "";
+        position: absolute;
+        top: -60%;
+        left: -80%;
+        width: 60%;
+        height: 220%;
+        background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.32) 45%, transparent 75%);
+        transform: translateX(-120%) rotate(18deg);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 700ms ease, opacity 200ms ease;
+      }
+      html[data-mobile="0"] .friendsTab:hover::after {
+        opacity: 0.5;
+        transform: translateX(320%) rotate(18deg);
       }
       .friendsList {
         margin-top: 10px;
         display: grid;
         gap: 8px;
-        max-height: 260px;
+        max-height: 320px;
         overflow: auto;
         padding: 10px;
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(0, 0, 0, 0.18);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.12));
         align-content: start;
       }
       .giftRow {
@@ -2580,38 +2692,106 @@
         width: 100%;
         padding: 10px 10px;
         border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
+        border: 1px solid var(--btn-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
+        color: var(--text);
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
+        box-shadow: 0 14px 42px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        position: relative;
+        overflow: hidden;
       }
       .friendRow {
         text-align: right;
         width: 100%;
         padding: 10px 10px;
         border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
+        border: 1px solid var(--btn-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
+        color: var(--text);
         cursor: pointer;
+        backdrop-filter: blur(var(--ui-blur));
+        -webkit-backdrop-filter: blur(var(--ui-blur));
+        box-shadow: 0 14px 42px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        user-select: none;
+        position: relative;
+        overflow: hidden;
+      }
+      .friendRow:hover {
+        transform: translateY(-1px);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)), var(--btn-hover-bg);
+        border-color: var(--btn-hover-border);
+        box-shadow: 0 18px 56px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        filter: saturate(1.08) brightness(1.03);
+      }
+      .friendRow:active {
+        transform: translateY(0px) scale(0.995);
+      }
+      .friendRow:focus-visible {
+        outline: 2px solid var(--glow-a);
+        outline-offset: 3px;
       }
       .friendRow.active {
-        border-color: rgba(37, 99, 235, 0.7);
-        background: rgba(37, 99, 235, 0.15);
+        border-color: var(--btn-primary-border);
+        background: var(--btn-primary-grad);
+        box-shadow: 0 18px 58px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--glow-a) inset;
       }
       .friendMeta {
         display: flex;
         justify-content: space-between;
         gap: 10px;
-        align-items: baseline;
+        align-items: center;
+        flex-direction: row-reverse;
+      }
+      html[dir="ltr"] .friendMeta {
+        flex-direction: row;
       }
       .friendMeta .name {
-        font-weight: 700;
+        font-weight: 900;
+        letter-spacing: 0.1px;
+        font-size: 14px;
+        min-width: 0;
+        flex: 1 1 auto;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
       }
       .friendMeta .id {
         opacity: 0.85;
         font-size: 12px;
-        font-weight: 700;
+        font-weight: 800;
         letter-spacing: 0.6px;
+        flex: 0 0 auto;
+      }
+      html[data-mobile="0"] .friendRow::before,
+      html[data-mobile="0"] .giftRow::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        background: radial-gradient(140px 80px at 30% 15%, var(--shine), transparent 65%),
+          radial-gradient(160px 120px at 70% 0%, var(--glow-a), transparent 70%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+        opacity: 0.75;
+        pointer-events: none;
+        transform: translateZ(0);
+      }
+      html[data-mobile="0"] .friendRow::after,
+      html[data-mobile="0"] .giftRow::after {
+        content: "";
+        position: absolute;
+        top: -60%;
+        left: -80%;
+        width: 60%;
+        height: 220%;
+        background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.35) 45%, transparent 75%);
+        transform: translateX(-120%) rotate(18deg);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 700ms ease, opacity 200ms ease;
+      }
+      html[data-mobile="0"] .friendRow:hover::after,
+      html[data-mobile="0"] .giftRow:hover::after {
+        opacity: 0.55;
+        transform: translateX(320%) rotate(18deg);
       }
       .idLine {
         display: flex;
@@ -2725,8 +2905,8 @@
         margin-inline-start: auto;
       }
       .friendsTiny {
-        font-size: 11px;
-        opacity: 0.78;
+        font-size: 12px;
+        opacity: 0.76;
         line-height: 1.5;
       }
       .presenceLine {
@@ -2891,7 +3071,7 @@
           min-width: 100%;
         }
         .friendsPanel {
-          top: 70px;
+          top: calc(70px + var(--safe-top));
         }
       }
 
@@ -9065,7 +9245,7 @@
                   <div class="friendLine">
                     <div class="avatarMini">${avatar}</div>
                     <div class="friendText">
-                      <div class="friendNameRow"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span><span class="friendsTiny" style="margin-inline-start:8px">LV ${escapeHtml(String(typeof f.level === "number" ? Math.max(1, Math.floor(f.level)) : 1))}</span></div>
+                      <div class="friendNameRow"><span class="${dot}"></span><span class="friendNameText">${escapeHtml(f.firstName || "Player")}</span><span class="friendsTiny" style="margin-inline-start:8px">LV ${escapeHtml(String(typeof f.level === "number" ? Math.max(1, Math.floor(f.level)) : 1))}</span></div>
                       <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
                     </div>
                   </div>
@@ -9254,7 +9434,7 @@
                 <div class="friendLine">
                   <div class="avatarMini">${avatar}</div>
                   <div class="friendText">
-                    <div class="friendNameRow"><span class="${dot}"></span><span>${escapeHtml(f.firstName || "Player")}</span></div>
+                    <div class="friendNameRow"><span class="${dot}"></span><span class="friendNameText">${escapeHtml(f.firstName || "Player")}</span></div>
                     <div class="friendsTiny">آخر تسجيل دخول: ${escapeHtml(formatAgo(lastSeenAt))}</div>
                   </div>
                 </div>
