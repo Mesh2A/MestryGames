@@ -949,6 +949,7 @@
         place-items: center;
         gap: 14px;
         width: 100%;
+        padding-bottom: calc(74px + var(--safe-bottom));
       }
       .panel.homeCard {
         width: min(320px, 92vw);
@@ -988,14 +989,16 @@
         line-height: 1.35;
       }
       .homeFooterBar {
-        width: min(520px, 92vw);
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(13, 18, 34, 0.55);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 12;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(0deg, rgba(18, 24, 44, 0.94), rgba(12, 16, 30, 0.72));
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
-        padding: 10px 12px;
+        padding: 12px calc(16px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(16px + var(--safe-left));
         display: flex;
         align-items: center;
         justify-content: space-between;
