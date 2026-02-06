@@ -987,6 +987,80 @@
         white-space: normal;
         line-height: 1.35;
       }
+      .homeFooterBar {
+        width: min(520px, 92vw);
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.55);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      html[data-reduce-motion="1"] .homeFooterBar {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+      }
+      .homeFooterLinks {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .homeFooterLink {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.86);
+        font-weight: 900;
+        font-size: 12px;
+        padding: 8px 8px;
+        border-radius: 12px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+      }
+      .homeFooterLink::after {
+        content: "";
+        position: absolute;
+        top: -40%;
+        bottom: -40%;
+        width: 90px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+        transform: translateX(-140%) skewX(-18deg);
+        opacity: 0;
+      }
+      .homeFooterLink:hover {
+        color: rgba(255, 255, 255, 0.98);
+        text-shadow: 0 0 16px rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .homeFooterLink:hover::after {
+        opacity: 1;
+        transform: translateX(240%) skewX(-18deg);
+        transition: transform 520ms ease, opacity 240ms ease;
+      }
+      html[data-reduce-motion="1"] .homeFooterLink:hover::after {
+        transition: none;
+      }
+      .homeFooterLink:focus-visible {
+        outline: 2px solid rgba(255, 255, 255, 0.25);
+        outline-offset: 2px;
+      }
+      .homeFooterCopy {
+        font-size: 12px;
+        opacity: 0.72;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        user-select: none;
+        white-space: nowrap;
+      }
       @media (max-width: 520px) {
         .panel.homeCard {
           min-height: 450px;
@@ -2475,6 +2549,51 @@
       .confirmMiniRow .btn {
         flex: 1;
       }
+      .formMiniCard {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(420px, calc(100vw - 24px));
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.92);
+        padding: 12px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      }
+      .formMiniHead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .formMiniClose {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        cursor: pointer;
+      }
+      .miniSelect {
+        width: 100%;
+      }
+      .miniTextarea {
+        width: 100%;
+        min-height: 110px;
+        resize: vertical;
+        margin-top: 10px;
+      }
+      .legalBody {
+        margin-top: 10px;
+        font-size: 12px;
+        line-height: 1.7;
+        opacity: 0.92;
+        max-height: min(52vh, 360px);
+        overflow: auto;
+        padding-inline-end: 6px;
+      }
       .chatPanel {
         position: fixed;
         top: calc(74px + var(--safe-top));
@@ -3557,6 +3676,14 @@
                 </div>
               </div>
             </div>
+            <div id="homeFooterBar" class="homeFooterBar" aria-label="Footer">
+              <div class="homeFooterLinks">
+                <button id="homeFeedbackBtn" class="homeFooterLink" type="button">Feedback</button>
+                <button id="homePolicyBtn" class="homeFooterLink" type="button">السياسة</button>
+                <button id="homePrivacyBtn" class="homeFooterLink" type="button">الخصوصية</button>
+              </div>
+              <div class="homeFooterCopy">© 2026 MestRy</div>
+            </div>
           </div>
         </section>
 
@@ -4004,6 +4131,61 @@
           <button id="friendConfirmRemoveBtn" class="btn danger" type="button">حذف صديق</button>
           <button id="friendConfirmBlockBtn" class="btn" type="button">حظر صديق</button>
         </div>
+      </div>
+    </div>
+
+    <div id="reportBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="formMiniCard" role="dialog" aria-modal="true">
+        <div class="formMiniHead">
+          <div id="reportTitle" class="confirmMiniQ">إبلاغ</div>
+          <button id="reportCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <select id="reportType" class="miniInput miniSelect" aria-label="نوع البلاغ">
+          <option value="غش">غش</option>
+          <option value="إساءة / سب">إساءة / سب</option>
+          <option value="سبام">سبام</option>
+          <option value="استغلال ثغرة">استغلال ثغرة</option>
+          <option value="أخرى">أخرى</option>
+        </select>
+        <textarea id="reportText" class="miniTextarea" placeholder="اكتب البلاغ هنا..." maxlength="1200"></textarea>
+        <div class="confirmMiniRow">
+          <button id="reportSendBtn" class="btn danger" type="button">إرسال البلاغ</button>
+          <button id="reportCancelBtn" class="btn" type="button">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="feedbackBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="formMiniCard" role="dialog" aria-modal="true">
+        <div class="formMiniHead">
+          <div id="feedbackTitle" class="confirmMiniQ">Feedback</div>
+          <button id="feedbackCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <textarea id="feedbackText" class="miniTextarea" placeholder="اكتب اقتراحك أو ملاحظتك..." maxlength="2000"></textarea>
+        <div class="confirmMiniRow">
+          <button id="feedbackSendBtn" class="btn primary" type="button">إرسال</button>
+          <button id="feedbackCancelBtn" class="btn" type="button">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="policyBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="formMiniCard" role="dialog" aria-modal="true">
+        <div class="formMiniHead">
+          <div id="policyTitle" class="confirmMiniQ">السياسة</div>
+          <button id="policyCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <div id="policyBody" class="legalBody"></div>
+      </div>
+    </div>
+
+    <div id="privacyBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="formMiniCard" role="dialog" aria-modal="true">
+        <div class="formMiniHead">
+          <div id="privacyTitle" class="confirmMiniQ">الخصوصية</div>
+          <button id="privacyCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <div id="privacyBody" class="legalBody"></div>
       </div>
     </div>
 
@@ -4857,6 +5039,10 @@
         logoutBtn: document.getElementById("logoutBtn"),
         discordBtn: document.getElementById("discordBtn"),
         discordBtnK: document.getElementById("discordBtnK"),
+        homeFooterBar: document.getElementById("homeFooterBar"),
+        homeFeedbackBtn: document.getElementById("homeFeedbackBtn"),
+        homePolicyBtn: document.getElementById("homePolicyBtn"),
+        homePrivacyBtn: document.getElementById("homePrivacyBtn"),
         progressK: document.getElementById("progressK"),
         helpK: document.getElementById("helpK"),
         helpText: document.getElementById("helpText"),
@@ -4884,6 +5070,27 @@
         howWarn: document.getElementById("howWarn"),
         howWarn2: document.getElementById("howWarn2"),
         howHintNote: document.getElementById("howHintNote"),
+        reportBackdrop: document.getElementById("reportBackdrop"),
+        reportTitle: document.getElementById("reportTitle"),
+        reportCloseBtn: document.getElementById("reportCloseBtn"),
+        reportType: document.getElementById("reportType"),
+        reportText: document.getElementById("reportText"),
+        reportSendBtn: document.getElementById("reportSendBtn"),
+        reportCancelBtn: document.getElementById("reportCancelBtn"),
+        feedbackBackdrop: document.getElementById("feedbackBackdrop"),
+        feedbackTitle: document.getElementById("feedbackTitle"),
+        feedbackCloseBtn: document.getElementById("feedbackCloseBtn"),
+        feedbackText: document.getElementById("feedbackText"),
+        feedbackSendBtn: document.getElementById("feedbackSendBtn"),
+        feedbackCancelBtn: document.getElementById("feedbackCancelBtn"),
+        policyBackdrop: document.getElementById("policyBackdrop"),
+        policyTitle: document.getElementById("policyTitle"),
+        policyCloseBtn: document.getElementById("policyCloseBtn"),
+        policyBody: document.getElementById("policyBody"),
+        privacyBackdrop: document.getElementById("privacyBackdrop"),
+        privacyTitle: document.getElementById("privacyTitle"),
+        privacyCloseBtn: document.getElementById("privacyCloseBtn"),
+        privacyBody: document.getElementById("privacyBody"),
         settingsContent: document.getElementById("settingsContent"),
         missionsContent: document.getElementById("missionsContent"),
         profileDropBackdrop: document.getElementById("profileDropBackdrop"),
@@ -5105,6 +5312,21 @@
           howBtn: "طريقة اللعبه",
           logoutBtn: "تسجيل خروج",
           discordBtn: "Discord",
+          footerFeedback: "Feedback",
+          footerPolicy: "السياسة",
+          footerPrivacy: "الخصوصية",
+          feedbackTitle: "Feedback",
+          feedbackPlaceholder: "اكتب اقتراحك أو ملاحظتك...",
+          feedbackSendBtn: "إرسال",
+          reportTitle: "إبلاغ",
+          reportTypeLabel: "نوع البلاغ",
+          reportPlaceholder: "اكتب البلاغ هنا...",
+          reportSendBtn: "إرسال البلاغ",
+          reportCancelBtn: "إلغاء",
+          policyTitle: "السياسة",
+          privacyTitle: "الخصوصية",
+          policyBodyHtml: `<div style="font-weight:900; margin-bottom:6px">سياسة الاستخدام</div><div>باستخدامك للعبة أنت توافق على عدم إساءة الاستخدام أو الغش أو الإضرار بتجربة اللاعبين.</div><div style="margin-top:8px; opacity:.9">قد يتم اتخاذ إجراءات (حظر/تقييد) عند تكرار المخالفات.</div>`,
+          privacyBodyHtml: `<div style="font-weight:900; margin-bottom:6px">سياسة الخصوصية</div><div>نستخدم بيانات أساسية لتشغيل الحساب والمزامنة (مثل البريد) وتحسين التجربة.</div><div style="margin-top:8px; opacity:.9">أي فيدباك أو بلاغ قد يتم إرساله للدعم لمراجعته. لا تشارك معلومات حساسة في الرسائل.</div>`,
           assistBtn: "مساعدة",
           assistTitle: "مساعدة",
           assistIntro: "هذه 3 مساعدات للمرحلة. اضغط على المساعدة لاستخدامها.",
@@ -5290,6 +5512,21 @@
           howBtn: "How to play",
           logoutBtn: "Logout",
           discordBtn: "Discord",
+          footerFeedback: "Feedback",
+          footerPolicy: "Policy",
+          footerPrivacy: "Privacy",
+          feedbackTitle: "Feedback",
+          feedbackPlaceholder: "Write your feedback or suggestion…",
+          feedbackSendBtn: "Send",
+          reportTitle: "Report",
+          reportTypeLabel: "Report type",
+          reportPlaceholder: "Write the report…",
+          reportSendBtn: "Send report",
+          reportCancelBtn: "Cancel",
+          policyTitle: "Policy",
+          privacyTitle: "Privacy",
+          policyBodyHtml: `<div style="font-weight:900; margin-bottom:6px">Usage policy</div><div>By using the game, you agree not to abuse, cheat, or harm other players’ experience.</div><div style="margin-top:8px; opacity:.9">Actions may be taken for repeated violations.</div>`,
+          privacyBodyHtml: `<div style="font-weight:900; margin-bottom:6px">Privacy policy</div><div>We use basic data to operate your account and sync your progress (like email) and to improve the experience.</div><div style="margin-top:8px; opacity:.9">Feedback and reports may be sent to support for review. Do not include sensitive information.</div>`,
           assistBtn: "Help",
           assistTitle: "Help",
           assistIntro: "These are 3 assists for this level. Tap an assist to use it.",
@@ -5498,6 +5735,27 @@
         if (el.howBtn) el.howBtn.textContent = t("howBtn");
         if (el.logoutBtn) el.logoutBtn.textContent = t("logoutBtn");
         if (el.discordBtnK) el.discordBtnK.textContent = t("discordBtn");
+        if (el.homeFeedbackBtn) el.homeFeedbackBtn.textContent = t("footerFeedback");
+        if (el.homePolicyBtn) el.homePolicyBtn.textContent = t("footerPolicy");
+        if (el.homePrivacyBtn) el.homePrivacyBtn.textContent = t("footerPrivacy");
+        if (el.feedbackTitle) el.feedbackTitle.textContent = t("feedbackTitle");
+        if (el.feedbackText) el.feedbackText.placeholder = t("feedbackPlaceholder");
+        if (el.feedbackSendBtn) el.feedbackSendBtn.textContent = t("feedbackSendBtn");
+        if (el.reportTitle) el.reportTitle.textContent = t("reportTitle");
+        if (el.reportType) {
+          el.reportType.setAttribute("aria-label", t("reportTypeLabel"));
+          el.reportType.innerHTML =
+            next === "en"
+              ? `<option value="Cheating">Cheating</option><option value="Harassment">Harassment</option><option value="Spam">Spam</option><option value="Exploit">Exploit</option><option value="Other">Other</option>`
+              : `<option value="غش">غش</option><option value="إساءة / سب">إساءة / سب</option><option value="سبام">سبام</option><option value="استغلال ثغرة">استغلال ثغرة</option><option value="أخرى">أخرى</option>`;
+        }
+        if (el.reportText) el.reportText.placeholder = t("reportPlaceholder");
+        if (el.reportSendBtn) el.reportSendBtn.textContent = t("reportSendBtn");
+        if (el.reportCancelBtn) el.reportCancelBtn.textContent = t("reportCancelBtn");
+        if (el.policyTitle) el.policyTitle.textContent = t("policyTitle");
+        if (el.privacyTitle) el.privacyTitle.textContent = t("privacyTitle");
+        if (el.policyBody) el.policyBody.innerHTML = t("policyBodyHtml");
+        if (el.privacyBody) el.privacyBody.innerHTML = t("privacyBodyHtml");
         if (el.assistBtn) el.assistBtn.textContent = t("assistBtn");
         if (el.progressK) el.progressK.textContent = t("progressK");
         if (el.helpK) el.helpK.textContent = t("helpK");
@@ -8736,6 +8994,9 @@
         el.discordBtn.style.display = "";
         el.discordBtn.addEventListener("click", () => openDiscord());
       }
+      if (el.homeFeedbackBtn) el.homeFeedbackBtn.addEventListener("click", () => openFeedbackModal());
+      if (el.homePolicyBtn) el.homePolicyBtn.addEventListener("click", () => openPolicyModal());
+      if (el.homePrivacyBtn) el.homePrivacyBtn.addEventListener("click", () => openPrivacyModal());
       el.backToMapBtn.addEventListener("click", () => {
         if (app.stage && app.stage.kind === "online") {
           openOnlineWithdrawModal();
@@ -9843,6 +10104,7 @@
             <button id="friendsGiftBtn" class="btn ${canGift ? "primary" : ""}" type="button" ${canGift ? "" : "disabled"}>اهداء</button>
             <button id="friendsRemoveBtn" class="btn danger" type="button">حذف/حظر</button>
             <button id="friendsDetailsBtn" class="btn" type="button">تفاصيل اللاعب</button>
+            <button id="friendsReportBtn" class="btn" type="button">إبلاغ</button>
             <div class="avatarSquare friendsFriendAvatar">${friendAvatarHtml}</div>
           </div>
           ${giftNote}
@@ -10159,6 +10421,22 @@
           closeFriendDetailsModal();
           return;
         }
+        if (e.key === "Escape" && el.reportBackdrop && el.reportBackdrop.classList.contains("show")) {
+          closeReportModal();
+          return;
+        }
+        if (e.key === "Escape" && el.feedbackBackdrop && el.feedbackBackdrop.classList.contains("show")) {
+          closeFeedbackModal();
+          return;
+        }
+        if (e.key === "Escape" && el.policyBackdrop && el.policyBackdrop.classList.contains("show")) {
+          closePolicyModal();
+          return;
+        }
+        if (e.key === "Escape" && el.privacyBackdrop && el.privacyBackdrop.classList.contains("show")) {
+          closePrivacyModal();
+          return;
+        }
         if (e.key === "Escape" && el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show")) {
           closeProfileDrop();
           return;
@@ -10281,6 +10559,120 @@
         el.friendDetailsBody.innerHTML = "";
       }
 
+      function openReportModal(target) {
+        if (!el.reportBackdrop || !el.reportText) return;
+        const id = target && typeof target.id === "string" ? target.id : "";
+        const name = target && typeof target.name === "string" ? target.name : "";
+        if (!id) return;
+        el.reportBackdrop.dataset.targetId = id;
+        el.reportBackdrop.dataset.targetName = name;
+        if (el.reportTitle) el.reportTitle.textContent = name ? `${t("reportTitle")} • ${name}` : t("reportTitle");
+        if (el.reportType) el.reportType.value = el.reportType.value || (currentLang() === "en" ? "Cheating" : "غش");
+        el.reportText.value = "";
+        el.reportBackdrop.classList.add("show");
+        el.reportBackdrop.setAttribute("aria-hidden", "false");
+        setTimeout(() => el.reportText && el.reportText.focus && el.reportText.focus(), 0);
+      }
+
+      function closeReportModal() {
+        if (!el.reportBackdrop) return;
+        el.reportBackdrop.classList.remove("show");
+        el.reportBackdrop.setAttribute("aria-hidden", "true");
+        el.reportBackdrop.dataset.targetId = "";
+        el.reportBackdrop.dataset.targetName = "";
+        if (el.reportText) el.reportText.value = "";
+      }
+
+      async function submitReport() {
+        const targetId = el.reportBackdrop ? String(el.reportBackdrop.dataset.targetId || "") : "";
+        if (!targetId) return;
+        const type = el.reportType && typeof el.reportType.value === "string" ? String(el.reportType.value).trim() : "";
+        const msg = el.reportText ? String(el.reportText.value || "").replace(/\s+/g, " ").trim() : "";
+        if (!type || msg.length < 3) {
+          enqueueToast({ title: t("reportTitle"), body: currentLang() === "en" ? "Write more details." : "اكتب تفاصيل أكثر.", autoMs: 2200 });
+          return;
+        }
+        const r = await friendsJson("/api/report-player", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetId, reason: type, details: msg }),
+        });
+        if (r.ok) {
+          closeReportModal();
+          enqueueToast({ title: t("reportTitle"), body: currentLang() === "en" ? "Report sent." : "تم إرسال البلاغ.", autoMs: 2200 });
+          return;
+        }
+        if (r.status === 401) {
+          enqueueToast({ title: t("reportTitle"), body: currentLang() === "en" ? "Please sign in first." : "سجّل دخولك أولاً.", autoMs: 2400 });
+          return;
+        }
+        enqueueToast({ title: t("reportTitle"), body: (r.data && r.data.error) || (currentLang() === "en" ? "Failed." : "فشل الإرسال."), autoMs: 2400 });
+      }
+
+      function openFeedbackModal() {
+        if (!el.feedbackBackdrop || !el.feedbackText) return;
+        if (el.feedbackTitle) el.feedbackTitle.textContent = t("feedbackTitle");
+        el.feedbackText.value = "";
+        el.feedbackBackdrop.classList.add("show");
+        el.feedbackBackdrop.setAttribute("aria-hidden", "false");
+        setTimeout(() => el.feedbackText && el.feedbackText.focus && el.feedbackText.focus(), 0);
+      }
+
+      function closeFeedbackModal() {
+        if (!el.feedbackBackdrop) return;
+        el.feedbackBackdrop.classList.remove("show");
+        el.feedbackBackdrop.setAttribute("aria-hidden", "true");
+        if (el.feedbackText) el.feedbackText.value = "";
+      }
+
+      async function submitFeedback() {
+        const msg = el.feedbackText ? String(el.feedbackText.value || "").replace(/\s+/g, " ").trim() : "";
+        if (msg.length < 3) {
+          enqueueToast({ title: t("feedbackTitle"), body: currentLang() === "en" ? "Write more details." : "اكتب تفاصيل أكثر.", autoMs: 2200 });
+          return;
+        }
+        const page = `${location.pathname}${location.search}${location.hash}`;
+        const r = await friendsJson("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: msg, page }),
+        });
+        if (r.ok) {
+          closeFeedbackModal();
+          enqueueToast({ title: t("feedbackTitle"), body: currentLang() === "en" ? "Sent. Thanks!" : "تم الإرسال. شكرًا!", autoMs: 2200 });
+          return;
+        }
+        enqueueToast({ title: t("feedbackTitle"), body: (r.data && r.data.error) || (currentLang() === "en" ? "Failed." : "فشل الإرسال."), autoMs: 2400 });
+      }
+
+      function openPolicyModal() {
+        if (!el.policyBackdrop) return;
+        if (el.policyTitle) el.policyTitle.textContent = t("policyTitle");
+        if (el.policyBody) el.policyBody.innerHTML = t("policyBodyHtml");
+        el.policyBackdrop.classList.add("show");
+        el.policyBackdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closePolicyModal() {
+        if (!el.policyBackdrop) return;
+        el.policyBackdrop.classList.remove("show");
+        el.policyBackdrop.setAttribute("aria-hidden", "true");
+      }
+
+      function openPrivacyModal() {
+        if (!el.privacyBackdrop) return;
+        if (el.privacyTitle) el.privacyTitle.textContent = t("privacyTitle");
+        if (el.privacyBody) el.privacyBody.innerHTML = t("privacyBodyHtml");
+        el.privacyBackdrop.classList.add("show");
+        el.privacyBackdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closePrivacyModal() {
+        if (!el.privacyBackdrop) return;
+        el.privacyBackdrop.classList.remove("show");
+        el.privacyBackdrop.setAttribute("aria-hidden", "true");
+      }
+
       function openFriendRemoveBlockModal(id) {
         if (!el.friendRemoveBlockBackdrop) return;
         el.friendRemoveBlockBackdrop.dataset.id = String(id || "");
@@ -10340,6 +10732,14 @@
             return;
           }
 
+          if (t.id === "friendsReportBtn") {
+            const list = Array.isArray(friendsState.friends) ? friendsState.friends : [];
+            const sel = list.find((x) => x && x.id === id);
+            const name = sel && sel.firstName ? String(sel.firstName) : "Player";
+            openReportModal({ id, name });
+            return;
+          }
+
           if (t.id === "friendsRemoveBtn") {
             openFriendRemoveBlockModal(id);
             return;
@@ -10381,6 +10781,34 @@
       if (el.friendDetailsBackdrop)
         el.friendDetailsBackdrop.addEventListener("click", (e) => {
           if (e.target === el.friendDetailsBackdrop) closeFriendDetailsModal();
+        });
+
+      if (el.reportCloseBtn) el.reportCloseBtn.addEventListener("click", () => closeReportModal());
+      if (el.reportCancelBtn) el.reportCancelBtn.addEventListener("click", () => closeReportModal());
+      if (el.reportSendBtn) el.reportSendBtn.addEventListener("click", () => submitReport());
+      if (el.reportBackdrop)
+        el.reportBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.reportBackdrop) closeReportModal();
+        });
+
+      if (el.feedbackCloseBtn) el.feedbackCloseBtn.addEventListener("click", () => closeFeedbackModal());
+      if (el.feedbackCancelBtn) el.feedbackCancelBtn.addEventListener("click", () => closeFeedbackModal());
+      if (el.feedbackSendBtn) el.feedbackSendBtn.addEventListener("click", () => submitFeedback());
+      if (el.feedbackBackdrop)
+        el.feedbackBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.feedbackBackdrop) closeFeedbackModal();
+        });
+
+      if (el.policyCloseBtn) el.policyCloseBtn.addEventListener("click", () => closePolicyModal());
+      if (el.policyBackdrop)
+        el.policyBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.policyBackdrop) closePolicyModal();
+        });
+
+      if (el.privacyCloseBtn) el.privacyCloseBtn.addEventListener("click", () => closePrivacyModal());
+      if (el.privacyBackdrop)
+        el.privacyBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.privacyBackdrop) closePrivacyModal();
         });
 
       if (el.friendRemoveBlockBackdrop)
