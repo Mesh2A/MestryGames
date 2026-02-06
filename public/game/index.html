@@ -313,6 +313,17 @@
         gap: 10px;
         align-items: center;
       }
+      .iconBtn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .i {
+        display: inline-block;
+        vertical-align: middle;
+        flex: 0 0 auto;
+      }
       .playerBrand {
         display: flex;
         align-items: center;
@@ -321,6 +332,63 @@
       }
       html[dir="ltr"] .playerBrand {
         flex-direction: row;
+      }
+      .playerNameRow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex: 1 1 auto;
+        direction: ltr;
+      }
+      html[dir="rtl"] #playerName {
+        direction: rtl;
+        unicode-bidi: plaintext;
+      }
+      html[dir="ltr"] #playerName {
+        direction: ltr;
+        unicode-bidi: plaintext;
+      }
+      .onlineDot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(148, 163, 184, 0.7);
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
+        flex: 0 0 auto;
+      }
+      .onlineDot.on {
+        background: rgba(34, 197, 94, 0.95);
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+      }
+      .onlineCount {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 30px;
+        height: 22px;
+        padding: 0 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.92);
+        font-weight: 900;
+        font-size: 12px;
+        letter-spacing: 0.2px;
+        flex: 0 0 auto;
+        gap: 6px;
+      }
+      html[dir="rtl"] .onlineCount {
+        direction: rtl;
+      }
+      html[dir="ltr"] .onlineCount {
+        direction: ltr;
+      }
+      .onlineCountLabel {
+        font-weight: 900;
+        font-size: 11px;
+        opacity: 0.86;
       }
       .playerAvatar {
         width: 34px;
@@ -799,8 +867,9 @@
         z-index: 2;
         opacity: 0;
         transform: translateY(12px) scale(0.992);
+        filter: blur(6px);
         pointer-events: none;
-        transition: opacity 260ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        transition: opacity 260ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 260ms ease;
         will-change: opacity, transform;
       }
       html[data-mobile="1"] .screen {
@@ -823,12 +892,14 @@
       .screen.active {
         opacity: 1;
         transform: translateY(0) scale(1);
+        filter: blur(0px);
         pointer-events: auto;
         z-index: 3;
       }
       html[data-booting="1"] .screen {
         opacity: 0 !important;
         transform: translateY(12px) scale(0.992) !important;
+        filter: blur(6px) !important;
         pointer-events: none !important;
         transition: none !important;
       }
@@ -836,6 +907,7 @@
       html[data-booting="1"][data-boot-screen="level"] #levelScreen {
         opacity: 1 !important;
         transform: translateY(0) scale(1) !important;
+        filter: blur(0px) !important;
         pointer-events: auto !important;
         z-index: 3 !important;
       }
@@ -1659,6 +1731,89 @@
       .win.show {
         display: grid;
         gap: 10px;
+      }
+      .win.fx {
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(34, 197, 94, 0.25) inset;
+      }
+      html[data-mobile="0"] .win.fx::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        pointer-events: none;
+        background: radial-gradient(220px 120px at 25% 20%, rgba(255, 255, 255, 0.28), transparent 64%),
+          radial-gradient(260px 140px at 70% 0%, rgba(34, 197, 94, 0.28), transparent 70%),
+          radial-gradient(260px 140px at 90% 20%, rgba(34, 211, 238, 0.18), transparent 72%);
+        opacity: 0;
+        animation: winGlow 1100ms ease-out 1;
+      }
+      html[data-mobile="0"] .win.fx::after {
+        content: "";
+        position: absolute;
+        top: -70%;
+        left: -90%;
+        width: 70%;
+        height: 240%;
+        background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.55) 45%, transparent 75%);
+        transform: translateX(-120%) rotate(18deg);
+        opacity: 0;
+        pointer-events: none;
+        animation: winShine 900ms ease-out 1;
+      }
+      .winFxLayer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .winSpark {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95), rgba(34, 197, 94, 0.85) 55%, rgba(34, 197, 94, 0) 70%);
+        opacity: 0;
+        transform: translate3d(0, 0, 0) scale(0.7);
+        animation: winSpark 900ms ease-out 1;
+        filter: drop-shadow(0 6px 14px rgba(34, 197, 94, 0.18));
+      }
+      @keyframes winGlow {
+        0% {
+          opacity: 0;
+        }
+        20% {
+          opacity: 0.9;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+      @keyframes winShine {
+        0% {
+          opacity: 0;
+          transform: translateX(-120%) rotate(18deg);
+        }
+        15% {
+          opacity: 0.65;
+        }
+        100% {
+          opacity: 0;
+          transform: translateX(340%) rotate(18deg);
+        }
+      }
+      @keyframes winSpark {
+        0% {
+          opacity: 0;
+          transform: translate3d(0, 0, 0) scale(0.7);
+        }
+        25% {
+          opacity: 0.9;
+        }
+        100% {
+          opacity: 0;
+          transform: translate3d(0, -18px, 0) scale(1.2);
+        }
       }
       .modalBackdrop {
         position: fixed;
@@ -2687,6 +2842,69 @@
         background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.12));
         align-content: start;
       }
+      .emptyCard {
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .emptyCard .t {
+        font-weight: 900;
+      }
+      .emptyCard .tiny {
+        margin-top: -4px;
+      }
+      .emptyCard .ctaRow {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .skRow {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 10px;
+        overflow: hidden;
+        position: relative;
+      }
+      .skRow::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.12) 45%, transparent 75%);
+        transform: translateX(-120%) rotate(18deg);
+        animation: shimmer 1200ms ease-in-out infinite;
+        opacity: 0.8;
+      }
+      html[data-reduce-motion="1"] .skRow::before {
+        animation: none;
+        opacity: 0.35;
+      }
+      .skLine {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.09);
+      }
+      .skLine.lg {
+        height: 12px;
+        width: 66%;
+      }
+      .skLine.sm {
+        margin-top: 8px;
+        width: 48%;
+        opacity: 0.75;
+      }
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-140%) rotate(18deg);
+        }
+        100% {
+          transform: translateX(320%) rotate(18deg);
+        }
+      }
       .giftRow {
         text-align: right;
         width: 100%;
@@ -3083,20 +3301,72 @@
     </style>
   </head>
   <body data-screen="home">
+    <svg aria-hidden="true" width="0" height="0" style="position:absolute; width:0; height:0; overflow:hidden">
+      <symbol id="i-coin" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          d="M12 2c-4.97 0-9 1.79-9 4v12c0 2.21 4.03 4 9 4s9-1.79 9-4V6c0-2.21-4.03-4-9-4Zm0 2c4.09 0 7 .99 7 2s-2.91 2-7 2-7-.99-7-2 2.91-2 7-2Zm0 16c-4.09 0-7-.99-7-2v-2.06C6.67 17.16 9.1 18 12 18s5.33-.84 7-2.06V18c0 1.01-2.91 2-7 2Zm0-6c-4.09 0-7-.99-7-2V9.94C6.67 11.16 9.1 12 12 12s5.33-.84 7-2.06V12c0 1.01-2.91 2-7 2Z"
+        />
+      </symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          d="M4 4h16v11a3 3 0 0 1-3 3H9l-4.6 3.45A1 1 0 0 1 3 20.65V7a3 3 0 0 1 1-2.24A3 3 0 0 1 4 4Zm3 6h10v2H7v-2Zm0-4h10v2H7V6Z"
+        />
+      </symbol>
+      <symbol id="i-users" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          d="M7.5 12a4 4 0 1 1 4-4 4 4 0 0 1-4 4Zm9 1a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 16.5 13ZM2.5 20a5 5 0 0 1 5-5h0a5 5 0 0 1 5 5v1h-10v-1Zm12.1 1a6.5 6.5 0 0 0-.4-2.2A4.5 4.5 0 0 1 21.5 20v1h-6.9Z"
+        />
+      </symbol>
+      <symbol id="i-tasks" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          d="M9 11H7V9h2v2Zm0 4H7v-2h2v2Zm0 4H7v-2h2v2Zm13-8H11V9h11v2Zm0 4H11v-2h11v2Zm0 4H11v-2h11v2ZM5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"
+        />
+      </symbol>
+      <symbol id="i-home" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M12 3 3 10v11h6v-7h6v7h6V10l-9-7Z" />
+      </symbol>
+    </svg>
+
     <div class="app">
       <header>
         <div class="brand">
           <div id="playerBrand" class="playerBrand">
-            <div id="playerName" class="playerName">—</div>
+            <div class="playerNameRow">
+              <span id="playerOnlineDot" class="onlineDot on" aria-hidden="true"></span>
+              <div id="playerName" class="playerName">—</div>
+              <div id="onlineCountBadge" class="onlineCount" title="اللاعبين المتصلين الآن" aria-label="اللاعبين المتصلين الآن">
+                <span id="onlineCountLabel" class="onlineCountLabel">المتصلين</span>
+                <span id="onlineCountText">0</span>
+              </div>
+            </div>
             <div id="playerAvatar" class="playerAvatar">P</div>
           </div>
         </div>
         <div class="actions">
-          <button id="coinsBadge" class="badgeMini" type="button">🪙 <span id="coinsText">0</span></button>
-          <button id="tasksBtn" class="btn ghost" type="button">المهام</button>
-          <button id="chatBtn" class="btn ghost" type="button">محادثة</button>
-          <button id="friendsBtn" class="btn ghost" type="button">الحساب</button>
-          <button id="homeHeaderBtn" class="btn ghost" type="button">الرئيسية</button>
+          <button id="coinsBadge" class="badgeMini iconBtn" type="button">
+            <svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-coin"></use></svg>
+            <span id="coinsText">0</span>
+          </button>
+          <button id="tasksBtn" class="btn ghost iconBtn" type="button">
+            <svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tasks"></use></svg>
+            <span>المهام</span>
+          </button>
+          <button id="chatBtn" class="btn ghost iconBtn" type="button">
+            <svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-chat"></use></svg>
+            <span>محادثة</span>
+          </button>
+          <button id="friendsBtn" class="btn ghost iconBtn" type="button">
+            <svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-users"></use></svg>
+            <span>الحساب</span>
+          </button>
+          <button id="homeHeaderBtn" class="btn ghost iconBtn" type="button">
+            <svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-home"></use></svg>
+            <span>الرئيسية</span>
+          </button>
         </div>
       </header>
       <div id="profileDropBackdrop" class="profileDropBackdrop" aria-hidden="true">
@@ -3298,6 +3568,7 @@
                 <div id="coach" class="coach" style="display:none"></div>
 
                 <div id="winBox" class="win">
+                  <div id="winFxLayer" class="winFxLayer" aria-hidden="true"></div>
                   <div id="winTitle" class="t">ممتاز! انفتح القفل.</div>
                   <div id="winSub" class="tiny">تم فتح المرحلة التالية تلقائياً.</div>
                   <div style="display:flex; gap:10px; flex-wrap:wrap">
@@ -3395,6 +3666,14 @@
                   <div class="shopRow">
                     <div class="t" id="settingsMotionK">الحركة</div>
                     <button id="motionBtn" class="btn" type="button">تقليل الحركة: لا</button>
+                  </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsSoundK">الصوت</div>
+                    <button id="soundBtn" class="btn" type="button">الصوت: تشغيل</button>
+                  </div>
+                  <div class="shopRow">
+                    <div class="t" id="settingsHapticsK">الاهتزاز</div>
+                    <button id="hapticsBtn" class="btn" type="button">الاهتزاز: تشغيل</button>
                   </div>
                   <div class="shopRow">
                     <div class="t" id="settingsShapeK">شكل القفل</div>
@@ -3719,6 +3998,96 @@
         } catch {}
       }
 
+      const fx = { ctx: null };
+
+      function canSound() {
+        return !!(app && app.state && app.state.soundOn);
+      }
+
+      function canHaptics() {
+        return !!(app && app.state && app.state.hapticsOn);
+      }
+
+      function vibrate(pattern) {
+        if (!canHaptics()) return;
+        try {
+          if (navigator && typeof navigator.vibrate === "function") navigator.vibrate(pattern);
+        } catch {}
+      }
+
+      function getAudioCtx() {
+        if (fx.ctx) return fx.ctx;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        try {
+          fx.ctx = new AC();
+          return fx.ctx;
+        } catch {
+          return null;
+        }
+      }
+
+      function beep(freq, ms, gain) {
+        if (!canSound()) return;
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        try {
+          const t0 = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, t0);
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), t0 + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(0.02, ms / 1000));
+          osc.connect(g);
+          g.connect(ctx.destination);
+          osc.start(t0);
+          osc.stop(t0 + Math.max(0.03, ms / 1000) + 0.02);
+        } catch {}
+      }
+
+      function playClickSound() {
+        beep(620, 40, 0.03);
+      }
+
+      function playErrorSound() {
+        beep(210, 80, 0.045);
+      }
+
+      function playWinSound() {
+        beep(740, 60, 0.04);
+        window.setTimeout(() => beep(980, 80, 0.045), 70);
+      }
+
+      function triggerWinFx() {
+        if (!el || !el.winBox || !el.winFxLayer) return;
+        const reduce = document.documentElement && document.documentElement.getAttribute("data-reduce-motion") === "1";
+        el.winBox.classList.remove("fx");
+        if (!el.winBox.classList.contains("show")) return;
+        el.winBox.classList.add("fx");
+        if (reduce) return;
+        el.winFxLayer.innerHTML = "";
+        const sparks = 14;
+        for (let i = 0; i < sparks; i++) {
+          const s = document.createElement("span");
+          s.className = "winSpark";
+          const left = 12 + Math.random() * 76;
+          const top = 18 + Math.random() * 54;
+          const delay = Math.floor(Math.random() * 180);
+          s.style.left = `${left}%`;
+          s.style.top = `${top}%`;
+          s.style.animationDelay = `${delay}ms`;
+          el.winFxLayer.appendChild(s);
+        }
+        window.setTimeout(() => {
+          try {
+            if (el.winFxLayer) el.winFxLayer.innerHTML = "";
+            if (el.winBox) el.winBox.classList.remove("fx");
+          } catch {}
+        }, 1300);
+      }
+
       function clamp(n, a, b) {
         return Math.min(b, Math.max(a, n));
       }
@@ -3768,6 +4137,8 @@
           },
           achievements: [],
           reduceMotion: false,
+          soundOn: true,
+          hapticsOn: true,
           lockShape: "round",
           mode: "normal",
           paidHintType: "reveal",
@@ -3796,6 +4167,8 @@
             : "crimson";
         base.lang = s.lang === "en" ? "en" : "ar";
         base.lastScreen = s.lastScreen === "map" || s.lastScreen === "level" ? s.lastScreen : "home";
+        base.soundOn = typeof s.soundOn === "boolean" ? s.soundOn : true;
+        base.hapticsOn = typeof s.hapticsOn === "boolean" ? s.hapticsOn : true;
         if (
           s.lastStage &&
           typeof s.lastStage === "object" &&
@@ -4054,6 +4427,8 @@
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
         const name = displayName || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
         if (el.playerName) el.playerName.textContent = name;
+        if (el.playerOnlineDot) el.playerOnlineDot.classList.toggle("on", !!cloud.enabled);
+        if (el.onlineCountText && !cloud.enabled) el.onlineCountText.textContent = "—";
         if (el.playerAvatar) {
           const letter = String(name || "P")
             .trim()
@@ -4379,6 +4754,10 @@
         brandTitle: document.getElementById("brandTitle"),
         brandSub: document.getElementById("brandSub"),
         playerName: document.getElementById("playerName"),
+        playerOnlineDot: document.getElementById("playerOnlineDot"),
+        onlineCountBadge: document.getElementById("onlineCountBadge"),
+        onlineCountLabel: document.getElementById("onlineCountLabel"),
+        onlineCountText: document.getElementById("onlineCountText"),
         playerAvatar: document.getElementById("playerAvatar"),
         home: document.getElementById("homeScreen"),
         map: document.getElementById("mapScreen"),
@@ -4453,6 +4832,10 @@
         langBtn: document.getElementById("langBtn"),
         settingsMotionK: document.getElementById("settingsMotionK"),
         motionBtn: document.getElementById("motionBtn"),
+        settingsSoundK: document.getElementById("settingsSoundK"),
+        soundBtn: document.getElementById("soundBtn"),
+        settingsHapticsK: document.getElementById("settingsHapticsK"),
+        hapticsBtn: document.getElementById("hapticsBtn"),
         settingsShapeK: document.getElementById("settingsShapeK"),
         shapeBtn: document.getElementById("shapeBtn"),
         settingsModeK: document.getElementById("settingsModeK"),
@@ -4593,6 +4976,7 @@
         winBox: document.getElementById("winBox"),
         winTitle: document.getElementById("winTitle"),
         winSub: document.getElementById("winSub"),
+        winFxLayer: document.getElementById("winFxLayer"),
         nextBtn: document.getElementById("nextBtn"),
         mapBtn2: document.getElementById("mapBtn2"),
         shareBtn: document.getElementById("shareBtn"),
@@ -4734,7 +5118,13 @@
           settingsLangK: "اللغة",
           settingsMotionK: "الحركة",
           motionBtn: ({ on }) => (on ? "تقليل الحركة: نعم" : "تقليل الحركة: لا"),
+          settingsSoundK: "الصوت",
+          soundBtn: ({ on }) => (on ? "الصوت: تشغيل" : "الصوت: إيقاف"),
+          settingsHapticsK: "الاهتزاز",
+          hapticsBtn: ({ on }) => (on ? "الاهتزاز: تشغيل" : "الاهتزاز: إيقاف"),
           settingsShapeK: "شكل القفل",
+          onlineCountTitle: "عدد اللاعبين المتصلين الآن",
+          onlineCountLabel: "المتصلين",
           shapeRound: "مستدير",
           shapeCircle: "دائري",
           shapeSquare: "مربع",
@@ -4913,7 +5303,13 @@
           settingsLangK: "Language",
           settingsMotionK: "Motion",
           motionBtn: ({ on }) => (on ? "Reduce motion: Yes" : "Reduce motion: No"),
+          settingsSoundK: "Sound",
+          soundBtn: ({ on }) => (on ? "Sound: On" : "Sound: Off"),
+          settingsHapticsK: "Haptics",
+          hapticsBtn: ({ on }) => (on ? "Haptics: On" : "Haptics: Off"),
           settingsShapeK: "Lock shape",
+          onlineCountTitle: "Players online now",
+          onlineCountLabel: "Online",
           shapeRound: "Rounded",
           shapeCircle: "Circle",
           shapeSquare: "Square",
@@ -5067,9 +5463,16 @@
         if (el.settingsThemeK) el.settingsThemeK.textContent = t("settingsThemeK");
         if (el.settingsLangK) el.settingsLangK.textContent = t("settingsLangK");
         if (el.settingsMotionK) el.settingsMotionK.textContent = t("settingsMotionK");
+        if (el.settingsSoundK) el.settingsSoundK.textContent = t("settingsSoundK");
+        if (el.settingsHapticsK) el.settingsHapticsK.textContent = t("settingsHapticsK");
         if (el.settingsShapeK) el.settingsShapeK.textContent = t("settingsShapeK");
         if (el.settingsModeK) el.settingsModeK.textContent = t("settingsModeK");
         if (el.settingsVersionK) el.settingsVersionK.textContent = t("settingsVersionK");
+        if (el.onlineCountLabel) el.onlineCountLabel.textContent = t("onlineCountLabel");
+        if (el.onlineCountBadge) {
+          el.onlineCountBadge.title = t("onlineCountTitle");
+          el.onlineCountBadge.setAttribute("aria-label", t("onlineCountTitle"));
+        }
         if (el.shopDesc) el.shopDesc.textContent = t("shopDesc");
         if (el.coinPacksTitle) el.coinPacksTitle.textContent = t("coinPacksTitle");
         if (el.coinPacksSub) el.coinPacksSub.textContent = t("coinPacksSub");
@@ -5431,7 +5834,8 @@
         });
         app.hints.forEach((h) => h.classList.remove("show"));
         el.msg.textContent = "";
-        el.winBox.classList.remove("show");
+        el.winBox.classList.remove("show", "fx", "onlineWin", "onlineLose");
+        if (el.winFxLayer) el.winFxLayer.innerHTML = "";
         if (el.history) el.history.innerHTML = "";
         if (el.coach) el.coach.style.display = "none";
         if (document.documentElement.dataset.mobile !== "1" && app.inputs[0]) app.inputs[0].focus();
@@ -5814,6 +6218,18 @@
         updateSettingsUI();
       }
 
+      function toggleSound() {
+        app.state.soundOn = !app.state.soundOn;
+        saveState(app.state);
+        updateSettingsUI();
+      }
+
+      function toggleHaptics() {
+        app.state.hapticsOn = !app.state.hapticsOn;
+        saveState(app.state);
+        updateSettingsUI();
+      }
+
       const versionState = {
         fetched: false,
         fetching: false,
@@ -5924,6 +6340,8 @@
         }
 
         if (el.motionBtn) el.motionBtn.textContent = t("motionBtn", { on: !!app.state.reduceMotion });
+        if (el.soundBtn) el.soundBtn.textContent = t("soundBtn", { on: !!app.state.soundOn });
+        if (el.hapticsBtn) el.hapticsBtn.textContent = t("hapticsBtn", { on: !!app.state.hapticsOn });
         if (el.modeBtn) el.modeBtn.textContent = t("modeBtn", { mode: app.state.mode || "normal" });
         renderVersionValue();
         fetchVersionOnce().catch(() => {});
@@ -6414,6 +6832,9 @@
         updateSettingsUI();
 
         el.winBox.classList.add("show");
+        playWinSound();
+        vibrate([0, 14, 24, 14]);
+        triggerWinFx();
         el.msg.textContent = "✅";
 
         if (app.stage.kind !== "daily" && app.stage.id >= TOTAL_LEVELS) {
@@ -7601,7 +8022,17 @@
           }
           if (el.mapBtn2) el.mapBtn2.style.display = "none";
           if (el.shareBtn) el.shareBtn.style.display = "none";
-          if (el.winBox) el.winBox.classList.add("show");
+          if (el.winBox) {
+            el.winBox.classList.add("show");
+            if (el.winBox.classList.contains("onlineWin")) {
+              playWinSound();
+              vibrate([0, 14, 24, 14]);
+              triggerWinFx();
+            } else if (el.winBox.classList.contains("onlineLose")) {
+              playErrorSound();
+              vibrate([0, 30, 40]);
+            }
+          }
         }
       }
 
@@ -8828,6 +9259,13 @@
       }
 
       function enqueueToast(item) {
+        try {
+          const title = item && typeof item.title === "string" ? item.title : "";
+          if (/(^|\s)(فشل|خطأ|Error|Failed)(\s|$)/i.test(title)) {
+            playErrorSound();
+            vibrate([0, 26, 40]);
+          }
+        } catch {}
         toastState.queue.push(item);
         if (!toastState.busy) showNextToast();
       }
@@ -9104,6 +9542,7 @@
       let livePollId = null;
       let lastFriendsPullAt = 0;
       let lastPresenceAt = 0;
+      let lastOnlineCountAt = 0;
       async function presencePing() {
         if (!cloud.enabled) return;
         const now = Date.now();
@@ -9111,6 +9550,15 @@
         saveStateSilent(app.state);
         try {
           await fetch("/api/presence/ping", { method: "POST" });
+        } catch {}
+      }
+      async function pollOnlineCount() {
+        if (!cloud.enabled || !el.onlineCountText) return;
+        try {
+          const r = await fetch("/api/presence/online-count", { method: "GET", cache: "no-store" });
+          const d = await r.json().catch(() => null);
+          const n = d && typeof d.count === "number" && Number.isFinite(d.count) ? Math.max(0, Math.floor(d.count)) : 0;
+          el.onlineCountText.textContent = String(n);
         } catch {}
       }
       function startLivePolling() {
@@ -9125,6 +9573,10 @@
           if (cloud.enabled && now - lastPresenceAt > 20000) {
             lastPresenceAt = now;
             presencePing().catch(() => {});
+          }
+          if (cloud.enabled && now - lastOnlineCountAt > 12000) {
+            lastOnlineCountAt = now;
+            pollOnlineCount().catch(() => {});
           }
           if (chatState.open && chatState.selectedId && now - (chatState.lastThreadPullAt || 0) > 1200) {
             chatState.lastThreadPullAt = now;
@@ -9183,7 +9635,11 @@
           if (!friendsUI.giftsList) return;
           const gifts = Array.isArray(friendsState.gifts) ? friendsState.gifts : [];
           if (!gifts.length) {
-            friendsUI.giftsList.innerHTML = `<div class="friendsTiny">لا يوجد إهداءات.</div>`;
+            if (friendsState.loadPromise) {
+              friendsUI.giftsList.innerHTML = new Array(5).fill(0).map(() => `<div class="skRow"><div class="skLine lg"></div><div class="skLine sm"></div></div>`).join("");
+            } else {
+              friendsUI.giftsList.innerHTML = `<div class="emptyCard"><div class="t">لا يوجد إهداءات</div><div class="tiny">عندما يرسل لك صديق عملات، ستظهر هنا.</div></div>`;
+            }
             return;
           }
           friendsUI.giftsList.innerHTML = gifts
@@ -9221,8 +9677,23 @@
         friendsUI.count.textContent = filtered.length ? (q ? `${filtered.length} / ${visibleList.length}` : `${filtered.length} لاعب`) : "";
 
         if (!visibleList.length) {
-          friendsUI.list.innerHTML = `<div class="friendsTiny">اضغط زر الأصدقاء لعرض القائمة.</div>`;
+          if (friendsState.loadPromise) {
+            friendsUI.list.innerHTML = new Array(7).fill(0).map(() => `<div class="skRow"><div class="skLine lg"></div><div class="skLine sm"></div></div>`).join("");
+          } else if (!cloud.enabled) {
+            friendsUI.list.innerHTML = `<div class="emptyCard"><div class="t">سجّل دخولك</div><div class="tiny">سجّل دخولك عشان تضيف أصدقاء وتستخدم الشات.</div></div>`;
+          } else {
+            const myId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
+            friendsUI.list.innerHTML = `<div class="emptyCard">
+              <div class="t">ابدأ بإضافة صديق</div>
+              <div class="tiny">انسخ ID الخاص بك وارسله لصديقك أو أضف ID صديقك الآن.</div>
+              ${myId ? `<div class="friendsTiny">ID الخاص بك: <span style="font-weight:900; letter-spacing:0.8px">${escapeHtml(myId)}</span></div>` : ``}
+              <div class="ctaRow">
+                <button type="button" class="btn primary" data-action="friends-add">إضافة صديق</button>
+              </div>
+            </div>`;
+          }
           if (friendsUI.actions) friendsUI.actions.style.display = "none";
+          friendsUI.count.textContent = "";
           return;
         }
 
@@ -9416,7 +9887,13 @@
           : list;
 
         if (!filtered.length) {
-          chatUI.friendsList.innerHTML = `<div class="friendsTiny">لا يوجد أصدقاء.</div>`;
+          if (friendsState.loadPromise) {
+            chatUI.friendsList.innerHTML = new Array(6).fill(0).map(() => `<div class="skRow"><div class="skLine lg"></div><div class="skLine sm"></div></div>`).join("");
+          } else if (!cloud.enabled) {
+            chatUI.friendsList.innerHTML = `<div class="emptyCard"><div class="t">سجّل دخولك</div><div class="tiny">سجّل دخولك عشان تستخدم الشات.</div></div>`;
+          } else {
+            chatUI.friendsList.innerHTML = `<div class="emptyCard"><div class="t">لا يوجد أصدقاء</div><div class="tiny">أضف صديقك أولاً ثم ابدأ المحادثة.</div><div class="ctaRow"><button type="button" class="btn primary" data-action="friends-add">إضافة صديق</button></div></div>`;
+          }
         } else {
           chatUI.friendsList.innerHTML = filtered
             .map((f) => {
@@ -9493,6 +9970,14 @@
           renderFriends();
         });
       }
+      document.addEventListener("click", (e) => {
+        const btn = e && e.target && e.target.closest ? e.target.closest('[data-action="friends-add"]') : null;
+        if (!btn) return;
+        if (!friendsState.open) openFriends();
+        friendsState.tab = "add";
+        renderFriends();
+        if (friendsUI.addInput) friendsUI.addInput.focus();
+      });
       if (friendsUI.photoInput) {
         friendsUI.photoInput.addEventListener("change", async (e) => {
           const input = e.target;
@@ -9870,6 +10355,8 @@
       }
 
       el.motionBtn.addEventListener("click", () => toggleMotion());
+      if (el.soundBtn) el.soundBtn.addEventListener("click", () => toggleSound());
+      if (el.hapticsBtn) el.hapticsBtn.addEventListener("click", () => toggleHaptics());
       el.shapeBtn.addEventListener("click", () => cycleShape());
       el.modeBtn.addEventListener("click", () => cycleMode());
       if (el.changeNameBtn) el.changeNameBtn.addEventListener("click", () => openNameModal());
@@ -10005,6 +10492,7 @@
           saveStateSilent(app.state);
         }
         updateUserCenter();
+        if (cloud.enabled) pollOnlineCount().catch(() => {});
 
         const remote = await cloudGet();
         if (remote) {
@@ -10059,6 +10547,15 @@
         applyLockShape();
         updateCoinsUI();
         updateSettingsUI();
+        document.addEventListener(
+          "click",
+          (e) => {
+            const t = e && e.target && e.target.closest ? e.target.closest("button") : null;
+            if (!t || t.disabled) return;
+            playClickSound();
+          },
+          { capture: true }
+        );
         enableMapControls();
         buildBgPattern();
         renderMap();

@@ -1,6 +1,7 @@
 import { authOptions } from "@/lib/auth";
 import { ensureGameProfile, readCoinsEarnedTotalFromState, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rateLimit";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const rl = consumeRateLimit(`friend_gift:${email}`, { limit: 6, windowMs: 60_000 });
+  if (!rl.ok) return NextResponse.json({ error: "rate_limited", retryAfterMs: rl.retryAfterMs }, { status: 429 });
+
   let body: unknown = null;
   try {
     body = await req.json();
@@ -28,6 +32,7 @@ export async function POST(req: NextRequest) {
       ? (body as { id: string }).id.trim().toUpperCase()
       : "";
   if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
+  if (!/^[A-Z0-9]{2,16}$/.test(id)) return NextResponse.json({ error: "bad_id" }, { status: 400 });
 
   try {
     await ensureGameProfile(email);

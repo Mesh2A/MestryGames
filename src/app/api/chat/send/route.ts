@@ -3,6 +3,7 @@ import { pruneChatState } from "@/lib/chatTtl";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail } from "@/lib/profile";
+import { consumeRateLimit } from "@/lib/rateLimit";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const rl = consumeRateLimit(`chat_send:${email}`, { limit: 18, windowMs: 30_000 });
+  if (!rl.ok) return NextResponse.json({ error: "rate_limited", retryAfterMs: rl.retryAfterMs }, { status: 429 });
 
   let body: unknown = null;
   try {
