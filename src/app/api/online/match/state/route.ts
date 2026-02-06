@@ -40,11 +40,13 @@ function safeState(raw: unknown) {
   const phase = kind === "custom" && s.phase === "setup" ? ("setup" as const) : ("play" as const);
   const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
   const ready = s.ready && typeof s.ready === "object" ? (s.ready as Record<string, unknown>) : {};
-  const hasSecretA = typeof secrets.a === "string" && secrets.a.length > 0;
-  const hasSecretB = typeof secrets.b === "string" && secrets.b.length > 0;
+  const secretA = typeof secrets.a === "string" ? secrets.a : "";
+  const secretB = typeof secrets.b === "string" ? secrets.b : "";
+  const hasSecretA = secretA.length > 0;
+  const hasSecretB = secretB.length > 0;
   const readyA = ready.a === true;
   const readyB = ready.b === true;
-  return { a, b, lastMasked, endedReason, forfeitedBy, kind, phase, hasSecretA, hasSecretB, readyA, readyB };
+  return { a, b, lastMasked, endedReason, forfeitedBy, kind, phase, secretA, secretB, hasSecretA, hasSecretB, readyA, readyB };
 }
 
 function maskDigits(len: number) {
@@ -89,13 +91,14 @@ export async function GET(req: NextRequest) {
           codeLen: number;
           aEmail: string;
           bEmail: string;
+          answer: string;
           turnEmail: string;
           turnStartedAt: bigint;
           winnerEmail: string | null;
           endedAt: Date | null;
           state: unknown;
         }[]
-      >`SELECT "id","mode","fee","codeLen","aEmail","bEmail","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
+      >`SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
       if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
@@ -186,6 +189,19 @@ export async function GET(req: NextRequest) {
             }
           : null;
 
+      let solution: string | null = null;
+      const isEnded = !!m.endedAt || !!m.winnerEmail;
+      const isDisabled = state.endedReason === "disabled";
+      if (isEnded && !isDisabled) {
+        if (state.kind === "custom") {
+          if (m.winnerEmail === m.aEmail) solution = state.secretB || null;
+          else if (m.winnerEmail === m.bEmail) solution = state.secretA || null;
+        } else {
+          const ans = typeof m.answer === "string" ? m.answer : "";
+          solution = ans ? ans : null;
+        }
+      }
+
       return {
         ok: true as const,
         match: {
@@ -209,6 +225,7 @@ export async function GET(req: NextRequest) {
           endedAt: m.endedAt ? m.endedAt.toISOString() : null,
           endedReason: state.endedReason,
           forfeitedBy: state.forfeitedBy ? (state.forfeitedBy === email ? "me" : "them") : null,
+          solution,
           opponent: oppProfile
             ? {
                 id: oppProfile.publicId,

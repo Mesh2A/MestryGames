@@ -36,6 +36,18 @@ function generateAnswer(codeLen: number) {
   return digits.join("");
 }
 
+function normalizeKind(kind: string) {
+  const k = String(kind || "").trim().toLowerCase();
+  if (k === "custom" || k === "specified" || k === "limited") return "custom";
+  return "normal";
+}
+
+function parseRoomModeKey(mode: string) {
+  const m = String(mode || "").trim().toLowerCase();
+  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  return { mode: m, kind: "normal" as const };
+}
+
 function readDisplayNameFromState(state: unknown) {
   if (!state || typeof state !== "object") return "";
   const v = (state as Record<string, unknown>).displayName;
@@ -78,8 +90,10 @@ export async function POST(req: NextRequest) {
   }
 
   const codeRaw = body && typeof body === "object" && "code" in body ? (body as { code?: unknown }).code : "";
+  const kindRaw = body && typeof body === "object" && "kind" in body ? (body as { kind?: unknown }).kind : "";
   const code = normalizeCode(typeof codeRaw === "string" ? codeRaw : "");
   if (!code) return NextResponse.json({ error: "missing_code" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const kindReq = typeof kindRaw === "string" ? normalizeKind(kindRaw) : "";
 
   try {
     const out = await prisma.$transaction(async (tx) => {
@@ -92,6 +106,8 @@ export async function POST(req: NextRequest) {
       if (!room) return { status: "error" as const, error: "room_not_found" as const };
       if (room.status !== "waiting") return { status: "error" as const, error: "room_full" as const };
       if (room.hostEmail === email) return { status: "error" as const, error: "cannot_join_own" as const };
+      const parsed = parseRoomModeKey(room.mode);
+      if (kindReq && kindReq !== parsed.kind) return { status: "error" as const, error: "room_kind_mismatch" as const };
 
       const myProfileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
       const myStateObj = myProfileRow?.state && typeof myProfileRow.state === "object" ? (myProfileRow.state as Record<string, unknown>) : {};
@@ -105,16 +121,21 @@ export async function POST(req: NextRequest) {
       await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
 
       const matchId = randomId("m");
-      const answer = generateAnswer(Math.max(1, Math.floor(room.codeLen)));
+      const answer = parsed.kind === "custom" ? "" : generateAnswer(Math.max(1, Math.floor(room.codeLen)));
       const aStarts = (randomBytes(1)[0] & 1) === 1;
       const aEmail = aStarts ? room.hostEmail : email;
       const bEmail = aStarts ? email : room.hostEmail;
       const turnEmail = aStarts ? room.hostEmail : email;
       const turnStartedAt = nowMs();
 
+      const initialState =
+        parsed.kind === "custom"
+          ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
+          : { a: [], b: [], lastMasked: null };
+
       await tx.$executeRaw`
         INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")
-        VALUES (${matchId}, ${room.mode}, ${fee}, ${room.codeLen}, ${aEmail}, ${bEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify({ a: [], b: [], lastMasked: null })}::jsonb, NOW(), NOW())
+        VALUES (${matchId}, ${parsed.mode}, ${fee}, ${room.codeLen}, ${aEmail}, ${bEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify(initialState)}::jsonb, NOW(), NOW())
       `;
 
       await tx.$executeRaw`
@@ -133,7 +154,8 @@ export async function POST(req: NextRequest) {
         matchId,
         fee,
         codeLen: room.codeLen,
-        mode: room.mode,
+        mode: parsed.mode,
+        kind: parsed.kind,
         opponent: hostProfile
           ? {
               id: hostProfile.publicId,
@@ -153,4 +175,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
-

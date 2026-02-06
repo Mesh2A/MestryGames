@@ -14,6 +14,12 @@ function normalizeCode(code: string) {
     .slice(0, 10);
 }
 
+function parseRoomModeKey(mode: string) {
+  const m = String(mode || "").trim().toLowerCase();
+  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  return { mode: m, kind: "normal" as const };
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
@@ -55,7 +61,16 @@ export async function GET(req: NextRequest) {
           return { ok: true as const, status: "cancelled" as const };
         }
 
-        return { ok: true as const, status: room.status, matchId: room.matchId, mode: room.mode, fee: room.fee, codeLen: room.codeLen };
+        const parsed = parseRoomModeKey(room.mode);
+        return {
+          ok: true as const,
+          status: room.status,
+          matchId: room.matchId,
+          mode: parsed.mode,
+          kind: parsed.kind,
+          fee: room.fee,
+          codeLen: room.codeLen,
+        };
       });
 
       const forbidden = !out.ok && !!out && typeof out === "object" && "forbidden" in out && (out as { forbidden?: unknown }).forbidden === true;
@@ -70,7 +85,11 @@ export async function GET(req: NextRequest) {
     const room = rows && rows[0] ? rows[0] : null;
     if (!room) return NextResponse.json({ error: "room_not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
     if (room.hostEmail !== email && room.guestEmail !== email) return NextResponse.json({ error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
-    return NextResponse.json({ status: room.status, matchId: room.matchId, mode: room.mode, fee: room.fee, codeLen: room.codeLen }, { status: 200, headers: { "Cache-Control": "no-store" } });
+    const parsed = parseRoomModeKey(room.mode);
+    return NextResponse.json(
+      { status: room.status, matchId: room.matchId, mode: parsed.mode, kind: parsed.kind, fee: room.fee, codeLen: room.codeLen },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }

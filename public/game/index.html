@@ -2656,6 +2656,86 @@
         resize: vertical;
         margin-top: 10px;
       }
+      .setupDigits {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+        padding: 8px 6px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+        cursor: text;
+        user-select: none;
+      }
+      .setupDigits:focus-visible {
+        outline: none;
+        border-color: rgba(34, 211, 238, 0.6);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+      }
+      .setupDot {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.14));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 20px;
+        letter-spacing: 0.4px;
+        color: rgba(255, 255, 255, 0.92);
+        transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+      }
+      .setupDot.filled {
+        border-color: rgba(239, 68, 68, 0.42);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+        transform: translateY(-1px);
+      }
+      .setupHiddenInput {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        left: -9999px;
+        top: -9999px;
+        width: 1px;
+        height: 1px;
+      }
+      .setupStatusRow {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+        font-size: 13px;
+        font-weight: 900;
+      }
+      .setupStatusTag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .setupStatusTag.ok {
+        border-color: rgba(34, 211, 238, 0.34);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+      }
+      .setupCheck {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(34, 211, 238, 0.18);
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 12px;
+        line-height: 1;
+      }
       .legalBody {
         margin-top: 10px;
         font-size: 12px;
@@ -4285,8 +4365,9 @@
           <button id="onlineSetupCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
         </div>
         <div id="onlineSetupHint" class="tiny" style="margin-top:8px; opacity:.9">—</div>
-        <input id="onlineSetupInput" class="miniInput" inputmode="numeric" autocomplete="off" placeholder="—" />
-        <div id="onlineSetupStatus" class="friendsTiny" style="margin-top:10px"></div>
+        <div id="onlineSetupDigits" class="setupDigits" role="button" tabindex="0" aria-label="Set digits"></div>
+        <input id="onlineSetupInput" class="miniInput setupHiddenInput" inputmode="numeric" autocomplete="off" placeholder="—" />
+        <div id="onlineSetupStatus" class="setupStatusRow"></div>
         <div class="confirmMiniRow">
           <button id="onlineSetupReadyBtn" class="btn primary" type="button">استعد</button>
           <button id="onlineSetupForfeitBtn" class="btn danger" type="button">انسحاب</button>
@@ -5199,6 +5280,7 @@
         onlineSetupBackdrop: document.getElementById("onlineSetupBackdrop"),
         onlineSetupTitle: document.getElementById("onlineSetupTitle"),
         onlineSetupHint: document.getElementById("onlineSetupHint"),
+        onlineSetupDigits: document.getElementById("onlineSetupDigits"),
         onlineSetupInput: document.getElementById("onlineSetupInput"),
         onlineSetupStatus: document.getElementById("onlineSetupStatus"),
         onlineSetupCloseBtn: document.getElementById("onlineSetupCloseBtn"),
@@ -5449,6 +5531,8 @@
           onlineSetupBadSecret: "اكتب {n} أرقام صحيحة.",
           onlineSetupFailed: "تعذر الإرسال.",
           onlineSetupForfeitBtn: "انسحاب",
+          onlineSolutionLabel: "الرقم الصحيح:",
+          onlineBackBtn: "العودة",
           startBtn: "ابدأ",
           howBtn: "طريقة اللعبه",
           logoutBtn: "تسجيل خروج",
@@ -5677,6 +5761,8 @@
           onlineSetupBadSecret: "Enter exactly {n} digits.",
           onlineSetupFailed: "Failed to send.",
           onlineSetupForfeitBtn: "Forfeit",
+          onlineSolutionLabel: "Solution:",
+          onlineBackBtn: "Back",
           startBtn: "Start",
           howBtn: "How to play",
           logoutBtn: "Logout",
@@ -7198,6 +7284,7 @@
         if (el.onlineHud) el.onlineHud.style.display = stage.kind === "online" ? "" : "none";
         if (el.backToMapBtn) el.backToMapBtn.textContent = stage.kind === "online" ? "انسحاب" : t("backToMapBtn");
         if (el.assistBtn) el.assistBtn.style.display = stage.kind === "online" ? "none" : "";
+        if (el.retryBtn) el.retryBtn.style.display = stage.kind === "online" ? "none" : "";
 
         if (stage.kind === "level") {
           const mode = app.state.mode || "normal";
@@ -8297,7 +8384,7 @@
         onlineState.barRafId = requestAnimationFrame(tick);
       }
 
-      function onlineRenderEndScreen(fee, winner, endedReason, forfeitedBy) {
+      function onlineRenderEndScreen(fee, winner, endedReason, forfeitedBy, solution) {
         if (!el.winBox || !el.winSub || !el.winTitle) return;
         const pot = Math.max(0, Math.floor(fee)) * 2;
         const myName = onlineState.meName || "لاعب";
@@ -8330,8 +8417,12 @@
                 : ""
             : "";
 
+        const sol = String(solution || "").trim();
+        const solLine = sol ? `<div class="tiny" style="text-align:center">${escapeHtml(t("onlineSolutionLabel"))} <span class="maskM">${escapeHtml(sol)}</span></div>` : ``;
+
         el.winSub.innerHTML = `<div class="onlineWrap">
           ${subLine ? `<div class="tiny">${escapeHtml(subLine)}</div>` : ``}
+          ${solLine}
           <div class="onlineEndRow">
             <div class="onlineEndCard">
               <div id="onlineEndLoserAvatar" class="onlineAvatar">L</div>
@@ -8533,10 +8624,25 @@
           stopOnlineMatchPolling();
           app.session.over = true;
           const winner = m.winner === "me" || m.winner === "them" ? m.winner : null;
-          onlineRenderEndScreen(fee, winner, m.endedReason, m.forfeitedBy);
+          const sol = typeof m.solution === "string" ? String(m.solution || "").trim() : "";
+          if (sol && app.inputs && Array.isArray(app.inputs) && sol.length === app.inputs.length) {
+            for (let i = 0; i < app.inputs.length; i++) {
+              const input = app.inputs[i];
+              if (!input) continue;
+              input.value = sol[i] || "";
+              input.disabled = true;
+              const slot = input.parentElement;
+              if (slot) {
+                slot.classList.remove("bad", "warn");
+                slot.classList.add("ok");
+              }
+            }
+            if (el.checkBtn) el.checkBtn.disabled = true;
+          }
+          onlineRenderEndScreen(fee, winner, m.endedReason, m.forfeitedBy, typeof m.solution === "string" ? m.solution : "");
           if (el.nextBtn) {
             el.nextBtn.disabled = false;
-            el.nextBtn.textContent = "الرئيسية";
+            el.nextBtn.textContent = t("onlineBackBtn");
           }
           if (el.mapBtn2) el.mapBtn2.style.display = "none";
           if (el.shareBtn) el.shareBtn.style.display = "none";
@@ -8611,20 +8717,16 @@
             ${card("medium")}
             ${card("hard")}
           </div>
-          ${
-            kind === "normal"
-              ? `<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
-                  <button id="roomCreateBtn" class="btn" type="button">إنشاء غرفة</button>
-                  <button id="roomJoinBtn" class="btn" type="button">انضم لغرفة</button>
-                </div>`
-              : ""
-          }
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
+            <button id="roomCreateBtn" class="btn" type="button">إنشاء غرفة</button>
+            <button id="roomJoinBtn" class="btn" type="button">انضم لغرفة</button>
+          </div>
         </div>`;
 
         const roomCreateBtn = document.getElementById("roomCreateBtn");
-        if (roomCreateBtn) roomCreateBtn.addEventListener("click", () => renderRoomCreateSelect());
+        if (roomCreateBtn) roomCreateBtn.addEventListener("click", () => renderRoomCreateSelect(kind));
         const roomJoinBtn = document.getElementById("roomJoinBtn");
-        if (roomJoinBtn) roomJoinBtn.addEventListener("click", () => renderRoomJoin());
+        if (roomJoinBtn) roomJoinBtn.addEventListener("click", () => renderRoomJoin(kind));
       }
 
       function onlineSetSearchAvatar(elm, photo, letter) {
@@ -8714,7 +8816,7 @@
           .slice(0, 10);
       }
 
-      function renderRoomCreateSelect() {
+      function renderRoomCreateSelect(kind) {
         if (!el.onlineContent) return;
         if (!cloud.enabled) {
           enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
@@ -8758,12 +8860,12 @@
           p.addEventListener("click", () => {
             const mode = String(p.dataset.roomCreateMode || "").trim();
             if (!mode) return;
-            onlineCreateRoom(mode);
+            onlineCreateRoom(mode, kind);
           });
         }
       }
 
-      async function onlineCreateRoom(mode) {
+      async function onlineCreateRoom(mode, kind) {
         await fetchOnlineEnabledOnce(true).catch(() => {});
         if (!onlineFeature.enabled) {
           enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
@@ -8774,7 +8876,7 @@
         const r = await friendsJson("/api/online/room/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode }),
+          body: JSON.stringify({ mode, kind }),
         });
         if (!r.ok || !r.data) {
           const code = r.data && typeof r.data.error === "string" ? r.data.error : "server_error";
@@ -8789,23 +8891,26 @@
         }
 
         const roomCode = normalizeRoomCode(r.data.code);
-        const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(mode).fee;
-        const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(mode).codeLen;
+        const modeResolved = r.data && typeof r.data.mode === "string" ? String(r.data.mode).trim() : mode;
+        const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(modeResolved).fee;
+        const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(modeResolved).codeLen;
+        const kindResolved = r.data && typeof r.data.kind === "string" ? (String(r.data.kind).trim() === "custom" ? "custom" : "normal") : kind;
         if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
         if (!roomCode) {
           renderOnlineSelect();
           return;
         }
         onlineState.roomCode = roomCode;
-        renderRoomWaiting(roomCode, mode, fee, codeLen);
+        renderRoomWaiting(roomCode, modeResolved, fee, codeLen, kindResolved);
         startRoomPolling(roomCode);
       }
 
-      function renderRoomWaiting(roomCode, mode, fee, codeLen) {
+      function renderRoomWaiting(roomCode, mode, fee, codeLen, kind) {
         if (!el.onlineContent) return;
-        const diff = mode === "easy" ? "سهل" : mode === "medium" ? "متوسط" : "صعب";
+        const diff = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
+        const kindLabel = kind === "custom" ? t("onlineModeCustom") : t("onlineModeNormal");
         el.onlineContent.innerHTML = `<div class="onlineWrap">
-          <div class="tiny">غرفة خاصة (${escapeHtml(diff)} • ${escapeHtml(String(codeLen))} أرقام • <span class="coinChip">${fee}🪙</span>)</div>
+          <div class="tiny">غرفة خاصة (${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(codeLen))} أرقام • <span class="coinChip">${fee}🪙</span>)</div>
           <div class="onlineRoomBox">
             <div class="onlineRoomLabel">الكود</div>
             <div class="onlineCode">${escapeHtml(roomCode)}</div>
@@ -8867,7 +8972,7 @@
         }, 650);
       }
 
-      function renderRoomJoin() {
+      function renderRoomJoin(kind) {
         if (!el.onlineContent) return;
         if (!cloud.enabled) {
           enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
@@ -8908,7 +9013,7 @@
           inp.addEventListener("keydown", (e) => {
             if (e && e.key === "Enter") {
               e.preventDefault();
-              joinRoomFromInput();
+              joinRoomFromInput(kind);
             }
           });
         }
@@ -8916,10 +9021,10 @@
         const backBtn = document.getElementById("roomBackBtn2");
         if (backBtn) backBtn.addEventListener("click", () => renderOnlineSelect());
         const joinBtn = document.getElementById("roomJoinConfirmBtn");
-        if (joinBtn) joinBtn.addEventListener("click", () => joinRoomFromInput());
+        if (joinBtn) joinBtn.addEventListener("click", () => joinRoomFromInput(kind));
       }
 
-      async function joinRoomFromInput() {
+      async function joinRoomFromInput(kind) {
         const inp = document.getElementById("roomCodeInput");
         const code = normalizeRoomCode(inp && inp.value ? inp.value : "");
         if (!code) {
@@ -8935,7 +9040,7 @@
         const r = await friendsJson("/api/online/room/join", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code }),
+          body: JSON.stringify({ code, kind }),
         });
         if (!r.ok || !r.data) {
           const msg =
@@ -8945,6 +9050,8 @@
                 ? "الغرفة ممتلئة."
                 : r.data && r.data.error === "cannot_join_own"
                   ? "لا يمكنك الانضمام لغرفتك."
+                  : r.data && r.data.error === "room_kind_mismatch"
+                    ? "نوع الغرفة مختلف."
                   : r.data && r.data.error === "insufficient_coins"
                     ? "عملاتك غير كافية."
                     : r.data && r.data.error === "online_disabled"
@@ -9231,7 +9338,16 @@
 
       el.nextBtn.addEventListener("click", () => {
         if (app.stage.kind === "online") {
+          try {
+            closeOnlineSetupModal();
+          } catch {}
+          if (el.winBox) el.winBox.classList.remove("show", "onlineWin", "onlineLose");
+          if (el.mapBtn2) el.mapBtn2.style.display = "";
+          if (el.shareBtn) el.shareBtn.style.display = "";
+          stopOnlineMatchPolling();
           goHome();
+          renderOnlineSelect();
+          openModal("online");
           return;
         }
         if (app.stage.kind !== "level") {
@@ -10883,11 +10999,24 @@
         if (!el.onlineSetupBackdrop) return;
         if (el.onlineSetupTitle) el.onlineSetupTitle.textContent = t("onlineSetupTitle");
         if (el.onlineSetupHint) el.onlineSetupHint.textContent = t("onlineSetupHint").replace("{n}", String(codeLen || ""));
+        const len = Math.max(1, Math.floor(codeLen || 0));
         if (el.onlineSetupInput) {
-          el.onlineSetupInput.maxLength = Math.max(1, Math.floor(codeLen || 0));
-          el.onlineSetupInput.value = String(el.onlineSetupInput.value || "").replace(/[^\d]/g, "").slice(0, el.onlineSetupInput.maxLength);
+          el.onlineSetupInput.maxLength = len;
+          el.onlineSetupInput.value = String(el.onlineSetupInput.value || "").replace(/[^\d]/g, "").slice(0, len);
           el.onlineSetupInput.placeholder = t("onlineSetupPlaceholder").replace("{n}", String(codeLen || ""));
           el.onlineSetupInput.disabled = !!myReady;
+        }
+        if (el.onlineSetupDigits) {
+          const v = el.onlineSetupInput ? String(el.onlineSetupInput.value || "") : "";
+          const dots = Array.from({ length: len })
+            .map((_, i) => {
+              const d = v[i] ? escapeHtml(v[i]) : "";
+              return `<div class="setupDot ${d ? "filled" : ""}">${d}</div>`;
+            })
+            .join("");
+          el.onlineSetupDigits.innerHTML = dots;
+          el.onlineSetupDigits.setAttribute("aria-label", t("onlineSetupHint").replace("{n}", String(codeLen || "")));
+          el.onlineSetupDigits.tabIndex = myReady ? -1 : 0;
         }
         if (el.onlineSetupReadyBtn) {
           el.onlineSetupReadyBtn.textContent = myReady ? t("onlineSetupReadyDone") : t("onlineSetupReadyBtn");
@@ -10895,9 +11024,11 @@
         }
         if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.textContent = t("onlineSetupForfeitBtn");
         if (el.onlineSetupStatus) {
-          const a = myReady ? t("onlineSetupMeReady") : t("onlineSetupMeNotReady");
-          const b = oppReady ? t("onlineSetupOppReady") : t("onlineSetupOppNotReady");
-          el.onlineSetupStatus.textContent = `${a} • ${b}`;
+          const meLabel = myReady ? t("onlineSetupMeReady") : t("onlineSetupMeNotReady");
+          const oppLabel = oppReady ? t("onlineSetupOppReady") : t("onlineSetupOppNotReady");
+          const meTag = `<span class="setupStatusTag ${myReady ? "ok" : ""}">${myReady ? `<span class="setupCheck">✓</span>` : ""}${escapeHtml(meLabel)}</span>`;
+          const oppTag = `<span class="setupStatusTag ${oppReady ? "ok" : ""}">${oppReady ? `<span class="setupCheck">✓</span>` : ""}${escapeHtml(oppLabel)}</span>`;
+          el.onlineSetupStatus.innerHTML = `${meTag}${oppTag}`;
         }
         el.onlineSetupBackdrop.classList.add("show");
         el.onlineSetupBackdrop.setAttribute("aria-hidden", "false");
@@ -10922,6 +11053,7 @@
           return;
         }
         if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = true;
+        openOnlineSetupModal(len, true, false);
         const r = await friendsJson("/api/online/match/setup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -11076,6 +11208,34 @@
       if (el.onlineSetupCloseBtn) el.onlineSetupCloseBtn.addEventListener("click", () => closeOnlineSetupModal());
       if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.addEventListener("click", () => onlineExitMatch());
       if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.addEventListener("click", () => submitOnlineSetupReady());
+      if (el.onlineSetupDigits && el.onlineSetupInput) {
+        el.onlineSetupDigits.addEventListener("click", () => {
+          if (el.onlineSetupInput.disabled) return;
+          try {
+            el.onlineSetupInput.focus();
+          } catch {}
+        });
+        el.onlineSetupDigits.addEventListener("keydown", (e) => {
+          if (!e || (e.key !== "Enter" && e.key !== " ")) return;
+          e.preventDefault();
+          if (el.onlineSetupInput.disabled) return;
+          try {
+            el.onlineSetupInput.focus();
+          } catch {}
+        });
+        el.onlineSetupInput.addEventListener("input", () => {
+          const len = Math.max(1, Math.floor((app.stage && app.stage.kind === "online" ? app.stage.codeLen : 0) || el.onlineSetupInput.maxLength || 0));
+          el.onlineSetupInput.value = String(el.onlineSetupInput.value || "").replace(/[^\d]/g, "").slice(0, len);
+          const v = String(el.onlineSetupInput.value || "");
+          const dots = Array.from({ length: len })
+            .map((_, i) => {
+              const d = v[i] ? escapeHtml(v[i]) : "";
+              return `<div class="setupDot ${d ? "filled" : ""}">${d}</div>`;
+            })
+            .join("");
+          el.onlineSetupDigits.innerHTML = dots;
+        });
+      }
       if (el.onlineSetupBackdrop)
         el.onlineSetupBackdrop.addEventListener("click", (e) => {
           if (e.target === el.onlineSetupBackdrop) closeOnlineSetupModal();

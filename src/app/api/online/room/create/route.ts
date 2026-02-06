@@ -19,6 +19,18 @@ function configForMode(mode: "easy" | "medium" | "hard") {
   return { fee: 89, codeLen: 5 };
 }
 
+function normalizeKind(kind: string) {
+  const k = String(kind || "").trim().toLowerCase();
+  if (k === "custom" || k === "specified" || k === "limited") return "custom";
+  return "normal";
+}
+
+function parseRoomModeKey(mode: string) {
+  const m = String(mode || "").trim().toLowerCase();
+  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  return { mode: m, kind: "normal" as const };
+}
+
 function generateRoomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes(8);
@@ -51,6 +63,8 @@ export async function POST(req: NextRequest) {
   const modeRaw = body && typeof body === "object" && "mode" in body ? (body as { mode?: unknown }).mode : "";
   const mode = normalizeMode(typeof modeRaw === "string" ? modeRaw : "");
   if (!mode) return NextResponse.json({ error: "bad_mode" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const kindRaw = body && typeof body === "object" && "kind" in body ? (body as { kind?: unknown }).kind : "";
+  const kind = normalizeKind(typeof kindRaw === "string" ? kindRaw : "");
 
   const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard");
 
@@ -67,7 +81,8 @@ export async function POST(req: NextRequest) {
       `;
       if (existing && existing[0]) {
         const r = existing[0];
-        return { status: "waiting" as const, code: r.code, mode: r.mode, fee: r.fee, codeLen: r.codeLen };
+        const parsed = parseRoomModeKey(r.mode);
+        return { status: "waiting" as const, code: r.code, mode: parsed.mode, kind: parsed.kind, fee: r.fee, codeLen: r.codeLen };
       }
 
       const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
@@ -84,11 +99,11 @@ export async function POST(req: NextRequest) {
         const code = generateRoomCode();
         const inserted = await tx.$queryRaw<{ code: string }[]>`
           INSERT INTO "OnlineRoom" ("code","mode","fee","codeLen","hostEmail","guestEmail","status","matchId","createdAt","updatedAt")
-          VALUES (${code}, ${mode}, ${fee}, ${codeLen}, ${email}, NULL, 'waiting', NULL, NOW(), NOW())
+          VALUES (${code}, ${kind === "custom" ? `${mode}_custom` : mode}, ${fee}, ${codeLen}, ${email}, NULL, 'waiting', NULL, NOW(), NOW())
           ON CONFLICT ("code") DO NOTHING
           RETURNING "code"
         `;
-        if (inserted && inserted[0]) return { status: "waiting" as const, code, mode, fee, codeLen, coins: nextCoins };
+        if (inserted && inserted[0]) return { status: "waiting" as const, code, mode, kind, fee, codeLen, coins: nextCoins };
       }
 
       return { status: "error" as const, error: "code_unavailable" as const, coins: nextCoins };
@@ -100,4 +115,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
-
