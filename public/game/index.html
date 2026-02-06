@@ -328,6 +328,10 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        flex-direction: row;
+      }
+      html[dir="rtl"] .playerBrand,
+      body[dir="rtl"] .playerBrand {
         flex-direction: row-reverse;
       }
       #playerAvatar {
@@ -371,10 +375,12 @@
         flex: 0 0 auto;
         gap: 6px;
       }
-      html[dir="rtl"] .onlineCount {
+      html[dir="rtl"] .onlineCount,
+      body[dir="rtl"] .onlineCount {
         direction: rtl;
       }
-      html[dir="ltr"] .onlineCount {
+      html[dir="ltr"] .onlineCount,
+      body[dir="ltr"] .onlineCount {
         direction: ltr;
       }
       .onlineCountLabel {
