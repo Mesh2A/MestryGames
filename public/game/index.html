@@ -56,7 +56,7 @@
         --glow-a: rgba(34, 211, 238, 0.22);
         --glow-b: rgba(99, 102, 241, 0.22);
         --glow-c: rgba(236, 72, 153, 0.18);
-        --ui-blur: 0px;
+        --ui-blur: 12px;
         --bg-grad-a: radial-gradient(1200px 720px at 18% 0%, rgba(34, 211, 238, 0.18), transparent 62%);
         --bg-grad-b: radial-gradient(1100px 760px at 84% 10%, rgba(99, 102, 241, 0.16), transparent 64%),
           radial-gradient(900px 620px at 52% 110%, rgba(236, 72, 153, 0.08), transparent 58%);
@@ -185,6 +185,7 @@
         --btn-bg: rgba(255, 255, 255, 0.08);
         --btn-hover-bg: rgba(255, 255, 255, 0.1);
         --pattern-color: rgba(255, 255, 255, 0.06);
+        --ui-blur: 0px;
       }
       * {
         box-sizing: border-box;
@@ -215,6 +216,11 @@
           repeating-linear-gradient(25deg, rgba(255, 255, 255, 0.03) 0 2px, rgba(255, 255, 255, 0) 2px 7px);
         opacity: 0.55;
         mix-blend-mode: overlay;
+        transform: translate3d(0, 0, 0);
+        animation: bgFloat 14s ease-in-out infinite alternate;
+      }
+      html[data-reduce-motion="1"][data-mobile="0"] body::before {
+        animation: none;
       }
       html[data-theme="crimson"] body::after {
         content: "";
@@ -240,6 +246,16 @@
         }
         to {
           transform: rotate(-10deg) translateX(12%);
+        }
+      }
+      @keyframes bgFloat {
+        from {
+          transform: translate3d(-1.2%, -0.6%, 0) scale(1.02);
+          opacity: 0.5;
+        }
+        to {
+          transform: translate3d(1.2%, 0.6%, 0) scale(1.04);
+          opacity: 0.62;
         }
       }
       .app {
@@ -605,6 +621,7 @@
         user-select: none;
         position: relative;
         overflow: hidden;
+        will-change: transform;
       }
       .btn.twoLine {
         display: grid;
@@ -639,7 +656,8 @@
         transform: translateY(-2px) scale(1.01);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)), var(--btn-hover-bg);
         border-color: var(--btn-hover-border);
-        box-shadow: 0 16px 46px rgba(0, 0, 0, 0.24);
+        box-shadow: 0 18px 56px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        filter: saturate(1.08) brightness(1.03);
       }
       .btn:active {
         transform: translateY(0) scale(0.995);

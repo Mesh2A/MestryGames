@@ -3,10 +3,10 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  font-family: var(--font-geist-sans);
-  background: radial-gradient(1200px 600px at 10% -10%, rgba(98, 164, 255, 0.22), transparent 65%),
-    radial-gradient(1200px 600px at 90% -10%, rgba(255, 190, 120, 0.15), transparent 65%),
-    #0b1020;
+  background: radial-gradient(1200px 600px at 10% -10%, rgba(56, 189, 248, 0.22), transparent 65%),
+    radial-gradient(1200px 600px at 90% -10%, rgba(167, 139, 250, 0.16), transparent 65%),
+    radial-gradient(900px 520px at 50% 120%, rgba(34, 211, 238, 0.1), transparent 60%),
+    #070912;
   color: #fff;
 }
 
@@ -17,12 +17,45 @@
 .card {
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
   backdrop-filter: blur(10px);
   padding: 16px;
   width: min(330px, 92vw);
   display: grid;
   gap: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(260px 160px at 22% 8%, rgba(255, 255, 255, 0.16), transparent 65%),
+    radial-gradient(320px 200px at 90% 0%, rgba(56, 189, 248, 0.16), transparent 70%),
+    radial-gradient(360px 240px at 0% 92%, rgba(167, 139, 250, 0.14), transparent 72%);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -80%;
+  width: 60%;
+  height: 220%;
+  background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.35) 45%, transparent 75%);
+  transform: translateX(-120%) rotate(18deg);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 700ms ease, opacity 200ms ease;
+}
+
+.card:hover::after {
+  opacity: 0.55;
+  transform: translateX(320%) rotate(18deg);
 }
 
 .brand {

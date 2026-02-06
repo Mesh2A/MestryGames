@@ -20,7 +20,8 @@ export default async function PlayPage() {
       style={{
         height: "100dvh",
         minHeight: "100vh",
-        background: "#0b1020",
+        background:
+          "radial-gradient(1200px 700px at 20% 0%, rgba(56, 189, 248, 0.18), transparent 62%), radial-gradient(1100px 760px at 84% 10%, rgba(167, 139, 250, 0.14), transparent 64%), #070912",
         overflow: "hidden",
         position: "relative",
       }}
@@ -35,7 +36,9 @@ export default async function PlayPage() {
             padding: "10px 12px",
             borderRadius: 14,
             border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(13, 18, 34, 0.65)",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
             color: "#fff",
             fontSize: 12,
             lineHeight: 1.6,

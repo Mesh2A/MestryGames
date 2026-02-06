@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cairo, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const cairo = Cairo({
+  variable: "--font-ar",
+  subsets: ["arabic", "latin"],
+  weight: ["400", "600", "700", "800", "900"],
+});
+
+const inter = Inter({
+  variable: "--font-en",
   subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
 });
 
 const geistMono = Geist_Mono({
@@ -25,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${cairo.variable} ${inter.variable} ${geistMono.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>
