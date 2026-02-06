@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   title: "MestRyLock",
   description: "لعبة أرقام مع تحديات ومكافآت",
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    shortcut: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/favicon.png?v=2647e79", type: "image/png", sizes: "32x32" }],
+    shortcut: [{ url: "/favicon.png?v=2647e79", type: "image/png", sizes: "32x32" }],
+    apple: [{ url: "/apple-touch-icon.png?v=2647e79", type: "image/png", sizes: "180x180" }],
   },
 };
 
