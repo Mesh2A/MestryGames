@@ -2410,6 +2410,13 @@
         gap: 12px;
         align-items: center;
       }
+      .onlineFoundCountdown {
+        text-align: center;
+        font-weight: 900;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        letter-spacing: 0.1px;
+      }
       .onlineVs {
         text-align: center;
         color: var(--muted);
@@ -8377,9 +8384,11 @@
         oppFlashKey: "",
         searchingStartedAt: 0,
         pollQueueId: null,
+        pollQueueBusy: false,
         pollMatchId: null,
         pollMatchEvery: 0,
         pollRoomId: null,
+        pollRoomBusy: false,
         spinId: null,
         coinsSyncId: null,
         coinsSyncBusy: false,
@@ -8407,6 +8416,7 @@
       function stopOnlineQueuePolling() {
         if (onlineState.pollQueueId) clearInterval(onlineState.pollQueueId);
         onlineState.pollQueueId = null;
+        onlineState.pollQueueBusy = false;
         if (onlineState.spinId) clearInterval(onlineState.spinId);
         onlineState.spinId = null;
       }
@@ -8414,6 +8424,7 @@
       function stopOnlineRoomPolling() {
         if (onlineState.pollRoomId) clearInterval(onlineState.pollRoomId);
         onlineState.pollRoomId = null;
+        onlineState.pollRoomBusy = false;
       }
 
       function stopOnlineMatchPolling() {
@@ -8450,6 +8461,7 @@
         const meResolved = me || (await ensureMeLoaded());
         renderOnlineSearching(mode, meResolved || null, kind);
         const nameEl = document.getElementById("onlineSearchOppName");
+        const countdownEl = document.getElementById("onlineFoundCountdown");
         const barEl = document.getElementById("onlineSearchBar");
         const oppAv = document.getElementById("onlineSearchOppAvatar");
         if (onlineState.spinId) clearInterval(onlineState.spinId);
@@ -8468,17 +8480,17 @@
           opponent && typeof opponent.firstName === "string" && String(opponent.firstName || "").trim() ? String(opponent.firstName).trim() : "خصم";
         const oppPhoto = opponent && typeof opponent.photo === "string" ? opponent.photo : "";
         if (nameEl) nameEl.innerHTML = `${escapeHtml(oppName)}<span id="onlineSearchDots"></span>`;
-        const dotsEl2 = document.getElementById("onlineSearchDots");
         if (oppAv) onlineSetSearchAvatar(oppAv, oppPhoto, String(oppName || "O").slice(0, 1).toUpperCase());
+        if (countdownEl) countdownEl.style.display = "";
 
         onlineState.preEnterMatchId = id;
         onlineState.preEnterUntil = Date.now() + 5000;
         if (onlineState.preEnterId) clearInterval(onlineState.preEnterId);
         onlineState.preEnterId = setInterval(() => {
           const curName = document.getElementById("onlineSearchOppName");
-          const curDots = document.getElementById("onlineSearchDots");
           const curBar = document.getElementById("onlineSearchBar");
-          if (!curName || !curDots || !curBar) {
+          const curCountdown = document.getElementById("onlineFoundCountdown");
+          if (!curName || !curBar) {
             stopOnlinePreEnter();
             return;
           }
@@ -8492,11 +8504,11 @@
             return;
           }
           const sec = Math.max(1, Math.ceil(rem / 1000));
-          curDots.textContent = ` • يبدأ خلال ${sec}`;
+          if (curCountdown) curCountdown.textContent = `يبدأ خلال ${sec}`;
           const pct = Math.min(100, Math.max(0, Math.floor((rem / 5000) * 100)));
           curBar.style.width = `${pct}%`;
         }, 110);
-        if (dotsEl2) dotsEl2.textContent = ` • يبدأ خلال 5`;
+        if (countdownEl) countdownEl.textContent = `يبدأ خلال 5`;
         if (barEl) barEl.style.width = `100%`;
       }
 
@@ -9000,6 +9012,7 @@
 
         el.onlineContent.innerHTML = `<div class="onlineWrap">
           <div class="tiny">${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(cfg.codeLen))} ارقام</div>
+          <div id="onlineFoundCountdown" class="onlineFoundCountdown" style="display:none"></div>
           <div class="onlineMatchRow">
             <div class="onlinePlayerCard">
               <div id="onlineSearchMeAvatar" class="onlineAvatar">P</div>
@@ -9209,19 +9222,26 @@
       function startRoomPolling(code) {
         stopOnlineRoomPolling();
         const tick = async () => {
-          const s = await friendsJson(`/api/online/room/status?code=${encodeURIComponent(code)}`, { method: "GET" });
-          if (!s.ok || !s.data) return;
-          if (s.data.status === "matched" && s.data.matchId) {
-            stopOnlineRoomPolling();
-            const me = await ensureMeLoaded();
-            await onlinePreEnterMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind);
-            return;
-          }
-          if (s.data.status === "cancelled") {
-            stopOnlineRoomPolling();
-            if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
-            enqueueToast({ title: t("onlineBtn"), body: "تم إلغاء الغرفة.", autoMs: 2200 });
-            renderOnlineSelect();
+          if (onlineState.pollRoomBusy) return;
+          onlineState.pollRoomBusy = true;
+          try {
+            const s = await friendsJson(`/api/online/room/status?code=${encodeURIComponent(code)}`, { method: "GET" });
+            if (!s.ok || !s.data) return;
+            if (s.data.status === "matched" && s.data.matchId) {
+              stopOnlineRoomPolling();
+              const me = await ensureMeLoaded();
+              await onlinePreEnterMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind);
+              return;
+            }
+            if (s.data.status === "cancelled") {
+              stopOnlineRoomPolling();
+              if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
+              enqueueToast({ title: t("onlineBtn"), body: "تم إلغاء الغرفة.", autoMs: 2200 });
+              renderOnlineSelect();
+            }
+          } catch {
+          } finally {
+            onlineState.pollRoomBusy = false;
           }
         };
         tick();
@@ -9382,16 +9402,23 @@
             onlineState.queueId = r.data.queueId;
             stopOnlineQueuePolling();
             const tick = async () => {
-              const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
-              if (!s.ok || !s.data) return;
-              if (s.data.status === "matched" && s.data.matchId) {
-                stopOnlineQueuePolling();
-                await onlinePreEnterMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind || onlineState.selectKind);
-              }
-              if (s.data.status === "cancelled") {
-                stopOnlineQueuePolling();
-                if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
-                renderOnlineSelect();
+              if (onlineState.pollQueueBusy) return;
+              onlineState.pollQueueBusy = true;
+              try {
+                const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
+                if (!s.ok || !s.data) return;
+                if (s.data.status === "matched" && s.data.matchId) {
+                  stopOnlineQueuePolling();
+                  await onlinePreEnterMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind || onlineState.selectKind);
+                }
+                if (s.data.status === "cancelled") {
+                  stopOnlineQueuePolling();
+                  if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
+                  renderOnlineSelect();
+                }
+              } catch {
+              } finally {
+                onlineState.pollQueueBusy = false;
               }
             };
             tick();
