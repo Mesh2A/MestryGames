@@ -219,7 +219,7 @@ export async function GET(req: NextRequest) {
           myId: myProfile?.publicId || null,
           myCoins,
           myLevel,
-          turn: state.phase === "setup" ? "setup" : m.endedAt ? "ended" : m.turnEmail === email ? "me" : "them",
+          turn: m.endedAt ? "ended" : state.phase === "setup" ? "setup" : m.turnEmail === email ? "me" : "them",
           timeLeftMs: state.phase === "setup" ? 0 : timeLeftMs,
           winner: m.winnerEmail ? (m.winnerEmail === email ? "me" : "them") : null,
           endedAt: m.endedAt ? m.endedAt.toISOString() : null,

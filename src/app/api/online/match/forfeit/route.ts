@@ -72,12 +72,39 @@ export async function POST(req: NextRequest) {
       if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
       if (m.endedAt || m.winnerEmail) return { ok: true as const, ended: true as const };
 
+      const now = Date.now();
       const winnerEmail = m.aEmail === email ? m.bEmail : m.aEmail;
       const loserEmail = email;
-      const pot = Math.max(0, Math.floor(m.fee)) * 2;
-      const now = Date.now();
       const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
-      const nextState = { ...prevState, endedReason: "forfeit", forfeitedBy: email, forfeitedAt: now };
+      const kind = prevState.kind === "custom" ? ("custom" as const) : ("normal" as const);
+      const phase = kind === "custom" && prevState.phase === "setup" ? ("setup" as const) : ("play" as const);
+      const fee = Math.max(0, Math.floor(m.fee));
+      const isSetupCancel = kind === "custom" && phase === "setup";
+      const nextState = { ...prevState, endedReason: isSetupCancel ? "forfeit_setup" : "forfeit", forfeitedBy: email, forfeitedAt: now };
+
+      if (isSetupCancel) {
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "winnerEmail" = NULL, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+
+        const refund = async (who: string) => {
+          const profile = await tx.gameProfile.findUnique({ where: { email: who }, select: { state: true } });
+          const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+          const coins = readCoinsFromState(stateObj);
+          const peak = readCoinsPeakFromState(stateObj);
+          const nextCoins = coins + fee;
+          const next = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: now };
+          await tx.gameProfile.update({ where: { email: who }, data: { state: next } });
+          return nextCoins;
+        };
+
+        const [aCoins, bCoins] = await Promise.all([refund(m.aEmail), refund(m.bEmail)]);
+        return { ok: true as const, ended: true as const, cancelled: true as const, aCoins, bCoins };
+      }
+
+      const pot = fee * 2;
 
       await tx.$executeRaw`
         UPDATE "OnlineMatch"

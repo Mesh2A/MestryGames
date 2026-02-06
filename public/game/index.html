@@ -8514,6 +8514,7 @@
         const winnerIsMe = winner === "me";
         const hasWinner = winner === "me" || winner === "them";
         const isDisabled = String(endedReason || "") === "disabled";
+        const isForfeit = String(endedReason || "").startsWith("forfeit");
 
         const loserIsMe = hasWinner ? !winnerIsMe : false;
         const loserName = hasWinner ? (loserIsMe ? myName : oppName) : myName;
@@ -8523,12 +8524,12 @@
 
         el.winBox.classList.toggle("onlineWin", hasWinner && winnerIsMe && !isDisabled);
         el.winBox.classList.toggle("onlineLose", hasWinner && !winnerIsMe && !isDisabled);
-        el.winTitle.textContent = isDisabled ? "تم إيقاف الأونلاين" : winnerIsMe ? "فزت!" : "خسرت";
+        el.winTitle.textContent = isDisabled ? "تم إيقاف الأونلاين" : !hasWinner && isForfeit ? "تم إلغاء المباراة" : winnerIsMe ? "فزت!" : "خسرت";
 
         const subLine =
           isDisabled
             ? "تم إيقاف الأونلاين وإعادة الرهان."
-            : endedReason === "forfeit"
+            : isForfeit
             ? forfeitedBy === "them"
               ? "الخصم انسحب"
               : forfeitedBy === "me"
@@ -8818,7 +8819,7 @@
               vibrate([0, 30, 40]);
             }
           }
-          if (m.endedReason === "forfeit" && m.forfeitedBy === "them" && !onlineState.autoReturnId) {
+          if (String(m.endedReason || "").startsWith("forfeit") && m.forfeitedBy === "them" && !onlineState.autoReturnId) {
             enqueueToast({ title: t("onlineBtn"), body: "الخصم انسحب", autoMs: 1800 });
             onlineState.autoReturnId = setTimeout(() => {
               onlineState.autoReturnId = null;
