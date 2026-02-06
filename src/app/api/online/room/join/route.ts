@@ -38,6 +38,7 @@ function generateAnswer(codeLen: number) {
 
 function normalizeKind(kind: string) {
   const k = String(kind || "").trim().toLowerCase();
+  if (k === "props" || k === "properties") return "props";
   if (k === "custom" || k === "specified" || k === "limited") return "custom";
   return "normal";
 }
@@ -45,6 +46,7 @@ function normalizeKind(kind: string) {
 function parseRoomModeKey(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
   if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const };
   return { mode: m, kind: "normal" as const };
 }
 
@@ -66,6 +68,13 @@ function firstNameFromDisplayNameOrEmail(displayName: string, email: string) {
   const name = String(displayName || "").trim();
   if (name) return name;
   return firstNameFromEmail(email);
+}
+
+function generatePropsDeck() {
+  const pool = ["skip_turn", "double_or_nothing", "reverse_digits", "hide_colors"];
+  const out: string[] = [];
+  for (let i = 0; i < 5; i++) out.push(pool[randomBytes(1)[0] % pool.length]);
+  return out;
 }
 
 export async function POST(req: NextRequest) {
@@ -93,7 +102,7 @@ export async function POST(req: NextRequest) {
   const kindRaw = body && typeof body === "object" && "kind" in body ? (body as { kind?: unknown }).kind : "";
   const code = normalizeCode(typeof codeRaw === "string" ? codeRaw : "");
   if (!code) return NextResponse.json({ error: "missing_code" }, { status: 400, headers: { "Cache-Control": "no-store" } });
-  const kindReq = typeof kindRaw === "string" ? normalizeKind(kindRaw) : "";
+  const kindReq = typeof kindRaw === "string" ? (normalizeKind(kindRaw) as "normal" | "custom" | "props") : "";
 
   try {
     const out = await prisma.$transaction(async (tx) => {
@@ -131,7 +140,20 @@ export async function POST(req: NextRequest) {
       const initialState =
         parsed.kind === "custom"
           ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
-          : { a: [], b: [], lastMasked: null };
+          : parsed.kind === "props"
+            ? {
+                kind: "props",
+                phase: "cards",
+                deck: generatePropsDeck(),
+                pick: { a: null, b: null },
+                used: { a: false, b: false },
+                effects: { skipBy: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
+                round: 1,
+                a: [],
+                b: [],
+                lastMasked: null,
+              }
+            : { a: [], b: [], lastMasked: null };
 
       await tx.$executeRaw`
         INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")

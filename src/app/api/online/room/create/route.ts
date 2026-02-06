@@ -21,6 +21,7 @@ function configForMode(mode: "easy" | "medium" | "hard") {
 
 function normalizeKind(kind: string) {
   const k = String(kind || "").trim().toLowerCase();
+  if (k === "props" || k === "properties") return "props";
   if (k === "custom" || k === "specified" || k === "limited") return "custom";
   return "normal";
 }
@@ -28,6 +29,7 @@ function normalizeKind(kind: string) {
 function parseRoomModeKey(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
   if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const };
   return { mode: m, kind: "normal" as const };
 }
 
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
   const mode = normalizeMode(typeof modeRaw === "string" ? modeRaw : "");
   if (!mode) return NextResponse.json({ error: "bad_mode" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   const kindRaw = body && typeof body === "object" && "kind" in body ? (body as { kind?: unknown }).kind : "";
-  const kind = normalizeKind(typeof kindRaw === "string" ? kindRaw : "");
+  const kind = normalizeKind(typeof kindRaw === "string" ? kindRaw : "") as "normal" | "custom" | "props";
 
   const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard");
 
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
         const code = generateRoomCode();
         const inserted = await tx.$queryRaw<{ code: string }[]>`
           INSERT INTO "OnlineRoom" ("code","mode","fee","codeLen","hostEmail","guestEmail","status","matchId","createdAt","updatedAt")
-          VALUES (${code}, ${kind === "custom" ? `${mode}_custom` : mode}, ${fee}, ${codeLen}, ${email}, NULL, 'waiting', NULL, NOW(), NOW())
+          VALUES (${code}, ${kind === "custom" ? `${mode}_custom` : kind === "props" ? `${mode}_props` : mode}, ${fee}, ${codeLen}, ${email}, NULL, 'waiting', NULL, NOW(), NOW())
           ON CONFLICT ("code") DO NOTHING
           RETURNING "code"
         `;

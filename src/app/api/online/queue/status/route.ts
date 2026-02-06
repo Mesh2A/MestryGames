@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 function parseQueueMode(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
   if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const };
   return { mode: m, kind: "normal" as const };
 }
 

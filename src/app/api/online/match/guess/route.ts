@@ -5,6 +5,7 @@ import { getOnlineEnabled } from "@/lib/onlineConfig";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 
 const TURN_MS = 30_000;
 
@@ -65,20 +66,45 @@ function evaluateGuess(guess: string, answer: string) {
   return result as ("ok" | "warn" | "bad")[];
 }
 
+function generateAnswer(codeLen: number) {
+  const digits: string[] = [];
+  const used = new Set<number>();
+  while (digits.length < codeLen) {
+    const d = randomBytes(1)[0] % 10;
+    if (used.has(d)) continue;
+    used.add(d);
+    digits.push(String(d));
+  }
+  return digits.join("");
+}
+
 function safeState(raw: unknown) {
   const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const a = Array.isArray(s.a) ? s.a : [];
   const b = Array.isArray(s.b) ? s.b : [];
   const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
-  const kind = s.kind === "custom" ? ("custom" as const) : ("normal" as const);
-  const phase = kind === "custom" && s.phase === "setup" ? ("setup" as const) : ("play" as const);
+  const kind = s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : ("normal" as const);
+  const phase =
+    kind === "custom" && s.phase === "setup" ? ("setup" as const) : kind === "props" && s.phase === "cards" ? ("cards" as const) : ("play" as const);
   const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
   const ready = s.ready && typeof s.ready === "object" ? (s.ready as Record<string, unknown>) : {};
   const secretA = typeof secrets.a === "string" ? secrets.a : "";
   const secretB = typeof secrets.b === "string" ? secrets.b : "";
   const readyA = ready.a === true;
   const readyB = ready.b === true;
-  return { a, b, lastMasked, kind, phase, secretA, secretB, readyA, readyB };
+  const deck = Array.isArray(s.deck) ? s.deck.filter((x) => typeof x === "string").slice(0, 5) : [];
+  const pick = s.pick && typeof s.pick === "object" ? (s.pick as Record<string, unknown>) : {};
+  const used = s.used && typeof s.used === "object" ? (s.used as Record<string, unknown>) : {};
+  const effects = s.effects && typeof s.effects === "object" ? (s.effects as Record<string, unknown>) : {};
+  const pickA = typeof pick.a === "number" && Number.isFinite(pick.a) ? Math.max(0, Math.min(4, Math.floor(pick.a))) : null;
+  const pickB = typeof pick.b === "number" && Number.isFinite(pick.b) ? Math.max(0, Math.min(4, Math.floor(pick.b))) : null;
+  const usedA = used.a === true;
+  const usedB = used.b === true;
+  const skipBy = effects.skipBy === "a" || effects.skipBy === "b" ? (effects.skipBy as "a" | "b") : null;
+  const reverseFor = effects.reverseFor === "a" || effects.reverseFor === "b" ? (effects.reverseFor as "a" | "b") : null;
+  const hideColorsFor = effects.hideColorsFor === "a" || effects.hideColorsFor === "b" ? (effects.hideColorsFor as "a" | "b") : null;
+  const doubleAgainst = effects.doubleAgainst === "a" || effects.doubleAgainst === "b" ? (effects.doubleAgainst as "a" | "b") : null;
+  return { a, b, lastMasked, kind, phase, secretA, secretB, readyA, readyB, deck, pickA, pickB, usedA, usedB, skipBy, reverseFor, hideColorsFor, doubleAgainst };
 }
 
 export async function POST(req: NextRequest) {
@@ -136,7 +162,7 @@ export async function POST(req: NextRequest) {
       const now = Date.now();
       const turnStartedAt = Number(m.turnStartedAt || 0);
       const state0 = safeState(m.state);
-      if (state0.phase !== "setup" && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS) {
+      if (state0.phase === "play" && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS) {
         const nextTurn = m.turnEmail === m.aEmail ? m.bEmail : m.aEmail;
         await tx.$executeRaw`
           UPDATE "OnlineMatch"
@@ -153,14 +179,18 @@ export async function POST(req: NextRequest) {
       if (!isDigitsN(guess, len)) return { ok: false as const, error: "bad_guess" as const };
 
       if (state0.kind === "custom" && (!state0.readyA || !state0.readyB)) return { ok: false as const, error: "not_ready" as const };
+      if (state0.kind === "props" && (state0.phase !== "play" || state0.pickA === null || state0.pickB === null)) return { ok: false as const, error: "not_ready" as const };
       const role = m.aEmail === email ? "a" : "b";
       const targetAnswer = state0.kind === "custom" ? (role === "a" ? state0.secretB : state0.secretA) : m.answer;
       if (!targetAnswer || !isDigitsN(targetAnswer, len)) return { ok: false as const, error: "not_ready" as const };
 
-      const result = evaluateGuess(guess, targetAnswer);
-      const solved = result.every((x) => x === "ok");
+      const effectiveGuess = state0.kind === "props" && state0.reverseFor === role ? guess.split("").reverse().join("") : guess;
+      const rawResult = evaluateGuess(effectiveGuess, targetAnswer);
+      const solved = rawResult.every((x) => x === "ok");
       const state = state0;
 
+      const hideColors = state0.kind === "props" && state0.hideColorsFor === role;
+      const result = hideColors ? Array(len).fill("mask") : rawResult;
       const entry = { guess, result, at: now };
       const nextA = role === "a" ? (state.a as unknown[]).concat([entry]).slice(-160) : (state.a as unknown[]).slice(-160);
       const nextB = role === "b" ? (state.b as unknown[]).concat([entry]).slice(-160) : (state.b as unknown[]).slice(-160);
@@ -172,6 +202,39 @@ export async function POST(req: NextRequest) {
         b: nextB,
         lastMasked: { by: email, len, at: now },
       };
+
+      const consumeEffects = () => {
+        if (state0.kind !== "props") return;
+        const eff = prevState.effects && typeof prevState.effects === "object" ? (prevState.effects as Record<string, unknown>) : {};
+        const nextEff: Record<string, unknown> = { ...eff };
+        if (nextEff.reverseFor === role) nextEff.reverseFor = null;
+        if (nextEff.hideColorsFor === role) nextEff.hideColorsFor = null;
+        if (nextEff.skipBy === role) nextEff.skipBy = null;
+        nextState.effects = nextEff;
+      };
+      consumeEffects();
+
+      if (solved && state0.kind === "props" && state0.doubleAgainst === role) {
+        const newAnswer = generateAnswer(len);
+        const eff = prevState.effects && typeof prevState.effects === "object" ? (prevState.effects as Record<string, unknown>) : {};
+        nextState.effects = { ...eff, doubleAgainst: null };
+        nextState.a = [];
+        nextState.b = [];
+        nextState.lastMasked = null;
+        nextState.round = typeof (prevState as Record<string, unknown>).round === "number" ? Math.floor((prevState as Record<string, unknown>).round as number) + 1 : 2;
+
+        const nextTurn = m.aEmail === email ? m.bEmail : m.aEmail;
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "answer" = ${newAnswer}, "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+
+        const myProfile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+        const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
+        const myCoins = readCoinsFromState(myState);
+        return { ok: true as const, solved: false as const, result, nextTurn: "them" as const, coins: myCoins, doubleOrNothing: true as const };
+      }
 
       if (solved) {
         const pot = Math.max(0, Math.floor(m.fee)) * 2;
@@ -224,7 +287,8 @@ export async function POST(req: NextRequest) {
         return { ok: true as const, solved: true as const, result, pot, coins: wNextCoins };
       }
 
-      const nextTurn = m.aEmail === email ? m.bEmail : m.aEmail;
+      const skip = state0.kind === "props" && state0.skipBy === role;
+      const nextTurn = skip ? email : m.aEmail === email ? m.bEmail : m.aEmail;
       await tx.$executeRaw`
         UPDATE "OnlineMatch"
         SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
@@ -235,7 +299,7 @@ export async function POST(req: NextRequest) {
       const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
       const myCoins = readCoinsFromState(myState);
 
-      return { ok: true as const, solved: false as const, result, nextTurn: "them" as const, coins: myCoins };
+      return { ok: true as const, solved: false as const, result, nextTurn: skip ? ("me" as const) : ("them" as const), coins: myCoins, hideColors: hideColors ? (true as const) : (false as const) };
     });
 
     if (!out.ok) {

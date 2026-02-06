@@ -1797,6 +1797,10 @@
         background: rgba(245, 158, 11, 0.72);
         border-color: rgba(245, 158, 11, 0.9);
       }
+      .dot.mask {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.22);
+      }
       html[data-mobile="1"] .dot.warn {
         background: rgba(245, 158, 11, 0.95);
         border-color: rgba(245, 158, 11, 1);
@@ -2773,6 +2777,106 @@
       .setupStatusTag.ok {
         border-color: rgba(34, 211, 238, 0.34);
         box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+      }
+      .propsPickCard {
+        width: min(520px, calc(100vw - 24px));
+      }
+      .propsCardsGrid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+      }
+      @media (max-width: 520px) {
+        .propsCardsGrid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      .propsCardBtn {
+        border: 0;
+        padding: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+      .propsCardBtn:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      .propsCard {
+        height: 92px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.18));
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 220ms ease, border-color 160ms ease;
+      }
+      .propsCardBtn:hover .propsCard {
+        border-color: rgba(239, 68, 68, 0.4);
+      }
+      .propsCard.flipped {
+        transform: rotateY(180deg);
+      }
+      .propsFace {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        border-radius: 14px;
+      }
+      .propsFace.back {
+        transform: rotateY(0deg);
+        gap: 10px;
+      }
+      .propsFace.front {
+        transform: rotateY(180deg);
+        text-align: center;
+        font-weight: 900;
+        font-size: 12px;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.92);
+      }
+      .propsLogo {
+        width: 26px;
+        height: 26px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.08);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 1000;
+        letter-spacing: 0.4px;
+      }
+      .propsHudRow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .propsHudCard {
+        flex: 1;
+        min-height: 56px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.18));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+        font-weight: 900;
+        font-size: 13px;
+        text-align: center;
       }
       .setupCheck {
         width: 18px;
@@ -3967,6 +4071,10 @@
                 <div id="onlineTurnText" class="onlineTiny">—</div>
                 <div class="onlineBar"><span id="onlineTurnBar"></span></div>
                 <div id="onlineOppLast" class="onlineTiny" style="text-align:right"></div>
+                <div id="onlinePropsHud" class="propsHudRow" style="display:none">
+                  <div id="onlinePropsCard" class="propsHudCard">—</div>
+                  <button id="onlinePropsUseBtn" class="btn primary" type="button">استخدم</button>
+                </div>
               </div>
 
               <div class="lock">
@@ -4425,6 +4533,18 @@
           <button id="onlineSetupReadyBtn" class="btn primary" type="button">استعد</button>
           <button id="onlineSetupForfeitBtn" class="btn danger" type="button">انسحاب</button>
         </div>
+      </div>
+    </div>
+
+    <div id="onlinePropsBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="formMiniCard propsPickCard" role="dialog" aria-modal="true">
+        <div class="formMiniHead">
+          <div class="confirmMiniQ">اللعب بالخواص</div>
+          <button id="onlinePropsCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <div id="onlinePropsHint" class="tiny" style="margin-top:8px; opacity:.9">اختر بطاقة واحدة فقط.</div>
+        <div id="onlinePropsCards" class="propsCardsGrid"></div>
+        <div id="onlinePropsStatus" class="tiny" style="margin-top:10px; opacity:.9"></div>
       </div>
     </div>
 
@@ -5339,6 +5459,11 @@
         onlineSetupCloseBtn: document.getElementById("onlineSetupCloseBtn"),
         onlineSetupReadyBtn: document.getElementById("onlineSetupReadyBtn"),
         onlineSetupForfeitBtn: document.getElementById("onlineSetupForfeitBtn"),
+        onlinePropsBackdrop: document.getElementById("onlinePropsBackdrop"),
+        onlinePropsCloseBtn: document.getElementById("onlinePropsCloseBtn"),
+        onlinePropsHint: document.getElementById("onlinePropsHint"),
+        onlinePropsCards: document.getElementById("onlinePropsCards"),
+        onlinePropsStatus: document.getElementById("onlinePropsStatus"),
         settingsContent: document.getElementById("settingsContent"),
         missionsContent: document.getElementById("missionsContent"),
         profileDropBackdrop: document.getElementById("profileDropBackdrop"),
@@ -5498,6 +5623,9 @@
         onlineTurnText: document.getElementById("onlineTurnText"),
         onlineTurnBar: document.getElementById("onlineTurnBar"),
         onlineOppLast: document.getElementById("onlineOppLast"),
+        onlinePropsHud: document.getElementById("onlinePropsHud"),
+        onlinePropsCard: document.getElementById("onlinePropsCard"),
+        onlinePropsUseBtn: document.getElementById("onlinePropsUseBtn"),
         msg: document.getElementById("msg"),
         checkBtn: document.getElementById("checkBtn"),
         hintBtn: document.getElementById("hintBtn"),
@@ -5558,8 +5686,10 @@
           onlineBtnSub: "يفتح عند مرحلة 45",
           onlineModeNormal: "اللعب العادي",
           onlineModeCustom: "اللعب المحدد",
+          onlineModeProps: "اللعب بالخواص",
           onlineSelectHintNormal: "اختر القيم.",
           onlineSelectHintCustom: "اختر القيم ثم حدد أرقامك قبل بدء التحدي.",
+          onlineSelectHintProps: "اختر القيم ثم اختر بطاقة قبل بدء التحدي.",
           onlineDiffEasy: "سهل",
           onlineDiffMedium: "متوسط",
           onlineDiffHard: "صعب",
@@ -5571,6 +5701,7 @@
           onlineTurnMe: "دورك الآن",
           onlineTurnThem: "دور الخصم",
           onlineTurnSetup: "تجهيز الأرقام",
+          onlineTurnCards: "اختيار بطاقة",
           onlineTurnEnded: "انتهى التحدي",
           onlineSetupTitle: "حدد أرقامك",
           onlineSetupHint: "اكتب {n} أرقام (التكرار مسموح).",
@@ -5789,8 +5920,10 @@
           onlineBtnSub: "Unlocks at level 45",
           onlineModeNormal: "Normal play",
           onlineModeCustom: "Custom play",
+          onlineModeProps: "Props play",
           onlineSelectHintNormal: "Choose difficulty.",
           onlineSelectHintCustom: "Choose difficulty, then set your code before start.",
+          onlineSelectHintProps: "Choose difficulty, then pick one card before start.",
           onlineDiffEasy: "Easy",
           onlineDiffMedium: "Medium",
           onlineDiffHard: "Hard",
@@ -5802,6 +5935,7 @@
           onlineTurnMe: "Your turn",
           onlineTurnThem: "Opponent's turn",
           onlineTurnSetup: "Setting up",
+          onlineTurnCards: "Picking card",
           onlineTurnEnded: "Match ended",
           onlineSetupTitle: "Set your code",
           onlineSetupHint: "Enter {n} digits (repeats allowed).",
@@ -8404,6 +8538,11 @@
         setupPendingValue: null,
         setupPendingMatchId: "",
         customFocused: false,
+        serverOffsetMs: 0,
+        propsPendingPickUntil: 0,
+        propsPendingPickIndex: -1,
+        propsMyCard: "",
+        propsMyUsed: false,
       };
 
       const ONLINE_TURN_MS = 30_000;
@@ -8478,7 +8617,7 @@
           const m = r && r.ok && r.data && r.data.match ? r.data.match : null;
           if (m) {
             if (!opponent && m.opponent) opponent = m.opponent;
-            if (typeof m.kind === "string") kind = m.kind === "custom" ? "custom" : "normal";
+            if (typeof m.kind === "string") kind = m.kind === "custom" ? "custom" : m.kind === "props" ? "props" : "normal";
             if (typeof m.serverNowMs === "number" && Number.isFinite(m.serverNowMs)) serverNowMs = Math.floor(m.serverNowMs);
             if (typeof m.turnStartedAtMs === "number" && Number.isFinite(m.turnStartedAtMs)) turnStartedAtMs = Math.floor(m.turnStartedAtMs);
             if (serverNowMs > 0 && turnStartedAtMs > 0) {
@@ -8803,14 +8942,26 @@
           setCoinsTotal(m.myCoins, earnedDelta, true);
         }
 
-        const turn = m.turn;
+        let turn = m.turn;
         const timeLeftMs = typeof m.timeLeftMs === "number" ? Math.max(0, Math.floor(m.timeLeftMs)) : 0;
-        onlineState.turnEndAt = turn === "ended" ? 0 : Date.now() + timeLeftMs;
+        const serverNowMs = typeof m.serverNowMs === "number" && Number.isFinite(m.serverNowMs) ? Math.floor(m.serverNowMs) : 0;
+        const turnStartedAtMs = typeof m.turnStartedAtMs === "number" && Number.isFinite(m.turnStartedAtMs) ? Math.floor(m.turnStartedAtMs) : 0;
+        const syncedStartAt = turnStartedAtMs > 0 ? turnStartedAtMs - (onlineState.serverOffsetMs || 0) : 0;
+        const notStarted = turn !== "ended" && serverNowMs > 0 && turnStartedAtMs > serverNowMs + 120 && syncedStartAt > Date.now() + 60;
+        if (notStarted && (turn === "me" || turn === "them")) turn = "setup";
+        onlineState.turnEndAt = turn === "ended" || notStarted ? 0 : Date.now() + timeLeftMs;
         const pct = onlineState.turnEndAt ? Math.min(100, Math.max(0, Math.floor((timeLeftMs / ONLINE_TURN_MS) * 100))) : 0;
         if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
-        if (el.onlineTurnText)
-          el.onlineTurnText.textContent =
-            turn === "me" ? t("onlineTurnMe") : turn === "them" ? t("onlineTurnThem") : turn === "setup" ? t("onlineTurnSetup") : t("onlineTurnEnded");
+        if (el.onlineTurnText) {
+          if (notStarted) {
+            const rem = Math.max(0, syncedStartAt - Date.now());
+            const sec = Math.max(1, Math.ceil(rem / 1000));
+            el.onlineTurnText.textContent = `يبدأ خلال ${sec}`;
+          } else {
+            const setupLabel = m.kind === "props" && m.phase === "cards" ? t("onlineTurnCards") : t("onlineTurnSetup");
+            el.onlineTurnText.textContent = turn === "me" ? t("onlineTurnMe") : turn === "them" ? t("onlineTurnThem") : turn === "setup" ? setupLabel : t("onlineTurnEnded");
+          }
+        }
         if (meCard) meCard.classList.toggle("turnActive", turn === "me");
         if (oppCard) oppCard.classList.toggle("turnActive", turn === "them");
         if (turn === "me" || turn === "them") startOnlineTurnBarLoop();
@@ -8879,6 +9030,29 @@
           }
         }
 
+        if (m.kind === "props" && m.phase === "cards") {
+          openOnlinePropsModal(Array.isArray(m.deck) ? m.deck : [], typeof m.myPick === "number" ? m.myPick : null, typeof m.oppPick === "number" ? m.oppPick : null);
+        } else {
+          closeOnlinePropsModal();
+        }
+
+        if (el.onlinePropsHud) {
+          const myCard = typeof m.myCard === "string" ? String(m.myCard || "") : "";
+          const myUsed = !!m.myUsed;
+          onlineState.propsMyCard = myCard;
+          onlineState.propsMyUsed = myUsed;
+          if (m.kind === "props" && myCard) {
+            el.onlinePropsHud.style.display = "";
+            if (el.onlinePropsCard) el.onlinePropsCard.textContent = propsCardLabel(myCard);
+            if (el.onlinePropsUseBtn) {
+              el.onlinePropsUseBtn.style.display = myUsed ? "none" : "";
+              el.onlinePropsUseBtn.disabled = myUsed || onlineState.busy || turn !== "me" || m.phase !== "play";
+            }
+          } else {
+            el.onlinePropsHud.style.display = "none";
+          }
+        }
+
         if (turn === "ended") {
           stopOnlineMatchPolling();
           stopOnlineHiddenForfeitTimer();
@@ -8938,10 +9112,16 @@
         if (onlineState.stateFetchBusy) return;
         onlineState.stateFetchBusy = true;
         try {
+          const t0 = Date.now();
           const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(id)}`, { method: "GET" });
+          const t1 = Date.now();
           if (!r.ok || !r.data || !r.data.match) return;
           if (onlineState.matchId !== id) return;
           if (!app.stage || app.stage.kind !== "online" || app.stage.matchId !== id) return;
+          if (typeof r.data.match.serverNowMs === "number" && Number.isFinite(r.data.match.serverNowMs)) {
+            const mid = Math.floor((t0 + t1) / 2);
+            onlineState.serverOffsetMs = Math.floor(r.data.match.serverNowMs) - mid;
+          }
           onlineApplyMatchState(r.data.match, meEmail, fee);
         } finally {
           onlineState.stateFetchBusy = false;
@@ -8963,6 +9143,7 @@
         stopOnlineMatchPolling();
         stopOnlineHiddenForfeitTimer();
         closeOnlineSetupModal();
+        closeOnlinePropsModal();
         closeOnlineWithdrawModal();
 
         if (!onlineFeature.enabled) {
@@ -8972,11 +9153,12 @@
           return;
         }
 
-        const kind = onlineState.selectKind === "custom" ? "custom" : "normal";
+        const kind = onlineState.selectKind === "custom" ? "custom" : onlineState.selectKind === "props" ? "props" : "normal";
         const tab = (k, label) => `<button class="onlineTab ${k === kind ? "on" : ""}" type="button" data-online-kind="${escapeHtml(k)}">${escapeHtml(label)}</button>`;
         const tabsHtml = `<div class="onlineTabs">
           ${tab("normal", t("onlineModeNormal"))}
           ${tab("custom", t("onlineModeCustom"))}
+          ${tab("props", t("onlineModeProps"))}
         </div>`;
 
         const card = (mode) => {
@@ -8993,7 +9175,7 @@
 
         el.onlineContent.innerHTML = `<div class="onlineWrap">
           ${tabsHtml}
-          <div class="tiny">${escapeHtml(kind === "custom" ? t("onlineSelectHintCustom") : t("onlineSelectHintNormal"))}</div>
+          <div class="tiny">${escapeHtml(kind === "custom" ? t("onlineSelectHintCustom") : kind === "props" ? t("onlineSelectHintProps") : t("onlineSelectHintNormal"))}</div>
           <div class="onlinePacks">
             ${card("easy")}
             ${card("medium")}
@@ -9025,7 +9207,7 @@
         onlineState.searchingStartedAt = Date.now();
         startOnlineCoinsSync();
         const diff = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
-        const kindLabel = kind === "custom" ? t("onlineModeCustom") : t("onlineModeNormal");
+        const kindLabel = kind === "custom" ? t("onlineModeCustom") : kind === "props" ? t("onlineModeProps") : t("onlineModeNormal");
 
         el.onlineContent.innerHTML = `<div class="onlineWrap">
           <div class="tiny">${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(cfg.codeLen))} ارقام</div>
@@ -9179,7 +9361,14 @@
         const modeResolved = r.data && typeof r.data.mode === "string" ? String(r.data.mode).trim() : mode;
         const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(modeResolved).fee;
         const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(modeResolved).codeLen;
-        const kindResolved = r.data && typeof r.data.kind === "string" ? (String(r.data.kind).trim() === "custom" ? "custom" : "normal") : kind;
+        const kindResolved =
+          r.data && typeof r.data.kind === "string"
+            ? String(r.data.kind).trim() === "custom"
+              ? "custom"
+              : String(r.data.kind).trim() === "props"
+                ? "props"
+                : "normal"
+            : kind;
         if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
         if (!roomCode) {
           renderOnlineSelect();
@@ -9193,7 +9382,7 @@
       function renderRoomWaiting(roomCode, mode, fee, codeLen, kind) {
         if (!el.onlineContent) return;
         const diff = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
-        const kindLabel = kind === "custom" ? t("onlineModeCustom") : t("onlineModeNormal");
+        const kindLabel = kind === "custom" ? t("onlineModeCustom") : kind === "props" ? t("onlineModeProps") : t("onlineModeNormal");
         el.onlineContent.innerHTML = `<div class="onlineWrap">
           <div class="tiny">غرفة خاصة (${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(codeLen))} أرقام • <span class="coinChip">${fee}🪙</span>)</div>
           <div class="onlineRoomBox">
@@ -9385,7 +9574,7 @@
         onlineState.busy = true;
         try {
           const mePromise = ensureMeLoaded();
-          onlineState.selectKind = kind === "custom" ? "custom" : "normal";
+          onlineState.selectKind = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
           renderOnlineSearching(mode, friendsState.me || null, onlineState.selectKind);
           const r = await friendsJson("/api/online/queue/join", {
             method: "POST",
@@ -9462,10 +9651,16 @@
         onlineState.endCoinsSyncDone = false;
         stopOnlinePreEnter();
         stopOnlineHiddenForfeitTimer();
-        onlineState.selectKind = kind === "custom" ? "custom" : "normal";
+        onlineState.selectKind = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
         onlineState.customFocused = false;
         onlineState.oppFlashKey = "";
         onlineState.endAnimKey = "";
+        onlineState.propsPendingPickUntil = 0;
+        onlineState.propsPendingPickIndex = -1;
+        onlineState.propsMyCard = "";
+        onlineState.propsMyUsed = false;
+        closeOnlinePropsModal();
+        if (el.onlinePropsHud) el.onlinePropsHud.style.display = "none";
         if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.style.display = "";
 
         onlineState.oppName = "";
@@ -9532,7 +9727,7 @@
               return;
             }
             if (code === "not_ready") {
-              enqueueToast({ title: t("onlineSetupTitle"), body: t("onlineTurnSetup"), autoMs: 2200 });
+              enqueueToast({ title: t("onlineBtn"), body: onlineState.selectKind === "props" ? t("onlineTurnCards") : t("onlineTurnSetup"), autoMs: 2200 });
               await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
               return;
             }
@@ -9554,8 +9749,11 @@
               const slot = app.inputs[i] && app.inputs[i].parentElement;
               if (!slot) continue;
               slot.classList.remove("ok", "bad", "warn");
-              slot.classList.add(result[i]);
+              if (result[i] !== "mask") slot.classList.add(result[i]);
             }
+          }
+          if (r.data && r.data.doubleOrNothing) {
+            enqueueToast({ title: "Double or nothing", body: "استمر اللعب! الجولة مستمرة.", autoMs: 2400 });
           }
           clearGuessOnly();
           await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
@@ -9572,6 +9770,7 @@
         stopOnlineRoomPolling();
         stopOnlineHiddenForfeitTimer();
         closeOnlineSetupModal();
+        closeOnlinePropsModal();
         closeOnlineWithdrawModal();
         if (el.winBox) el.winBox.classList.remove("show", "onlineWin", "onlineLose");
         if (el.mapBtn2) el.mapBtn2.style.display = "";
@@ -9624,7 +9823,8 @@
         el.onlineContent.addEventListener("click", (e) => {
           const tabBtn = e && e.target && e.target.closest ? e.target.closest("button[data-online-kind]") : null;
           if (tabBtn && !tabBtn.dataset.onlineMode) {
-            onlineState.selectKind = String(tabBtn.dataset.onlineKind || "").trim() === "custom" ? "custom" : "normal";
+            const k = String(tabBtn.dataset.onlineKind || "").trim();
+            onlineState.selectKind = k === "custom" ? "custom" : k === "props" ? "props" : "normal";
             renderOnlineSelect();
             return;
           }
@@ -9632,7 +9832,8 @@
           if (!btn) return;
           const mode = String(btn.dataset.onlineMode || "").trim();
           if (!mode) return;
-          const kind = String(btn.dataset.onlineKind || "").trim() === "custom" ? "custom" : onlineState.selectKind === "custom" ? "custom" : "normal";
+          const k = String(btn.dataset.onlineKind || "").trim();
+          const kind = k === "custom" ? "custom" : k === "props" ? "props" : "normal";
           onlineJoin(mode, kind);
         });
       }
@@ -11133,6 +11334,10 @@
           closeOnlineSetupModal();
           return;
         }
+        if (e.key === "Escape" && el.onlinePropsBackdrop && el.onlinePropsBackdrop.classList.contains("show")) {
+          closeOnlinePropsModal();
+          return;
+        }
         if (e.key === "Escape" && el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show")) {
           closeProfileDrop();
           return;
@@ -11420,6 +11625,116 @@
         if (el.onlineSetupDigits) el.onlineSetupDigits.innerHTML = "";
       }
 
+      function propsCardLabel(card) {
+        const c = String(card || "");
+        if (c === "skip_turn") return "منع الخصم من اللعب الدور القادم";
+        if (c === "double_or_nothing") return "Double or nothing";
+        if (c === "reverse_digits") return "عكس الأرقام";
+        if (c === "hide_colors") return "منع اظهار الوان الإجابة";
+        return "—";
+      }
+
+      function renderOnlinePropsCards(deck, myPick, oppPick) {
+        if (!el.onlinePropsCards) return;
+        const now = Date.now();
+        const pending = onlineState.matchId && now < (onlineState.propsPendingPickUntil || 0);
+        const revealOpp = oppPick !== null && oppPick !== undefined && oppPick !== "" && myPick !== null && myPick !== undefined && myPick !== "";
+        const myPickN = typeof myPick === "number" ? myPick : myPick === null ? null : null;
+        const oppPickN = typeof oppPick === "number" ? oppPick : oppPick === null ? null : null;
+
+        el.onlinePropsCards.innerHTML = "";
+        for (let i = 0; i < 5; i++) {
+          const btn = document.createElement("button");
+          btn.className = "propsCardBtn";
+          btn.type = "button";
+          btn.disabled = pending || myPickN !== null;
+          btn.dataset.index = String(i);
+          const flipped = myPickN === i || (revealOpp && oppPickN === i);
+          const label = propsCardLabel(deck && deck[i] ? deck[i] : "");
+          btn.innerHTML = `
+            <div class="propsCard ${flipped ? "flipped" : ""}">
+              <div class="propsFace back">
+                <span class="propsLogo">ML</span>
+              </div>
+              <div class="propsFace front">${escapeHtml(label)}</div>
+            </div>
+          `;
+          btn.addEventListener("click", () => submitOnlinePropsPick(i));
+          el.onlinePropsCards.appendChild(btn);
+        }
+      }
+
+      function openOnlinePropsModal(deck, myPick, oppPick) {
+        if (!el.onlinePropsBackdrop) return;
+        renderOnlinePropsCards(deck, myPick, oppPick);
+        if (el.onlinePropsStatus) {
+          const mePicked = typeof myPick === "number";
+          const oppPicked = typeof oppPick === "number";
+          el.onlinePropsStatus.textContent = mePicked ? (oppPicked ? "تم اختيار البطاقات." : "بانتظار الخصم...") : "اختر بطاقة واحدة فقط.";
+        }
+        el.onlinePropsBackdrop.classList.add("show");
+        el.onlinePropsBackdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closeOnlinePropsModal() {
+        if (!el.onlinePropsBackdrop) return;
+        el.onlinePropsBackdrop.classList.remove("show");
+        el.onlinePropsBackdrop.setAttribute("aria-hidden", "true");
+        if (el.onlinePropsCards) el.onlinePropsCards.innerHTML = "";
+        if (el.onlinePropsStatus) el.onlinePropsStatus.textContent = "";
+      }
+
+      async function submitOnlinePropsPick(index) {
+        if (!cloud.enabled) return;
+        if (!app.stage || app.stage.kind !== "online") return;
+        const id = app.stage.matchId;
+        if (!id) return;
+        if (onlineState.propsPendingPickUntil && Date.now() < onlineState.propsPendingPickUntil) return;
+        onlineState.propsPendingPickUntil = Date.now() + 1800;
+        onlineState.propsPendingPickIndex = index;
+        try {
+          const r = await friendsJson("/api/online/match/props", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, action: "pick", index }),
+          });
+          if (!r.ok) {
+            onlineState.propsPendingPickUntil = 0;
+            onlineState.propsPendingPickIndex = -1;
+            enqueueToast({ title: t("onlineBtn"), body: r.status === 0 ? "ضعف اتصال. حاول مرة ثانية." : "تعذر اختيار البطاقة.", autoMs: 2400 });
+            return;
+          }
+          await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+        } catch {
+          onlineState.propsPendingPickUntil = 0;
+          onlineState.propsPendingPickIndex = -1;
+        }
+      }
+
+      async function submitOnlinePropsUse() {
+        if (!cloud.enabled) return;
+        if (!app.stage || app.stage.kind !== "online") return;
+        if (app.session && app.session.over) return;
+        const id = app.stage.matchId;
+        if (!id) return;
+        if (el.onlinePropsUseBtn) el.onlinePropsUseBtn.disabled = true;
+        try {
+          const r = await friendsJson("/api/online/match/props", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, action: "use" }),
+          });
+          if (!r.ok) {
+            enqueueToast({ title: t("onlineBtn"), body: "تعذر استخدام البطاقة.", autoMs: 2200 });
+          } else if (r.data && typeof r.data.card === "string") {
+            enqueueToast({ title: "بطاقة", body: `تم استخدام: ${propsCardLabel(r.data.card)}`, autoMs: 2400 });
+          }
+          await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+        } finally {
+          if (el.onlinePropsUseBtn) el.onlinePropsUseBtn.disabled = false;
+        }
+      }
+
       async function submitOnlineSetupToggleReady() {
         if (!cloud.enabled) return;
         if (!app.stage || app.stage.kind !== "online") return;
@@ -11607,6 +11922,11 @@
         });
 
       if (el.onlineSetupCloseBtn) el.onlineSetupCloseBtn.addEventListener("click", () => closeOnlineSetupModal());
+      if (el.onlinePropsCloseBtn) el.onlinePropsCloseBtn.addEventListener("click", () => closeOnlinePropsModal());
+      if (el.onlinePropsBackdrop)
+        el.onlinePropsBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.onlinePropsBackdrop) closeOnlinePropsModal();
+        });
       if (el.onlineSetupForfeitBtn)
         el.onlineSetupForfeitBtn.addEventListener("click", () => {
           if (app.session && app.session.over) return;
@@ -11686,6 +12006,7 @@
           if (app.session && app.session.over) return;
           if (app.stage && app.stage.kind === "online") onlineExitMatch();
         });
+      if (el.onlinePropsUseBtn) el.onlinePropsUseBtn.addEventListener("click", () => submitOnlinePropsUse());
 
       if (friendsUI.addBtn && friendsUI.addInput) {
         friendsUI.addBtn.addEventListener("click", async () => {
