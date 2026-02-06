@@ -2,6 +2,7 @@ import { hashPassword } from "@/lib/password";
 import { generatePublicId } from "@/lib/profile";
 import { prisma } from "@/lib/prisma";
 import { ensureDbReady } from "@/lib/ensureDb";
+import { notifyDiscord } from "@/lib/discord";
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 
@@ -72,13 +73,13 @@ export async function POST(req: NextRequest) {
 
       const emailOwner = await tx.gameProfile.findFirst({
         where: { OR: [{ email }, { contactEmail: email }] },
-        select: { email: true, passwordHash: true, publicId: true },
+        select: { email: true, passwordHash: true, publicId: true, username: true },
       });
       if (emailOwner) {
         if (emailOwner.email === email && !emailOwner.passwordHash) {
           for (let attempt = 0; attempt < 7; attempt++) {
             try {
-              await tx.gameProfile.update({
+              const out = await tx.gameProfile.update({
                 where: { email },
                 data: {
                   username,
@@ -86,8 +87,9 @@ export async function POST(req: NextRequest) {
                   contactEmail: email,
                   publicId: emailOwner.publicId || generatePublicId(11),
                 },
+                select: { publicId: true, username: true, email: true },
               });
-              return { ok: true as const };
+              return { ok: true as const, profile: out, mode: "upgraded" as const };
             } catch (e) {
               const code = (e as { code?: unknown }).code;
               if (code === "P2002") continue;
@@ -99,11 +101,20 @@ export async function POST(req: NextRequest) {
         return { ok: false as const, error: "email_taken" as const };
       }
 
-      await createCredentialsProfileTx(tx, { username, email, passwordHash });
-      return { ok: true as const };
+      const created = await createCredentialsProfileTx(tx, { username, email, passwordHash });
+      return { ok: true as const, profile: { publicId: created.publicId, username: created.username, email: created.email }, mode: "created" as const };
     });
 
     if (!updated.ok) return NextResponse.json({ error: updated.error }, { status: 409 });
+    const profile = "profile" in updated ? updated.profile : null;
+    await notifyDiscord("audit", {
+      title: updated.mode === "upgraded" ? "User registered (credentials linked)" : "User registered",
+      email,
+      fields: [
+        { name: "Username", value: username, inline: true },
+        { name: "Public ID", value: profile && "publicId" in profile ? String((profile as { publicId?: unknown }).publicId || "—") : "—", inline: true },
+      ],
+    });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
     const code = (e as { code?: unknown }).code;

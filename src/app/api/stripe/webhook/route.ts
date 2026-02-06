@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { notifyDiscord } from "@/lib/discord";
 
 type StripeEvent = {
   type?: string;
@@ -208,9 +209,30 @@ export async function POST(req: NextRequest) {
         data: { state: nextState },
       });
 
-      return { ok: true, coinsAdded: coins, totalCoins, alreadyProcessed: false };
+      return { ok: true, coinsAdded: coins, nameChangeCreditsAdded: nameChangeCredits, totalCoins, alreadyProcessed: false };
     });
 
+    if (out && typeof out === "object" && !("error" in out)) {
+      const alreadyProcessed = !!(out as { alreadyProcessed?: unknown }).alreadyProcessed;
+      const coinsAdded = typeof (out as { coinsAdded?: unknown }).coinsAdded === "number" ? (out as { coinsAdded: number }).coinsAdded : 0;
+      const nameCreditsAdded =
+        typeof (out as { nameChangeCreditsAdded?: unknown }).nameChangeCreditsAdded === "number"
+          ? (out as { nameChangeCreditsAdded: number }).nameChangeCreditsAdded
+          : 0;
+      if (!alreadyProcessed && (coinsAdded > 0 || nameCreditsAdded > 0)) {
+        await notifyDiscord("audit", {
+          title: "Purchase paid (Stripe webhook)",
+          email: profileEmail,
+          fields: [
+            { name: "Pack", value: packId, inline: true },
+            { name: "Coins", value: String(coinsAdded), inline: true },
+            { name: "Name credits", value: String(nameCreditsAdded), inline: true },
+            { name: "Amount", value: unitAmount ? `${(unitAmount / 100).toFixed(2)} ${currency.toUpperCase()}` : `0 ${currency.toUpperCase()}`, inline: true },
+            { name: "Session", value: sessionId, inline: false },
+          ],
+        });
+      }
+    }
     return NextResponse.json(out, { status: 200 });
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
