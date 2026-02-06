@@ -290,33 +290,6 @@
         align-items: center;
         gap: 10px;
       }
-      .siteTitle {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        direction: ltr;
-      }
-      .siteTitleLogo {
-        width: 26px;
-        height: 26px;
-        display: block;
-        color: #b00000;
-        filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.35));
-        flex: 0 0 auto;
-      }
-      .siteTitleText {
-        font-weight: 900;
-        font-size: 15px;
-        letter-spacing: 0.3px;
-        opacity: 0.92;
-        line-height: 1;
-        white-space: nowrap;
-      }
-      @media (max-width: 520px) {
-        .siteTitleText {
-          display: none;
-        }
-      }
       header h1 {
         margin: 0;
         font-size: clamp(16px, 2.2vw, 19px);
@@ -3586,16 +3559,6 @@
     <div class="app">
       <header>
         <div class="brand">
-          <div class="siteTitle" aria-label="MestRyLock">
-            <svg class="siteTitleLogo" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-              <path
-                fill="currentColor"
-                d="M40 380V60h100l60 120 60-120h100v320H280V190l-80 120-80-120v190H40z"
-              />
-              <path fill="currentColor" d="M400 60h80v240h120v80H400V60z" />
-            </svg>
-            <div id="siteTitleText" class="siteTitleText">MestRyLock</div>
-          </div>
           <div id="playerBrand" class="playerBrand">
             <div id="playerAvatar" class="playerAvatar">P</div>
             <div id="playerName" class="playerName">—</div>
@@ -5094,7 +5057,6 @@
         homeHeaderBtn: document.getElementById("homeHeaderBtn"),
         brandTitle: document.getElementById("brandTitle"),
         brandSub: document.getElementById("brandSub"),
-        siteTitleText: document.getElementById("siteTitleText"),
         playerBrand: document.getElementById("playerBrand"),
         playerName: document.getElementById("playerName"),
         playerOnlineDot: document.getElementById("playerOnlineDot"),
@@ -5806,7 +5768,6 @@
         if (el.tasksBtn) el.tasksBtn.textContent = t("tasksBtn");
         if (el.chatBtn) el.chatBtn.textContent = t("chatBtn");
         if (el.homeHeaderBtn) el.homeHeaderBtn.textContent = t("homeHeaderBtn");
-        if (el.siteTitleText) el.siteTitleText.textContent = t("homeTitle");
         if (el.homeTitle) el.homeTitle.textContent = t("homeTitle");
         if (el.homeDesc) el.homeDesc.textContent = t("homeDesc");
         if (el.onlineBtnK) el.onlineBtnK.textContent = t("onlineBtn");
