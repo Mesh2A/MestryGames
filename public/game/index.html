@@ -2600,13 +2600,17 @@
         position: absolute;
         left: 50%;
         top: 50%;
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1.06);
         width: min(360px, calc(100vw - 24px));
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(13, 18, 34, 0.92);
         padding: 12px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        transition: transform 180ms ease;
+      }
+      .confirmMiniBackdrop.show .confirmMiniCard {
+        transform: translate(-50%, -50%) scale(1);
       }
       .confirmMiniQ {
         font-weight: 900;
@@ -2624,13 +2628,17 @@
         position: absolute;
         left: 50%;
         top: 50%;
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1.06);
         width: min(420px, calc(100vw - 24px));
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(13, 18, 34, 0.92);
         padding: 12px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        transition: transform 180ms ease;
+      }
+      .confirmMiniBackdrop.show .formMiniCard {
+        transform: translate(-50%, -50%) scale(1);
       }
       .formMiniHead {
         display: flex;
@@ -5523,6 +5531,7 @@
           onlineSetupHint: "اكتب {n} أرقام (التكرار مسموح).",
           onlineSetupPlaceholder: "مثال: {n} أرقام",
           onlineSetupReadyBtn: "استعد",
+          onlineSetupCancelReadyBtn: "إلغاء الاستعداد",
           onlineSetupReadyDone: "تم",
           onlineSetupMeReady: "أنت مستعد",
           onlineSetupMeNotReady: "أنت غير مستعد",
@@ -5753,6 +5762,7 @@
           onlineSetupHint: "Enter {n} digits (repeats allowed).",
           onlineSetupPlaceholder: "Example: {n} digits",
           onlineSetupReadyBtn: "Ready",
+          onlineSetupCancelReadyBtn: "Cancel ready",
           onlineSetupReadyDone: "Ready",
           onlineSetupMeReady: "You are ready",
           onlineSetupMeNotReady: "Not ready",
@@ -8308,6 +8318,7 @@
         queueId: "",
         matchId: "",
         roomCode: "",
+        selectKind: "normal",
         meEmail: "",
         meName: "",
         mePhoto: "",
@@ -8320,12 +8331,16 @@
         searchingStartedAt: 0,
         pollQueueId: null,
         pollMatchId: null,
+        pollMatchEvery: 0,
         pollRoomId: null,
         spinId: null,
         lastMaskedAt: 0,
         busy: false,
         forfeitSent: false,
         stateFetchBusy: false,
+        setupMyReady: false,
+        setupOppReady: false,
+        customFocused: false,
       };
 
       const ONLINE_TURN_MS = 30_000;
@@ -8351,8 +8366,19 @@
       function stopOnlineMatchPolling() {
         if (onlineState.pollMatchId) clearInterval(onlineState.pollMatchId);
         onlineState.pollMatchId = null;
+        onlineState.pollMatchEvery = 0;
         if (onlineState.barRafId) cancelAnimationFrame(onlineState.barRafId);
         onlineState.barRafId = 0;
+      }
+
+      function startOnlineMatchPolling(myEmail, fee, everyMs) {
+        const ms = Math.max(180, Math.min(1500, Math.floor(everyMs || 0)));
+        if (onlineState.pollMatchId && onlineState.pollMatchEvery === ms) return;
+        if (onlineState.pollMatchId) clearInterval(onlineState.pollMatchId);
+        onlineState.pollMatchEvery = ms;
+        onlineState.pollMatchId = setInterval(async () => {
+          await onlineFetchMatchStateOnce(myEmail, fee);
+        }, ms);
       }
 
       function flashPlayerCard(card) {
@@ -8418,7 +8444,9 @@
             : "";
 
         const sol = String(solution || "").trim();
-        const solLine = sol ? `<div class="tiny" style="text-align:center">${escapeHtml(t("onlineSolutionLabel"))} <span class="maskM">${escapeHtml(sol)}</span></div>` : ``;
+        const solLine = sol
+          ? `<div class="tiny" style="text-align:center">${escapeHtml(t("onlineSolutionLabel"))} <span class="maskM" dir="ltr" style="unicode-bidi:bidi-override">${escapeHtml(sol)}</span></div>`
+          : ``;
 
         el.winSub.innerHTML = `<div class="onlineWrap">
           ${subLine ? `<div class="tiny">${escapeHtml(subLine)}</div>` : ``}
@@ -8583,6 +8611,8 @@
         if (meCard) meCard.classList.toggle("turnActive", turn === "me");
         if (oppCard) oppCard.classList.toggle("turnActive", turn === "them");
         if (turn === "me" || turn === "them") startOnlineTurnBarLoop();
+        if (turn === "setup") startOnlineMatchPolling(meEmail, fee, 240);
+        else startOnlineMatchPolling(meEmail, fee, 450);
 
         const myLevel = typeof m.myLevel === "number" ? m.myLevel : null;
         if (el.onlineMeSub) el.onlineMeSub.textContent = myLevel ? `LV ${myLevel} • ${fee}🪙` : `${fee}🪙`;
@@ -8615,9 +8645,19 @@
         if (m.kind === "custom" && m.phase === "setup") {
           const myReady = !!m.myReady;
           const oppReady = !!m.oppReady;
+          onlineState.setupMyReady = myReady;
+          onlineState.setupOppReady = oppReady;
           openOnlineSetupModal(m.codeLen, myReady, oppReady);
         } else {
+          onlineState.setupMyReady = false;
+          onlineState.setupOppReady = false;
           closeOnlineSetupModal();
+          if (onlineState.selectKind === "custom" && !onlineState.customFocused) {
+            onlineState.customFocused = true;
+            requestAnimationFrame(() => {
+              if (app.inputs && app.inputs[0]) app.inputs[0].focus();
+            });
+          }
         }
 
         if (turn === "ended") {
@@ -8960,7 +9000,7 @@
             stopOnlineRoomPolling();
             const me = await ensureMeLoaded();
             closeHowTo();
-            startOnlineMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null);
+            startOnlineMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind);
             return;
           }
           if (s.data.status === "cancelled") {
@@ -9064,7 +9104,7 @@
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
         closeHowTo();
-        startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null);
+        startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null, r.data.kind || kind);
       }
 
       async function onlineJoin(mode, kind) {
@@ -9108,7 +9148,7 @@
           if (r.data.status === "matched" && r.data.matchId) {
             stopOnlineQueuePolling();
             closeHowTo();
-            startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null);
+            startOnlineMatch(r.data.matchId, r.data.mode, r.data.fee, r.data.codeLen, me, r.data.opponent || null, r.data.kind || onlineState.selectKind);
             return;
           }
           if (r.data.status === "waiting" && r.data.queueId) {
@@ -9120,7 +9160,7 @@
               if (s.data.status === "matched" && s.data.matchId) {
                 stopOnlineQueuePolling();
                 closeHowTo();
-                startOnlineMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null);
+                startOnlineMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind || onlineState.selectKind);
               }
               if (s.data.status === "cancelled") {
                 stopOnlineQueuePolling();
@@ -9134,7 +9174,7 @@
         }
       }
 
-      async function startOnlineMatch(matchId, mode, fee, codeLen, me, opponentFromJoin) {
+      async function startOnlineMatch(matchId, mode, fee, codeLen, me, opponentFromJoin, kind) {
         onlineState.matchId = matchId;
         onlineState.mode = mode;
         onlineState.fee = fee;
@@ -9142,6 +9182,15 @@
         onlineState.lastMaskedAt = 0;
         onlineState.forfeitSent = false;
         onlineState.stateFetchBusy = false;
+        onlineState.setupMyReady = false;
+        onlineState.setupOppReady = false;
+        onlineState.selectKind = kind === "custom" ? "custom" : "normal";
+        onlineState.customFocused = false;
+
+        if (onlineState.selectKind === "custom") {
+          if (el.onlineSetupInput) el.onlineSetupInput.value = "";
+          openOnlineSetupModal(codeLen, false, false);
+        }
 
         openStage({ kind: "online", id: 0, matchId, mode, fee, codeLen });
 
@@ -9164,13 +9213,12 @@
 
         stopOnlineMatchPolling();
         await onlineFetchMatchStateOnce(myEmail, fee);
-        onlineState.pollMatchId = setInterval(async () => {
-          await onlineFetchMatchStateOnce(myEmail, fee);
-        }, 450);
-
-        requestAnimationFrame(() => {
-          if (app.inputs && app.inputs[0]) app.inputs[0].focus();
-        });
+        startOnlineMatchPolling(myEmail, fee, 450);
+        if (onlineState.selectKind !== "custom") {
+          requestAnimationFrame(() => {
+            if (app.inputs && app.inputs[0]) app.inputs[0].focus();
+          });
+        }
       }
 
       async function onlineSubmitGuess(guess) {
@@ -9191,6 +9239,15 @@
               updateOnlineBtnUI();
               enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
               await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+              return;
+            }
+            if (code === "not_ready") {
+              enqueueToast({ title: t("onlineSetupTitle"), body: t("onlineTurnSetup"), autoMs: 2200 });
+              await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+              return;
+            }
+            if (code === "not_your_turn") {
+              el.msg.textContent = "ليس دورك.";
               return;
             }
             el.msg.textContent = "تعذر إرسال المحاولة.";
@@ -11019,8 +11076,8 @@
           el.onlineSetupDigits.tabIndex = myReady ? -1 : 0;
         }
         if (el.onlineSetupReadyBtn) {
-          el.onlineSetupReadyBtn.textContent = myReady ? t("onlineSetupReadyDone") : t("onlineSetupReadyBtn");
-          el.onlineSetupReadyBtn.disabled = !!myReady;
+          el.onlineSetupReadyBtn.textContent = myReady ? t("onlineSetupCancelReadyBtn") : t("onlineSetupReadyBtn");
+          el.onlineSetupReadyBtn.disabled = false;
         }
         if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.textContent = t("onlineSetupForfeitBtn");
         if (el.onlineSetupStatus) {
@@ -11041,23 +11098,26 @@
         el.onlineSetupBackdrop.setAttribute("aria-hidden", "true");
       }
 
-      async function submitOnlineSetupReady() {
+      async function submitOnlineSetupToggleReady() {
         if (!cloud.enabled) return;
         if (!app.stage || app.stage.kind !== "online") return;
         const id = app.stage.matchId;
         if (!id) return;
         const len = Math.max(1, Math.floor(app.stage.codeLen || 0));
+        const isReady = !!onlineState.setupMyReady;
         const secret = el.onlineSetupInput ? String(el.onlineSetupInput.value || "").replace(/[^\d]/g, "").slice(0, len) : "";
-        if (!secret || secret.length !== len) {
+        if (!isReady && (!secret || secret.length !== len)) {
           enqueueToast({ title: t("onlineSetupTitle"), body: t("onlineSetupBadSecret").replace("{n}", String(len)), autoMs: 2400 });
           return;
         }
         if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = true;
-        openOnlineSetupModal(len, true, false);
+        if (!isReady) openOnlineSetupModal(len, true, onlineState.setupOppReady);
+        else openOnlineSetupModal(len, false, onlineState.setupOppReady);
+        if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = true;
         const r = await friendsJson("/api/online/match/setup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, secret, ready: true }),
+          body: JSON.stringify(isReady ? { id, ready: false } : { id, secret, ready: true }),
         });
         if (!r.ok) {
           if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = false;
@@ -11207,7 +11267,7 @@
 
       if (el.onlineSetupCloseBtn) el.onlineSetupCloseBtn.addEventListener("click", () => closeOnlineSetupModal());
       if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.addEventListener("click", () => onlineExitMatch());
-      if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.addEventListener("click", () => submitOnlineSetupReady());
+      if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.addEventListener("click", () => submitOnlineSetupToggleReady());
       if (el.onlineSetupDigits && el.onlineSetupInput) {
         el.onlineSetupDigits.addEventListener("click", () => {
           if (el.onlineSetupInput.disabled) return;

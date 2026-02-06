@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
   const matchId = String(typeof matchIdRaw === "string" ? matchIdRaw : "").trim();
   const secret = String(typeof secretRaw === "string" ? secretRaw : "").trim();
   const ready = readyRaw === true;
+  const unready = readyRaw === false;
 
   if (!matchId) return NextResponse.json({ error: "bad_request" }, { status: 400, headers: { "Cache-Control": "no-store" } });
 
@@ -74,17 +75,27 @@ export async function POST(req: NextRequest) {
       if (s.phase !== "setup") return { ok: false as const, error: "already_started" as const };
 
       const len = Math.max(3, Math.min(6, Math.floor(m.codeLen || 0)));
-      if (!isDigitsN(secret, len)) return { ok: false as const, error: "bad_secret" as const };
 
       const next = { ...s.raw };
       const nextSecrets = next.secrets && typeof next.secrets === "object" ? { ...(next.secrets as Record<string, unknown>) } : {};
       const nextReady = next.ready && typeof next.ready === "object" ? { ...(next.ready as Record<string, unknown>) } : {};
 
-      if (role === "a" && s.readyA) return { ok: false as const, error: "already_ready" as const };
-      if (role === "b" && s.readyB) return { ok: false as const, error: "already_ready" as const };
-
-      nextSecrets[role] = secret;
-      if (ready) nextReady[role] = true;
+      const wasReady = role === "a" ? s.readyA : s.readyB;
+      if (ready) {
+        if (wasReady) return { ok: false as const, error: "already_ready" as const };
+        if (!isDigitsN(secret, len)) return { ok: false as const, error: "bad_secret" as const };
+        nextSecrets[role] = secret;
+        nextReady[role] = true;
+      } else if (unready) {
+        nextReady[role] = false;
+        if (secret) {
+          if (!isDigitsN(secret, len)) return { ok: false as const, error: "bad_secret" as const };
+          nextSecrets[role] = secret;
+        }
+      } else {
+        if (!isDigitsN(secret, len)) return { ok: false as const, error: "bad_secret" as const };
+        nextSecrets[role] = secret;
+      }
 
       next.secrets = nextSecrets;
       next.ready = nextReady;
@@ -119,7 +130,7 @@ export async function POST(req: NextRequest) {
       return {
         ok: true as const,
         phase: "setup" as const,
-        myReady: ready ? true : false,
+        myReady: nextReady[role] === true,
         oppReady: role === "a" ? readyB : readyA,
       };
     });
@@ -133,4 +144,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
-
