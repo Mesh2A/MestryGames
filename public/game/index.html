@@ -8464,6 +8464,7 @@
               .catch(() => {});
           }
         }
+        kickFastSync();
         if (chatUI.input) chatUI.input.focus();
       }
 
@@ -8945,19 +8946,19 @@
             lastPresenceAt = now;
             presencePing().catch(() => {});
           }
-          if (chatState.open && chatState.selectedId && now - (chatState.lastThreadPullAt || 0) > 2500) {
+          if (chatState.open && chatState.selectedId && now - (chatState.lastThreadPullAt || 0) > 1200) {
             chatState.lastThreadPullAt = now;
             loadChatThread(chatState.selectedId)
               .then(() => renderChatMessages())
               .catch(() => {});
           }
-          if ((friendsState.open || chatState.open) && now - lastFriendsPullAt > 6000) {
+          if ((friendsState.open || chatState.open) && now - lastFriendsPullAt > 4500) {
             lastFriendsPullAt = now;
             loadFriendsData().catch(() => {});
           }
           updateTasksBadge();
           updateProfileUI();
-        }, 3000);
+        }, 1800);
       }
 
       let fastSyncT = null;
@@ -8965,7 +8966,7 @@
       function kickFastSync() {
         if (!cloud.enabled) return;
         const now = Date.now();
-        if (now - lastFastSyncAt < 800) return;
+        if (now - lastFastSyncAt < 350) return;
         lastFastSyncAt = now;
         clearTimeout(fastSyncT);
         fastSyncT = setTimeout(() => {

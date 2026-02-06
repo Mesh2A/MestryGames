@@ -1,4 +1,5 @@
 import { authOptions } from "@/lib/auth";
+import { pruneChatState } from "@/lib/chatTtl";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -73,8 +74,12 @@ export async function POST(req: NextRequest) {
       const otherRow = await tx.gameProfile.findUnique({ where: { email: other.email }, select: { email: true, publicId: true, state: true } });
       if (!meRow?.publicId || !otherRow?.publicId) return;
 
-      const meState = readStateObj(meRow.state);
-      const otherState = readStateObj(otherRow.state);
+      const meStateRaw = readStateObj(meRow.state);
+      const otherStateRaw = readStateObj(otherRow.state);
+      const mePruned = pruneChatState(meStateRaw, now);
+      const otherPruned = pruneChatState(otherStateRaw, now);
+      const meState = mePruned.next;
+      const otherState = otherPruned.next;
 
       const meThreads = { ...readThreads(meState) };
       const otherThreads = { ...readThreads(otherState) };
@@ -85,11 +90,11 @@ export async function POST(req: NextRequest) {
       const otherThread = updateReadInThread(otherThreads[meRow.publicId], { readerId: meRow.publicId, otherId: otherRow.publicId, now });
       if (otherThread.changed) otherThreads[meRow.publicId] = otherThread.next;
 
-      if (meThread.changed) {
+      if (meThread.changed || mePruned.changed) {
         const nextMeState = { ...meState, chatThreads: meThreads } as Prisma.InputJsonValue;
         await tx.gameProfile.update({ where: { email: meRow.email }, data: { state: nextMeState } });
       }
-      if (otherThread.changed) {
+      if (otherThread.changed || otherPruned.changed) {
         const nextOtherState = { ...otherState, chatThreads: otherThreads } as Prisma.InputJsonValue;
         await tx.gameProfile.update({ where: { email: otherRow.email }, data: { state: nextOtherState } });
       }
@@ -100,4 +105,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

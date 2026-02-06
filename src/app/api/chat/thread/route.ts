@@ -1,8 +1,10 @@
 import { authOptions } from "@/lib/auth";
+import { pruneChatState } from "@/lib/chatTtl";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 function readStateObj(state: unknown) {
   return state && typeof state === "object" ? (state as Record<string, unknown>) : {};
@@ -38,8 +40,14 @@ export async function GET(req: NextRequest) {
     });
     if (!link) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
+    const now = Date.now();
     const row = await prisma.gameProfile.findUnique({ where: { email }, select: { state: true } });
-    const state = readStateObj(row?.state);
+    const stateRaw = readStateObj(row?.state);
+    const pruned = pruneChatState(stateRaw, now);
+    const state = pruned.next;
+    if (pruned.changed) {
+      await prisma.gameProfile.update({ where: { email }, data: { state: state as Prisma.InputJsonValue } });
+    }
     const threads = readThreads(state);
     const raw = threads[withId];
     const messages = Array.isArray(raw) ? raw : [];
@@ -48,4 +56,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

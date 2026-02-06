@@ -1,12 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import styles from "./AdminUsersPanel.module.css";
 
 type AdminUser = {
   id: string;
   email: string;
   displayName: string;
   firstName: string;
+  photo?: string;
   coins: number;
   stats: { streak: number; wins: number; unlocked: number; completed: number };
   createdAt: string;
@@ -158,16 +161,15 @@ export default function AdminUsersPanel() {
   }
 
   return (
-    <div style={windowStyle}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <div style={{ fontSize: 12, opacity: 0.92 }}>تحدي اونلاين</div>
+    <div className={styles.root}>
+      <div className={styles.bar}>
+        <div className={styles.sectionTitle}>تحدي اونلاين</div>
         <button
           type="button"
           onClick={toggleOnline}
           disabled={onlineBusy || onlineEnabled === null}
+          className={`${styles.btn} ${styles.btnChip}`}
           style={{
-            ...btnStyle,
-            padding: "8px 10px",
             background:
               onlineEnabled === null ? "rgba(255,255,255,0.06)" : onlineEnabled ? "rgba(34, 197, 94, 0.25)" : "rgba(148, 163, 184, 0.14)",
             borderColor:
@@ -179,19 +181,19 @@ export default function AdminUsersPanel() {
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="MestRy@Admin" style={inputStyle} />
-        <button type="button" onClick={load} disabled={loading} style={{ ...btnStyle, minWidth: 120 }}>
+      <div className={styles.inputRow}>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="MestRy@Admin" className={styles.input} />
+        <button type="button" onClick={load} disabled={loading} className={styles.btn} style={{ minWidth: 120 }}>
           MestRyGo
         </button>
       </div>
 
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
-        <div style={{ fontSize: 12, opacity: 0.92 }}>اللاعبين</div>
-        <div style={{ fontSize: 11, opacity: 0.75 }}>{users ? `${users.length} لاعب` : ""}</div>
+      <div className={styles.listHead}>
+        <div className={styles.listTitle}>اللاعبين</div>
+        <div className={styles.listMeta}>{users ? `${users.length} لاعب` : ""}</div>
       </div>
 
-      <div style={listStyle}>
+      <div className={styles.list}>
         {users && users.length ? (
           users.map((u) => (
             <button
@@ -199,140 +201,106 @@ export default function AdminUsersPanel() {
               key={u.email}
               onClick={() => setSelected(u)}
               disabled={loading}
-              style={{
-                ...rowBtnStyle,
-                borderColor: selected?.email === u.email ? "rgba(37, 99, 235, 0.7)" : rowBtnStyle.borderColor,
-                background: selected?.email === u.email ? "rgba(37, 99, 235, 0.15)" : rowBtnStyle.background,
-              }}
+              className={`${styles.btn} ${styles.rowBtn} ${selected?.email === u.email ? styles.rowBtnActive : ""}`}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <div style={{ fontWeight: 600 }}>{u.firstName}</div>
-                <div style={{ opacity: 0.9, fontSize: 12 }}>{u.coins} كوينز</div>
+              <div className={styles.rowTop}>
+                <div className={styles.rowName}>{u.firstName}</div>
+                <div className={styles.rowCoins}>{u.coins} كوينز</div>
               </div>
-              <div style={{ fontSize: 11, opacity: 0.78, marginTop: 4 }}>
+              <div className={styles.rowLine}>
                 {u.email}
                 {u.id ? ` — ID: ${u.id}` : ""}
               </div>
-              <div style={{ fontSize: 11, opacity: 0.72, marginTop: 4 }}>
+              <div className={styles.rowLine} style={{ opacity: 0.72 }}>
                 فتح: {u.stats?.unlocked ?? 1} — فوز: {u.stats?.wins ?? 0} — ستريك: {u.stats?.streak ?? 0}
               </div>
             </button>
           ))
         ) : (
-          <div style={{ fontSize: 12, opacity: 0.8 }}>اضغط “MestRyGo” لعرض اللاعبين.</div>
+          <div className={styles.small} style={{ opacity: 0.8 }}>
+            اضغط “MestRyGo” لعرض اللاعبين.
+          </div>
         )}
       </div>
 
-      <div style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.10)", paddingTop: 12 }}>
-        <div style={{ fontSize: 12, opacity: 0.92 }}>تحكم</div>
+      <div className={styles.panel}>
+        <div className={styles.sectionTitle}>تحكم</div>
 
         {selected ? (
-          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-            <div style={{ fontWeight: 700 }}>
-              {selected.firstName}
-              {selected.id ? ` — ${selected.id}` : ""}
+          <div className={styles.selected} style={{ marginTop: 10 }}>
+            <div className={styles.selectedHeader}>
+              <div className={styles.avatar}>
+                {selected.photo ? (
+                  <Image alt="" src={selected.photo} width={44} height={44} style={{ width: "100%", height: "100%", objectFit: "cover" }} unoptimized />
+                ) : (
+                  (selected.firstName || "P").slice(0, 1).toUpperCase()
+                )}
+              </div>
+              <div style={{ display: "grid", gap: 2 }}>
+                <div className={styles.selectedName}>
+                  {selected.firstName}
+                  {selected.id ? ` — ${selected.id}` : ""}
+                </div>
+                <div className={styles.small}>{selected.email}</div>
+              </div>
             </div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>{selected.email}</div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>{selected.displayName ? `الاسم: ${selected.displayName}` : "الاسم: —"}</div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>
+            <div className={styles.small}>{selected.displayName ? `الاسم: ${selected.displayName}` : "الاسم: —"}</div>
+            <div className={styles.small}>
               تسجيل أول مرة: {new Date(selected.createdAt).toLocaleString()}
             </div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>
+            <div className={styles.small}>
               آخر تحديث: {new Date(selected.updatedAt).toLocaleString()}
             </div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>الكوينز الحالية: {selected.coins}</div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>
+            <div className={styles.small}>الكوينز الحالية: {selected.coins}</div>
+            <div className={styles.small}>
               إحصائيات: فتح {selected.stats?.unlocked ?? 1} — مكتملة {selected.stats?.completed ?? 0} — فوز {selected.stats?.wins ?? 0} — ستريك {selected.stats?.streak ?? 0}
             </div>
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" onClick={() => setOp("add")} disabled={loading} style={chipStyle(op === "add")}>
+            <div className={styles.actionsRow}>
+              <button
+                type="button"
+                onClick={() => setOp("add")}
+                disabled={loading}
+                className={`${styles.btn} ${styles.btnChip} ${op === "add" ? styles.btnChipActive : ""}`}
+              >
                 إضافة
               </button>
-              <button type="button" onClick={() => setOp("set")} disabled={loading} style={chipStyle(op === "set")}>
+              <button
+                type="button"
+                onClick={() => setOp("set")}
+                disabled={loading}
+                className={`${styles.btn} ${styles.btnChip} ${op === "set" ? styles.btnChipActive : ""}`}
+              >
                 ضبط
               </button>
             </div>
 
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="numeric" placeholder="مثال: 100" style={inputStyle} />
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              inputMode="numeric"
+              placeholder="مثال: 100"
+              className={styles.input}
+              style={{ width: "100%", minWidth: 0 }}
+            />
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button type="button" onClick={updateCoins} disabled={loading} style={{ ...btnStyle, background: "#2563eb" }}>
+            <div className={styles.actionsRow}>
+              <button type="button" onClick={updateCoins} disabled={loading} className={`${styles.btn} ${styles.btnPrimary}`}>
                 تطبيق
               </button>
-              <button type="button" onClick={deleteUser} disabled={loading} style={{ ...btnStyle, background: "rgba(220, 38, 38, 0.35)" }}>
+              <button type="button" onClick={deleteUser} disabled={loading} className={`${styles.btn} ${styles.btnDanger}`}>
                 حذف اللاعب
               </button>
             </div>
           </div>
         ) : (
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.8 }}>اختر لاعب من القائمة.</div>
+          <div className={styles.small} style={{ marginTop: 10, opacity: 0.8 }}>
+            اختر لاعب من القائمة.
+          </div>
         )}
       </div>
 
-      {message ? <div style={{ ...cardStyle, marginTop: 12 }}>{message}</div> : null}
+      {message ? <div className={styles.panel}>{message}</div> : null}
     </div>
   );
-}
-
-const btnStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.16)",
-  background: "rgba(255,255,255,0.08)",
-  color: "#fff",
-  cursor: "pointer",
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.16)",
-  background: "rgba(255,255,255,0.06)",
-  color: "#fff",
-  width: "100%",
-};
-
-const cardStyle: React.CSSProperties = {
-  padding: "12px 12px",
-  borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(13, 18, 34, 0.65)",
-  color: "#fff",
-  lineHeight: 1.6,
-};
-
-const windowStyle: React.CSSProperties = {
-  ...cardStyle,
-  width: "min(640px, 92vw)",
-  padding: 16,
-  borderRadius: 18,
-};
-
-const listStyle: React.CSSProperties = {
-  marginTop: 10,
-  display: "grid",
-  gap: 8,
-  maxHeight: 280,
-  overflow: "auto",
-  padding: 2,
-};
-
-const rowBtnStyle: React.CSSProperties = {
-  textAlign: "right",
-  padding: "10px 10px",
-  borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#fff",
-  cursor: "pointer",
-};
-
-function chipStyle(active: boolean): React.CSSProperties {
-  return {
-    ...btnStyle,
-    padding: "8px 10px",
-    background: active ? "rgba(37, 99, 235, 0.35)" : "rgba(255,255,255,0.06)",
-    borderColor: active ? "rgba(37, 99, 235, 0.65)" : "rgba(255,255,255,0.16)",
-  };
 }

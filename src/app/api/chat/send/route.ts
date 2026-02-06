@@ -1,4 +1,5 @@
 import { authOptions } from "@/lib/auth";
+import { pruneChatState } from "@/lib/chatTtl";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail } from "@/lib/profile";
@@ -92,8 +93,12 @@ export async function POST(req: NextRequest) {
 
       const now = Date.now();
       const id = clientId || randomUUID();
-      const fromState = readStateObj(fromRow.state);
-      const toState = readStateObj(toRow.state);
+      const fromStateRaw = readStateObj(fromRow.state);
+      const toStateRaw = readStateObj(toRow.state);
+      const fromPruned = pruneChatState(fromStateRaw, now);
+      const toPruned = pruneChatState(toStateRaw, now);
+      const fromState = fromPruned.next;
+      const toState = toPruned.next;
 
       const fromName = firstNameFromDisplayNameOrEmail(readDisplayNameFromState(fromState), fromRow.email);
 

@@ -31,6 +31,14 @@ function readDisplayNameFromState(state: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function readPhotoFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).photo;
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const adminEmail = session?.user?.email;
@@ -57,6 +65,7 @@ export async function GET(req: NextRequest) {
         id: r.publicId || "",
         displayName,
         firstName,
+        photo: readPhotoFromState(r.state),
         coins: readCoinsFromState(r.state),
         stats: getProfileStats(r.state),
         createdAt: r.createdAt.toISOString(),
