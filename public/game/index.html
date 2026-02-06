@@ -290,6 +290,28 @@
         align-items: center;
         gap: 10px;
       }
+      .siteMark {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .siteMarkLogo {
+        width: 26px;
+        height: 26px;
+        display: block;
+        filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.35));
+      }
+      .siteMarkName {
+        font-weight: 900;
+        font-size: 15px;
+        letter-spacing: 0.3px;
+        opacity: 0.92;
+        line-height: 1;
+      }
       header h1 {
         margin: 0;
         font-size: clamp(16px, 2.2vw, 19px);
@@ -1005,6 +1027,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        direction: ltr;
       }
       html[data-reduce-motion="1"] .homeFooterBar {
         backdrop-filter: none;
@@ -1070,6 +1093,7 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
+        direction: ltr;
       }
       .homeFooterLogo {
         width: 28px;
@@ -3556,6 +3580,10 @@
     <div class="app">
       <header>
         <div class="brand">
+          <div class="siteMark">
+            <img class="siteMarkLogo" src="/icon.svg" alt="" aria-hidden="true" />
+            <div class="siteMarkName">MestRy</div>
+          </div>
           <div id="playerBrand" class="playerBrand">
             <div id="playerAvatar" class="playerAvatar">P</div>
             <div id="playerName" class="playerName">—</div>
@@ -3704,17 +3732,17 @@
               </div>
             </div>
             <div id="homeFooterBar" class="homeFooterBar" aria-label="Footer">
-              <div class="homeFooterLinks">
-                <button id="homeFeedbackBtn" class="homeFooterLink" type="button">Feedback</button>
-                <button id="homePolicyBtn" class="homeFooterLink" type="button">السياسة</button>
-                <button id="homePrivacyBtn" class="homeFooterLink" type="button">الخصوصية</button>
-              </div>
               <div class="homeFooterBrand">
                 <img class="homeFooterLogo" src="/icon.svg" alt="" aria-hidden="true" />
                 <div class="homeFooterCopy">
                   <span class="homeFooterBrandName">MestRy</span>
                   <span class="homeFooterBrandYear">© 2026</span>
                 </div>
+              </div>
+              <div class="homeFooterLinks">
+                <button id="homeFeedbackBtn" class="homeFooterLink" type="button">Feedback</button>
+                <button id="homePolicyBtn" class="homeFooterLink" type="button">السياسة</button>
+                <button id="homePrivacyBtn" class="homeFooterLink" type="button">الخصوصية</button>
               </div>
             </div>
           </div>
