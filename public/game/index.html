@@ -290,27 +290,32 @@
         align-items: center;
         gap: 10px;
       }
-      .siteMark {
+      .siteTitle {
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        padding: 8px 10px;
-        border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.05);
+        direction: ltr;
       }
-      .siteMarkLogo {
+      .siteTitleLogo {
         width: 26px;
         height: 26px;
         display: block;
+        color: #b00000;
         filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.35));
+        flex: 0 0 auto;
       }
-      .siteMarkName {
+      .siteTitleText {
         font-weight: 900;
         font-size: 15px;
         letter-spacing: 0.3px;
         opacity: 0.92;
         line-height: 1;
+        white-space: nowrap;
+      }
+      @media (max-width: 520px) {
+        .siteTitleText {
+          display: none;
+        }
       }
       header h1 {
         margin: 0;
@@ -1099,6 +1104,7 @@
         width: 28px;
         height: 28px;
         display: block;
+        color: #b00000;
         filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.3));
       }
       .homeFooterBrandName {
@@ -3580,9 +3586,15 @@
     <div class="app">
       <header>
         <div class="brand">
-          <div class="siteMark">
-            <img class="siteMarkLogo" src="/icon.svg" alt="" aria-hidden="true" />
-            <div class="siteMarkName">MestRy</div>
+          <div class="siteTitle" aria-label="MestRyLock">
+            <svg class="siteTitleLogo" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+              <path
+                fill="currentColor"
+                d="M40 380V60h100l60 120 60-120h100v320H280V190l-80 120-80-120v190H40z"
+              />
+              <path fill="currentColor" d="M400 60h80v240h120v80H400V60z" />
+            </svg>
+            <div id="siteTitleText" class="siteTitleText">MestRyLock</div>
           </div>
           <div id="playerBrand" class="playerBrand">
             <div id="playerAvatar" class="playerAvatar">P</div>
@@ -3733,7 +3745,13 @@
             </div>
             <div id="homeFooterBar" class="homeFooterBar" aria-label="Footer">
               <div class="homeFooterBrand">
-                <img class="homeFooterLogo" src="/icon.svg" alt="" aria-hidden="true" />
+                <svg class="homeFooterLogo" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                  <path
+                    fill="currentColor"
+                    d="M40 380V60h100l60 120 60-120h100v320H280V190l-80 120-80-120v190H40z"
+                  />
+                  <path fill="currentColor" d="M400 60h80v240h120v80H400V60z" />
+                </svg>
                 <div class="homeFooterCopy">
                   <span class="homeFooterBrandName">MestRy</span>
                   <span class="homeFooterBrandYear">© 2026</span>
@@ -5076,6 +5094,7 @@
         homeHeaderBtn: document.getElementById("homeHeaderBtn"),
         brandTitle: document.getElementById("brandTitle"),
         brandSub: document.getElementById("brandSub"),
+        siteTitleText: document.getElementById("siteTitleText"),
         playerBrand: document.getElementById("playerBrand"),
         playerName: document.getElementById("playerName"),
         playerOnlineDot: document.getElementById("playerOnlineDot"),
@@ -5787,6 +5806,7 @@
         if (el.tasksBtn) el.tasksBtn.textContent = t("tasksBtn");
         if (el.chatBtn) el.chatBtn.textContent = t("chatBtn");
         if (el.homeHeaderBtn) el.homeHeaderBtn.textContent = t("homeHeaderBtn");
+        if (el.siteTitleText) el.siteTitleText.textContent = t("homeTitle");
         if (el.homeTitle) el.homeTitle.textContent = t("homeTitle");
         if (el.homeDesc) el.homeDesc.textContent = t("homeDesc");
         if (el.onlineBtnK) el.onlineBtnK.textContent = t("onlineBtn");
