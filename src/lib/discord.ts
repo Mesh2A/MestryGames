@@ -1,4 +1,5 @@
 type DiscordField = { name: string; value: string; inline?: boolean };
+type DiscordKind = "signup" | "signin" | "purchases" | "suggestions" | "errors" | "reports" | "audit" | "support";
 
 function truncate(input: string, max: number) {
   const s = String(input ?? "");
@@ -16,9 +17,24 @@ function maskEmail(email: string) {
   return truncate(`${localMasked}@${domain}`, 80);
 }
 
-function pickWebhookUrl(kind: "audit" | "support") {
-  const fromKind = kind === "support" ? process.env.DISCORD_SUPPORT_WEBHOOK_URL : process.env.DISCORD_AUDIT_WEBHOOK_URL;
-  return String(fromKind || process.env.DISCORD_WEBHOOK_URL || "").trim();
+function pickWebhookUrl(kind: DiscordKind) {
+  const byKind =
+    kind === "signup"
+      ? process.env.DISCORD_SIGNUP_WEBHOOK_URL
+      : kind === "signin"
+        ? process.env.DISCORD_SIGNIN_WEBHOOK_URL
+        : kind === "purchases"
+          ? process.env.DISCORD_PURCHASES_WEBHOOK_URL
+        : kind === "suggestions"
+          ? process.env.DISCORD_SUGGESTIONS_WEBHOOK_URL || process.env.DISCORD_FEEDBACK_WEBHOOK_URL
+          : kind === "errors"
+            ? process.env.DISCORD_ERRORS_WEBHOOK_URL
+            : kind === "reports"
+              ? process.env.DISCORD_REPORTS_WEBHOOK_URL
+              : kind === "support"
+                ? process.env.DISCORD_SUPPORT_WEBHOOK_URL
+                : process.env.DISCORD_AUDIT_WEBHOOK_URL;
+  return String(byKind || process.env.DISCORD_WEBHOOK_URL || "").trim();
 }
 
 async function postWebhook(webhookUrl: string, payload: unknown) {
@@ -47,7 +63,7 @@ function rolePingContent() {
 }
 
 export async function notifyDiscord(
-  kind: "audit" | "support",
+  kind: DiscordKind,
   args: {
     title: string;
     fields?: DiscordField[];
@@ -73,7 +89,7 @@ export async function notifyDiscord(
   if (args.email) fields.unshift({ name: "Email", value: maskEmail(args.email), inline: true });
 
   const contentBase = truncate(args.content || "", 1800);
-  const ping = kind === "support" ? rolePingContent() : "";
+  const ping = kind === "support" || kind === "errors" || kind === "reports" ? rolePingContent() : "";
   const content = truncate([ping, contentBase].filter(Boolean).join("\n"), 1900);
 
   const payload = {
@@ -81,7 +97,18 @@ export async function notifyDiscord(
     embeds: [
       {
         title: safeTitle,
-        color: typeof args.color === "number" ? args.color : kind === "support" ? 0xef4444 : 0x60a5fa,
+        color:
+          typeof args.color === "number"
+            ? args.color
+            : kind === "support" || kind === "errors" || kind === "reports"
+              ? 0xef4444
+              : kind === "purchases"
+                ? 0x8b5cf6
+              : kind === "suggestions"
+                ? 0xf59e0b
+                : kind === "signup" || kind === "signin"
+                  ? 0x22c55e
+                  : 0x60a5fa,
         fields,
         timestamp: nowIso,
       },
@@ -91,4 +118,3 @@ export async function notifyDiscord(
 
   await postWebhook(webhookUrl, payload);
 }
-

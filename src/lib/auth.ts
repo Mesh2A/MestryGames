@@ -100,7 +100,7 @@ export const authOptions: NextAuthOptions = {
       const email = typeof user?.email === "string" ? user.email : "";
       const name = typeof user?.name === "string" ? user.name : "";
       const provider = typeof account?.provider === "string" ? account.provider : "";
-      await notifyDiscord("audit", {
+      await notifyDiscord("signin", {
         title: isNewUser ? "New sign-in (first time)" : "User signed in",
         email,
         fields: [
@@ -112,7 +112,7 @@ export const authOptions: NextAuthOptions = {
     async createUser({ user }) {
       const email = typeof user?.email === "string" ? user.email : "";
       const name = typeof user?.name === "string" ? user.name : "";
-      await notifyDiscord("audit", {
+      await notifyDiscord("signup", {
         title: "User created (OAuth)",
         email,
         fields: [{ name: "Name", value: name || "—", inline: true }],

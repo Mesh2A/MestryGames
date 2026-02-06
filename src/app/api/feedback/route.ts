@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await notifyDiscord("support", {
+  await notifyDiscord("suggestions", {
     title: "Feedback",
     email: email || undefined,
     content: message,
@@ -71,4 +71,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }
-

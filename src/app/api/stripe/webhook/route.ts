@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
           ? (out as { nameChangeCreditsAdded: number }).nameChangeCreditsAdded
           : 0;
       if (!alreadyProcessed && (coinsAdded > 0 || nameCreditsAdded > 0)) {
-        await notifyDiscord("audit", {
+        await notifyDiscord("purchases", {
           title: "Purchase paid (Stripe webhook)",
           email: profileEmail,
           fields: [
@@ -234,7 +234,16 @@ export async function POST(req: NextRequest) {
       }
     }
     return NextResponse.json(out, { status: 200 });
-  } catch {
+  } catch (e) {
+    const code = (e as { code?: unknown; name?: unknown }).code;
+    const name = (e as { code?: unknown; name?: unknown }).name;
+    await notifyDiscord("errors", {
+      title: "Stripe webhook failed",
+      fields: [
+        { name: "Code", value: typeof code === "string" ? code : "unknown", inline: true },
+        { name: "Name", value: typeof name === "string" ? name : "unknown", inline: true },
+      ],
+    });
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }

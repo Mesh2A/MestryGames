@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureDbReady();
   } catch {
+    await notifyDiscord("errors", { title: "Register failed (storage unavailable)" });
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
   let body: unknown = null;
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     if (!updated.ok) return NextResponse.json({ error: updated.error }, { status: 409 });
     const profile = "profile" in updated ? updated.profile : null;
-    await notifyDiscord("audit", {
+    await notifyDiscord("signup", {
       title: updated.mode === "upgraded" ? "User registered (credentials linked)" : "User registered",
       email,
       fields: [
@@ -118,8 +119,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
     const code = (e as { code?: unknown }).code;
-    if (code === "P1001") return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+    if (code === "P1001") {
+      await notifyDiscord("errors", { title: "Register failed (storage unavailable)", email, fields: [{ name: "Code", value: "P1001", inline: true }] });
+      return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+    }
     if (code === "P2002") return NextResponse.json({ error: "conflict" }, { status: 409 });
+    await notifyDiscord("errors", {
+      title: "Register failed (server error)",
+      email,
+      fields: [{ name: "Code", value: typeof code === "string" ? code : "unknown", inline: true }],
+    });
     return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 }

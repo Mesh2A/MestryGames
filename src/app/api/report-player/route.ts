@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     targetName = "";
   }
 
-  await notifyDiscord("support", {
+  await notifyDiscord("reports", {
     title: "Player report",
     email,
     fields: [
@@ -83,4 +83,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, id }, { status: 200 });
 }
-

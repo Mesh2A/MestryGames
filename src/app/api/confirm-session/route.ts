@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
           ? (out as { nameChangeCreditsAdded: number }).nameChangeCreditsAdded
           : 0;
       if (!alreadyProcessed && (coinsAdded > 0 || nameCreditsAdded > 0)) {
-        await notifyDiscord("audit", {
+        await notifyDiscord("purchases", {
           title: "Purchase paid (confirm session)",
           email,
           fields: [
@@ -172,7 +172,18 @@ export async function GET(req: NextRequest) {
       }
     }
     return NextResponse.json(out, { status: 200 });
-  } catch {
+  } catch (e) {
+    const code = (e as { code?: unknown; name?: unknown }).code;
+    const name = (e as { code?: unknown; name?: unknown }).name;
+    await notifyDiscord("errors", {
+      title: "Confirm session failed",
+      email,
+      fields: [
+        { name: "Code", value: typeof code === "string" ? code : "unknown", inline: true },
+        { name: "Name", value: typeof name === "string" ? name : "unknown", inline: true },
+        { name: "Session", value: sessionId || "—", inline: false },
+      ],
+    });
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
