@@ -22,6 +22,22 @@ function normalizeMode(mode: string) {
   return "";
 }
 
+function normalizeKind(kind: string) {
+  const k = String(kind || "").trim().toLowerCase();
+  if (k === "custom" || k === "specified" || k === "limited") return "custom";
+  return "normal";
+}
+
+function queueModeKey(baseMode: "easy" | "medium" | "hard", kind: "normal" | "custom") {
+  return kind === "custom" ? `${baseMode}_custom` : baseMode;
+}
+
+function parseQueueModeKey(mode: string) {
+  const m = String(mode || "").trim().toLowerCase();
+  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  return { mode: m, kind: "normal" as const };
+}
+
 function configForMode(mode: "easy" | "medium" | "hard") {
   if (mode === "easy") return { fee: 29, codeLen: 3 };
   if (mode === "medium") return { fee: 45, codeLen: 4 };
@@ -82,10 +98,13 @@ export async function POST(req: NextRequest) {
   }
 
   const modeRaw = body && typeof body === "object" && "mode" in body ? (body as { mode?: unknown }).mode : "";
+  const kindRaw = body && typeof body === "object" && "kind" in body ? (body as { kind?: unknown }).kind : "";
   const mode = normalizeMode(typeof modeRaw === "string" ? modeRaw : "");
   if (!mode) return NextResponse.json({ error: "bad_mode" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const kind = normalizeKind(typeof kindRaw === "string" ? kindRaw : "");
 
   const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard");
+  const modeKey = queueModeKey(mode as "easy" | "medium" | "hard", kind);
 
   try {
     const out = await prisma.$transaction(async (tx) => {
@@ -96,7 +115,8 @@ export async function POST(req: NextRequest) {
       >`SELECT "id", "status", "matchId", "mode", "fee", "codeLen" FROM "OnlineQueue" WHERE "email" = ${email} AND "status" = 'waiting' ORDER BY "createdAt" DESC LIMIT 1`;
       if (existing && existing[0]) {
         const row = existing[0];
-        return { status: "waiting" as const, queueId: row.id, fee: row.fee, codeLen: row.codeLen, mode: row.mode };
+        const parsed = parseQueueModeKey(row.mode);
+        return { status: "waiting" as const, queueId: row.id, fee: row.fee, codeLen: row.codeLen, mode: parsed.mode, kind: parsed.kind };
       }
 
       const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
@@ -113,7 +133,7 @@ export async function POST(req: NextRequest) {
       const opponent = await tx.$queryRaw<{ id: string; email: string; fee: number; codeLen: number }[]>`
         SELECT "id", "email", "fee", "codeLen"
         FROM "OnlineQueue"
-        WHERE "mode" = ${mode} AND "status" = 'waiting' AND "email" <> ${email}
+        WHERE "mode" = ${modeKey} AND "status" = 'waiting' AND "email" <> ${email}
         ORDER BY "createdAt" ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED
@@ -123,14 +143,14 @@ export async function POST(req: NextRequest) {
         const queueId = randomId("q");
         await tx.$executeRaw`
           INSERT INTO "OnlineQueue" ("id", "email", "mode", "fee", "codeLen", "status", "createdAt", "updatedAt")
-          VALUES (${queueId}, ${email}, ${mode}, ${fee}, ${codeLen}, 'waiting', NOW(), NOW())
+          VALUES (${queueId}, ${email}, ${modeKey}, ${fee}, ${codeLen}, 'waiting', NOW(), NOW())
         `;
-        return { status: "waiting" as const, queueId, fee, codeLen, mode };
+        return { status: "waiting" as const, queueId, fee, codeLen, mode, kind };
       }
 
       const opp = opponent[0];
       const matchId = randomId("m");
-      const answer = generateAnswer(codeLen);
+      const answer = kind === "custom" ? "" : generateAnswer(codeLen);
       const aStarts = (randomBytes(1)[0] & 1) === 1;
       const aEmail = aStarts ? email : opp.email;
       const bEmail = aStarts ? opp.email : email;
@@ -143,15 +163,20 @@ export async function POST(req: NextRequest) {
         WHERE "id" = ${opp.id}
       `;
 
+      const initialState =
+        kind === "custom"
+          ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
+          : { a: [], b: [], lastMasked: null };
+
       await tx.$executeRaw`
         INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")
-        VALUES (${matchId}, ${mode}, ${fee}, ${codeLen}, ${aEmail}, ${bEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify({ a: [], b: [], lastMasked: null })}::jsonb, NOW(), NOW())
+        VALUES (${matchId}, ${mode}, ${fee}, ${codeLen}, ${aEmail}, ${bEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify(initialState)}::jsonb, NOW(), NOW())
       `;
 
       const myQueueId = randomId("q");
       await tx.$executeRaw`
         INSERT INTO "OnlineQueue" ("id", "email", "mode", "fee", "codeLen", "status", "matchId", "createdAt", "updatedAt")
-        VALUES (${myQueueId}, ${email}, ${mode}, ${fee}, ${codeLen}, 'matched', ${matchId}, NOW(), NOW())
+        VALUES (${myQueueId}, ${email}, ${modeKey}, ${fee}, ${codeLen}, 'matched', ${matchId}, NOW(), NOW())
       `;
 
       const oppProfile = await tx.gameProfile.findUnique({ where: { email: opp.email }, select: { email: true, publicId: true, state: true, createdAt: true } });
@@ -161,6 +186,7 @@ export async function POST(req: NextRequest) {
         fee,
         codeLen,
         mode,
+        kind,
         opponent: oppProfile
           ? {
               id: oppProfile.publicId,

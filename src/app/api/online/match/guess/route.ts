@@ -70,7 +70,15 @@ function safeState(raw: unknown) {
   const a = Array.isArray(s.a) ? s.a : [];
   const b = Array.isArray(s.b) ? s.b : [];
   const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
-  return { a, b, lastMasked };
+  const kind = s.kind === "custom" ? ("custom" as const) : ("normal" as const);
+  const phase = kind === "custom" && s.phase === "setup" ? ("setup" as const) : ("play" as const);
+  const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
+  const ready = s.ready && typeof s.ready === "object" ? (s.ready as Record<string, unknown>) : {};
+  const secretA = typeof secrets.a === "string" ? secrets.a : "";
+  const secretB = typeof secrets.b === "string" ? secrets.b : "";
+  const readyA = ready.a === true;
+  const readyB = ready.b === true;
+  return { a, b, lastMasked, kind, phase, secretA, secretB, readyA, readyB };
 }
 
 export async function POST(req: NextRequest) {
@@ -127,7 +135,8 @@ export async function POST(req: NextRequest) {
 
       const now = Date.now();
       const turnStartedAt = Number(m.turnStartedAt || 0);
-      if (turnStartedAt > 0 && now - turnStartedAt >= TURN_MS) {
+      const state0 = safeState(m.state);
+      if (state0.phase !== "setup" && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS) {
         const nextTurn = m.turnEmail === m.aEmail ? m.bEmail : m.aEmail;
         await tx.$executeRaw`
           UPDATE "OnlineMatch"
@@ -143,16 +152,22 @@ export async function POST(req: NextRequest) {
       const len = Math.max(3, Math.min(6, Math.floor(m.codeLen || 0)));
       if (!isDigitsN(guess, len)) return { ok: false as const, error: "bad_guess" as const };
 
-      const result = evaluateGuess(guess, m.answer);
-      const solved = result.every((x) => x === "ok");
+      if (state0.kind === "custom" && (!state0.readyA || !state0.readyB)) return { ok: false as const, error: "not_ready" as const };
       const role = m.aEmail === email ? "a" : "b";
-      const state = safeState(m.state);
+      const targetAnswer = state0.kind === "custom" ? (role === "a" ? state0.secretB : state0.secretA) : m.answer;
+      if (!targetAnswer || !isDigitsN(targetAnswer, len)) return { ok: false as const, error: "not_ready" as const };
+
+      const result = evaluateGuess(guess, targetAnswer);
+      const solved = result.every((x) => x === "ok");
+      const state = state0;
 
       const entry = { guess, result, at: now };
       const nextA = role === "a" ? (state.a as unknown[]).concat([entry]).slice(-160) : (state.a as unknown[]).slice(-160);
       const nextB = role === "b" ? (state.b as unknown[]).concat([entry]).slice(-160) : (state.b as unknown[]).slice(-160);
 
+      const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
       const nextState: Record<string, unknown> = {
+        ...prevState,
         a: nextA,
         b: nextB,
         lastMasked: { by: email, len, at: now },

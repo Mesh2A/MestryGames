@@ -6,6 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
+function parseQueueMode(mode: string) {
+  const m = String(mode || "").trim().toLowerCase();
+  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
+  return { mode: m, kind: "normal" as const };
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
@@ -29,7 +35,18 @@ export async function GET(req: NextRequest) {
         >`SELECT "id","email","status","matchId","mode","fee","codeLen" FROM "OnlineQueue" WHERE "id" = ${id} LIMIT 1 FOR UPDATE`;
         const row = rows && rows[0] ? rows[0] : null;
         if (!row || row.email !== email) return { ok: false as const };
-        if (row.status !== "waiting") return { ok: true as const, status: row.status, matchId: row.matchId, mode: row.mode, fee: row.fee, codeLen: row.codeLen };
+        if (row.status !== "waiting") {
+          const parsed = parseQueueMode(row.mode);
+          return {
+            ok: true as const,
+            status: row.status,
+            matchId: row.matchId,
+            mode: parsed.mode,
+            kind: parsed.kind,
+            fee: row.fee,
+            codeLen: row.codeLen,
+          };
+        }
 
         await tx.$executeRaw`
           UPDATE "OnlineQueue" SET "status" = 'cancelled', "updatedAt" = NOW() WHERE "id" = ${id}
@@ -44,7 +61,18 @@ export async function GET(req: NextRequest) {
         const nextState = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
         await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
 
-        return { ok: true as const, status: "cancelled" as const, matchId: null, mode: row.mode, fee: row.fee, codeLen: row.codeLen, refunded: true as const, coins: nextCoins };
+        const parsed = parseQueueMode(row.mode);
+        return {
+          ok: true as const,
+          status: "cancelled" as const,
+          matchId: null,
+          mode: parsed.mode,
+          kind: parsed.kind,
+          fee: row.fee,
+          codeLen: row.codeLen,
+          refunded: true as const,
+          coins: nextCoins,
+        };
       });
       if (!out.ok) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
       return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
@@ -58,7 +86,11 @@ export async function GET(req: NextRequest) {
     `;
     const row = rows && rows[0] ? rows[0] : null;
     if (!row || row.email !== email) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
-    return NextResponse.json({ status: row.status, matchId: row.matchId, mode: row.mode, fee: row.fee, codeLen: row.codeLen }, { status: 200, headers: { "Cache-Control": "no-store" } });
+    const parsed = parseQueueMode(row.mode);
+    return NextResponse.json(
+      { status: row.status, matchId: row.matchId, mode: parsed.mode, kind: parsed.kind, fee: row.fee, codeLen: row.codeLen },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }

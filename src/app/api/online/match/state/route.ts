@@ -36,7 +36,15 @@ function safeState(raw: unknown) {
   const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
   const endedReason = typeof s.endedReason === "string" ? s.endedReason : null;
   const forfeitedBy = typeof s.forfeitedBy === "string" ? s.forfeitedBy : null;
-  return { a, b, lastMasked, endedReason, forfeitedBy };
+  const kind = s.kind === "custom" ? ("custom" as const) : ("normal" as const);
+  const phase = kind === "custom" && s.phase === "setup" ? ("setup" as const) : ("play" as const);
+  const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
+  const ready = s.ready && typeof s.ready === "object" ? (s.ready as Record<string, unknown>) : {};
+  const hasSecretA = typeof secrets.a === "string" && secrets.a.length > 0;
+  const hasSecretB = typeof secrets.b === "string" && secrets.b.length > 0;
+  const readyA = ready.a === true;
+  const readyB = ready.b === true;
+  return { a, b, lastMasked, endedReason, forfeitedBy, kind, phase, hasSecretA, hasSecretB, readyA, readyB };
 }
 
 function maskDigits(len: number) {
@@ -118,9 +126,10 @@ export async function GET(req: NextRequest) {
         m.state = nextState;
       }
 
+      const stateForTurn = safeState(m.state);
       const now = Date.now();
       const turnStartedAt = Number(m.turnStartedAt || 0);
-      const expired = !m.endedAt && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS;
+      const expired = stateForTurn.phase !== "setup" && !m.endedAt && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS;
       if (expired) {
         const nextTurn = m.turnEmail === m.aEmail ? m.bEmail : m.aEmail;
         await tx.$executeRaw`
@@ -132,7 +141,23 @@ export async function GET(req: NextRequest) {
         m.turnStartedAt = BigInt(now);
       }
 
-      const state = safeState(m.state);
+      let state = stateForTurn;
+      if (state.kind === "custom" && state.phase === "setup" && state.readyA && state.readyB && !m.endedAt) {
+        const now2 = Date.now();
+        const aStarts = (now2 & 1) === 1;
+        const turnEmail2 = aStarts ? m.aEmail : m.bEmail;
+        const nextState = { ...(m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {}), phase: "play" };
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "turnEmail" = ${turnEmail2}, "turnStartedAt" = ${now2}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+        m.turnEmail = turnEmail2;
+        m.turnStartedAt = BigInt(now2);
+        m.state = nextState;
+        state = safeState(m.state);
+      }
+
       const myRole = m.aEmail === email ? "a" : "b";
       const myHistory = (myRole === "a" ? state.a : state.b).filter((x) => x && typeof x === "object").slice(-120);
 
@@ -168,12 +193,18 @@ export async function GET(req: NextRequest) {
           mode: m.mode,
           fee: m.fee,
           codeLen: m.codeLen,
+          kind: state.kind,
+          phase: state.phase,
+          myReady: myRole === "a" ? state.readyA : state.readyB,
+          oppReady: myRole === "a" ? state.readyB : state.readyA,
+          myHasSecret: myRole === "a" ? state.hasSecretA : state.hasSecretB,
+          oppHasSecret: myRole === "a" ? state.hasSecretB : state.hasSecretA,
           myRole,
           myId: myProfile?.publicId || null,
           myCoins,
           myLevel,
-          turn: m.endedAt ? "ended" : m.turnEmail === email ? "me" : "them",
-          timeLeftMs,
+          turn: state.phase === "setup" ? "setup" : m.endedAt ? "ended" : m.turnEmail === email ? "me" : "them",
+          timeLeftMs: state.phase === "setup" ? 0 : timeLeftMs,
           winner: m.winnerEmail ? (m.winnerEmail === email ? "me" : "them") : null,
           endedAt: m.endedAt ? m.endedAt.toISOString() : null,
           endedReason: state.endedReason,
