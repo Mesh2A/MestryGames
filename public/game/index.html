@@ -8378,6 +8378,9 @@
         stateFetchBusy: false,
         setupMyReady: false,
         setupOppReady: false,
+        setupPendingUntil: 0,
+        setupPendingValue: null,
+        setupPendingMatchId: "",
         customFocused: false,
       };
 
@@ -8687,12 +8690,28 @@
         if (m.kind === "custom" && m.phase === "setup") {
           const myReady = !!m.myReady;
           const oppReady = !!m.oppReady;
-          onlineState.setupMyReady = myReady;
+          const now = Date.now();
+          let effectiveMyReady = myReady;
+          if (onlineState.setupPendingMatchId === onlineState.matchId && now < (onlineState.setupPendingUntil || 0)) {
+            if (typeof onlineState.setupPendingValue === "boolean") {
+              if (myReady === onlineState.setupPendingValue) {
+                onlineState.setupPendingUntil = 0;
+                onlineState.setupPendingValue = null;
+                onlineState.setupPendingMatchId = "";
+              } else {
+                effectiveMyReady = onlineState.setupPendingValue;
+              }
+            }
+          }
+          onlineState.setupMyReady = effectiveMyReady;
           onlineState.setupOppReady = oppReady;
-          openOnlineSetupModal(m.codeLen, myReady, oppReady);
+          openOnlineSetupModal(m.codeLen, effectiveMyReady, oppReady);
         } else {
           onlineState.setupMyReady = false;
           onlineState.setupOppReady = false;
+          onlineState.setupPendingUntil = 0;
+          onlineState.setupPendingValue = null;
+          onlineState.setupPendingMatchId = "";
           closeOnlineSetupModal();
           if (onlineState.selectKind === "custom" && !onlineState.customFocused) {
             onlineState.customFocused = true;
@@ -9242,6 +9261,9 @@
         onlineState.stateFetchBusy = false;
         onlineState.setupMyReady = false;
         onlineState.setupOppReady = false;
+        onlineState.setupPendingUntil = 0;
+        onlineState.setupPendingValue = null;
+        onlineState.setupPendingMatchId = "";
         onlineState.selectKind = kind === "custom" ? "custom" : "normal";
         onlineState.customFocused = false;
         onlineState.oppFlashKey = "";
@@ -11202,9 +11224,12 @@
           enqueueToast({ title: t("onlineSetupTitle"), body: t("onlineSetupBadSecret").replace("{n}", String(len)), autoMs: 2400 });
           return;
         }
-        if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = true;
-        if (!isReady) openOnlineSetupModal(len, true, onlineState.setupOppReady);
-        else openOnlineSetupModal(len, false, onlineState.setupOppReady);
+        const nextReady = !isReady;
+        onlineState.setupMyReady = nextReady;
+        onlineState.setupPendingUntil = Date.now() + 1600;
+        onlineState.setupPendingValue = nextReady;
+        onlineState.setupPendingMatchId = id;
+        openOnlineSetupModal(len, nextReady, onlineState.setupOppReady);
         if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = true;
         const r = await friendsJson("/api/online/match/setup", {
           method: "POST",
@@ -11212,6 +11237,11 @@
           body: JSON.stringify(isReady ? { id, ready: false } : { id, secret, ready: true }),
         });
         if (!r.ok) {
+          onlineState.setupMyReady = isReady;
+          onlineState.setupPendingUntil = 0;
+          onlineState.setupPendingValue = null;
+          onlineState.setupPendingMatchId = "";
+          openOnlineSetupModal(len, isReady, onlineState.setupOppReady);
           if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.disabled = false;
           enqueueToast({
             title: t("onlineSetupTitle"),
@@ -11221,6 +11251,11 @@
           return;
         }
         await onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+        setTimeout(() => {
+          try {
+            onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+          } catch {}
+        }, 280);
       }
 
       function openFriendRemoveBlockModal(id) {
@@ -11362,7 +11397,12 @@
         });
 
       if (el.onlineSetupCloseBtn) el.onlineSetupCloseBtn.addEventListener("click", () => closeOnlineSetupModal());
-      if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.addEventListener("click", () => onlineExitMatch());
+      if (el.onlineSetupForfeitBtn)
+        el.onlineSetupForfeitBtn.addEventListener("click", () => {
+          if (app.session && app.session.over) return;
+          closeOnlineSetupModal();
+          openOnlineWithdrawModal();
+        });
       if (el.onlineSetupReadyBtn) el.onlineSetupReadyBtn.addEventListener("click", () => submitOnlineSetupToggleReady());
       if (el.onlineSetupDigits && el.onlineSetupInput) {
         el.onlineSetupDigits.addEventListener("click", () => {
