@@ -23,6 +23,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MestRyLock",
   description: "لعبة أرقام مع تحديات ومكافآت",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }],
+  },
 };
 
 export default function RootLayout({

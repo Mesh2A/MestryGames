@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420">
+  <path
+    fill="#b00000"
+    d="M40 380V60h100l60 120 60-120h100v320H280V190l-80 120-80-120v190H40z"
+  />
+  <path fill="#b00000" d="M400 60h80v240h120v80H400V60z" />
+</svg>

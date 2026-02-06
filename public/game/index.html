@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0b1020" />
     <title>MestRyLock</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" href="/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -1063,6 +1065,28 @@
         letter-spacing: 0.2px;
         user-select: none;
         white-space: nowrap;
+      }
+      .homeFooterBrand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .homeFooterLogo {
+        width: 28px;
+        height: 28px;
+        display: block;
+        filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.3));
+      }
+      .homeFooterBrandName {
+        font-weight: 900;
+        font-size: 15px;
+        opacity: 0.92;
+        letter-spacing: 0.3px;
+      }
+      .homeFooterBrandYear {
+        font-size: 12px;
+        opacity: 0.72;
+        margin-inline-start: 8px;
       }
       @media (max-width: 520px) {
         .panel.homeCard {
@@ -3685,7 +3709,13 @@
                 <button id="homePolicyBtn" class="homeFooterLink" type="button">السياسة</button>
                 <button id="homePrivacyBtn" class="homeFooterLink" type="button">الخصوصية</button>
               </div>
-              <div class="homeFooterCopy">© 2026 MestRy</div>
+              <div class="homeFooterBrand">
+                <img class="homeFooterLogo" src="/icon.svg" alt="" aria-hidden="true" />
+                <div class="homeFooterCopy">
+                  <span class="homeFooterBrandName">MestRy</span>
+                  <span class="homeFooterBrandYear">© 2026</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
