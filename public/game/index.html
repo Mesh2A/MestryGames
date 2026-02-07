@@ -38,6 +38,15 @@
           document.documentElement.dataset.booting = "1";
           if (lastScreen === "map" || lastScreen === "level") document.documentElement.dataset.bootScreen = lastScreen;
         } catch {}
+        try {
+          const host = String(location.hostname || "").toLowerCase();
+          const dev = host === "localhost" || host === "127.0.0.1" || /(^|\?|&)debug=1(&|$)/.test(String(location.search || ""));
+          if (!dev && window.console) {
+            console.log = () => {};
+            console.info = () => {};
+            console.debug = () => {};
+          }
+        } catch {}
       })();
     </script>
     <style>
@@ -5089,6 +5098,12 @@
         }
       }
 
+      function setTextIfChanged(elm, next) {
+        if (!elm) return;
+        const v = String(next == null ? "" : next);
+        if (elm.textContent !== v) elm.textContent = v;
+      }
+
       function updateUserCenter() {
         const displayName = app && app.state ? String(app.state.displayName || "").trim() : "";
         const name = displayName || (app && app.state && app.state.lang === "en" ? "Player" : "لاعب");
@@ -5302,16 +5317,16 @@
           const now = Date.now();
           const last = typeof cloud.lastPutAt === "number" && Number.isFinite(cloud.lastPutAt) ? cloud.lastPutAt : 0;
           const since = now - last;
-          if (since < 200) {
+          if (since < 3000) {
             cloud.debounceId = setTimeout(() => {
               cloud.lastPutAt = Date.now();
               cloudPut(app.state).catch(() => {});
-            }, 220);
+            }, Math.max(0, 3050 - since));
             return;
           }
           cloud.lastPutAt = now;
           cloudPut(app.state).catch(() => {});
-        }, 240);
+        }, 1200);
       }
 
       function flushCloudNow() {
@@ -9953,19 +9968,14 @@
         });
       }
       if (el.onlineBtn) {
-        fetchOnlineEnabledOnce(true).catch(() => {});
-        if (!onlineFeature.pollId) {
-          onlineFeature.pollId = setInterval(() => {
-            fetchOnlineEnabledOnce(false).catch(() => {});
-          }, 15_000);
-        }
         updateOnlineBtnUI();
         el.onlineBtn.addEventListener("click", () => {
           if (!cloud.enabled) {
             enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
             return;
           }
-          if (!onlineFeature.enabled) {
+          fetchOnlineEnabledOnce(false).catch(() => {});
+          if (onlineFeature.fetched && !onlineFeature.enabled) {
             enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
             return;
           }
@@ -10605,9 +10615,42 @@
         const k = `${storageKey}:toast:${key}`;
         const now = Date.now();
         const last = Math.max(0, Math.floor(parseInt(String(localStorage.getItem(k) || "0"), 10) || 0));
-        if (last && now - last < ttlMs) return false;
+        const ttl = typeof ttlMs === "number" && Number.isFinite(ttlMs) ? Math.max(0, Math.floor(ttlMs)) : 0;
+        if (last && (!ttl || now - last < ttl)) return false;
         localStorage.setItem(k, String(now));
         return true;
+      }
+
+      function toastCursorKey() {
+        return `${storageKey}:toast_cursors_v1`;
+      }
+
+      function loadToastCursors() {
+        try {
+          const raw = localStorage.getItem(toastCursorKey());
+          if (!raw) return;
+          const p = JSON.parse(raw);
+          const inbox = p && typeof p.lastInboxAt === "number" && Number.isFinite(p.lastInboxAt) ? Math.max(0, Math.floor(p.lastInboxAt)) : 0;
+          const gifts = p && typeof p.lastGiftAt === "number" && Number.isFinite(p.lastGiftAt) ? Math.max(0, Math.floor(p.lastGiftAt)) : 0;
+          const req = p && typeof p.lastReqEventAt === "number" && Number.isFinite(p.lastReqEventAt) ? Math.max(0, Math.floor(p.lastReqEventAt)) : 0;
+          toastState.lastInboxAt = inbox;
+          toastState.lastGiftAt = gifts;
+          toastState.lastReqEventAt = req;
+        } catch {}
+      }
+
+      function saveToastCursors() {
+        try {
+          localStorage.setItem(
+            toastCursorKey(),
+            JSON.stringify({
+              at: Date.now(),
+              lastInboxAt: toastState.lastInboxAt || 0,
+              lastGiftAt: toastState.lastGiftAt || 0,
+              lastReqEventAt: toastState.lastReqEventAt || 0,
+            })
+          );
+        } catch {}
       }
 
       function enqueueToast(item) {
@@ -10702,7 +10745,7 @@
           const createdAt = req && typeof req.createdAt === "number" ? req.createdAt : 0;
           if (createdAt > maxAt) maxAt = createdAt;
           if (!requestId) continue;
-          if (!toastOnce(`fr_inbox:${requestId}`, 6 * 60 * 60 * 1000)) continue;
+          if (!toastOnce(`fr_inbox:${requestId}`, 0)) continue;
 
           enqueueToast({
             title: "طلب صداقة",
@@ -10746,6 +10789,7 @@
           });
         }
         toastState.lastInboxAt = maxAt;
+        saveToastCursors();
       }
 
       async function pollFriendRequestEvents() {
@@ -10763,7 +10807,7 @@
           if (createdAt > maxAt) maxAt = createdAt;
           const key = `fr_evt:${createdAt}:${action}:${fromId || fromName}`;
           if (!action) continue;
-          if (!toastOnce(key, 6 * 60 * 60 * 1000)) continue;
+          if (!toastOnce(key, 0)) continue;
 
           if (action === "accepted") {
             enqueueToast({ title: "تم قبول طلبك", body: `${fromName}${fromId ? ` (${fromId})` : ""} قبل طلب الصداقة.`, autoMs: 2400 });
@@ -10773,6 +10817,7 @@
           }
         }
         toastState.lastReqEventAt = maxAt;
+        saveToastCursors();
       }
 
       async function pollGiftEvents() {
@@ -10790,7 +10835,7 @@
           const createdAt = g && typeof g.createdAt === "string" ? Date.parse(g.createdAt) : 0;
           if (createdAt > maxAt) maxAt = createdAt;
           const key = `gift:${createdAt}:${fromId || fromName}:${coins}`;
-          if (!toastOnce(key, 6 * 60 * 60 * 1000)) continue;
+          if (!toastOnce(key, 0)) continue;
           touched = true;
           enqueueToast({
             title: "وصلك إهداء",
@@ -10799,6 +10844,7 @@
           });
         }
         toastState.lastGiftAt = maxAt;
+        saveToastCursors();
         if (touched) {
           const existing = Array.isArray(friendsState.gifts) ? friendsState.gifts : [];
           const seen = new Set(existing.map((x) => `${String(x.createdAt || "")}:${String(x.fromId || "")}:${Number(x.coins || 0)}`));
@@ -10827,6 +10873,7 @@
 
       async function pollRemoteStateLight() {
         if (!cloud.enabled) return;
+        if (document.hidden) return;
         const remote = await cloudGet();
         if (!remote) return;
 
@@ -10895,54 +10942,96 @@
       let lastFriendsPullAt = 0;
       let lastPresenceAt = 0;
       let lastOnlineCountAt = 0;
+      let lastRemoteStateAt = 0;
+      let lastChatInboxAt = 0;
+      let lastFriendInboxAt = 0;
+      let lastFriendReqAt = 0;
+      let lastGiftAt = 0;
+      let lastOnlineEnabledAt = 0;
+      let lastUiPulseAt = 0;
       async function presencePing() {
         if (!cloud.enabled) return;
+        if (document.hidden) return;
         const now = Date.now();
         app.state.lastSeenAt = now;
         saveStateSilent(app.state);
         try {
-          await fetch("/api/presence/ping", { method: "POST" });
+          await fetch("/api/presence/ping", { method: "POST", cache: "no-store", credentials: "include" });
         } catch {}
       }
       async function pollOnlineCount() {
         if (!cloud.enabled || !el.onlineCountText) return;
+        if (document.hidden) return;
         try {
-          const r = await fetch("/api/presence/online-count", { method: "GET", cache: "no-store" });
+          const r = await fetch("/api/presence/online-count", { method: "GET", cache: "no-store", credentials: "include" });
           const d = await r.json().catch(() => null);
           const n = d && typeof d.count === "number" && Number.isFinite(d.count) ? Math.max(0, Math.floor(d.count)) : 0;
-          el.onlineCountText.textContent = String(n);
+          setTextIfChanged(el.onlineCountText, String(n));
         } catch {}
+      }
+      function stopLivePolling() {
+        if (livePollId) clearInterval(livePollId);
+        livePollId = null;
       }
       function startLivePolling() {
         if (livePollId) return;
+        if (!cloud.enabled) return;
         livePollId = setInterval(() => {
-          pollFriendInbox().catch(() => {});
-          pollFriendRequestEvents().catch(() => {});
-          pollGiftEvents().catch(() => {});
-          pollChatInbox().catch(() => {});
-          pollRemoteStateLight().catch(() => {});
+          if (!cloud.enabled) {
+            stopLivePolling();
+            return;
+          }
+          if (document.hidden) return;
           const now = Date.now();
-          if (cloud.enabled && now - lastPresenceAt > 20000) {
+          if (now - lastOnlineEnabledAt > 30000) {
+            lastOnlineEnabledAt = now;
+            fetchOnlineEnabledOnce(false).catch(() => {});
+          }
+          if (now - lastFriendInboxAt > 7000) {
+            lastFriendInboxAt = now;
+            pollFriendInbox().catch(() => {});
+          }
+          if (now - lastFriendReqAt > 8000) {
+            lastFriendReqAt = now;
+            pollFriendRequestEvents().catch(() => {});
+          }
+          if (now - lastGiftAt > 8000) {
+            lastGiftAt = now;
+            pollGiftEvents().catch(() => {});
+          }
+          const chatEvery = chatState.open ? 2500 : 9000;
+          if (now - lastChatInboxAt > chatEvery) {
+            lastChatInboxAt = now;
+            pollChatInbox().catch(() => {});
+          }
+          if (now - lastRemoteStateAt > 15000) {
+            lastRemoteStateAt = now;
+            pollRemoteStateLight().catch(() => {});
+          }
+          if (now - lastPresenceAt > 25000) {
             lastPresenceAt = now;
             presencePing().catch(() => {});
           }
-          if (cloud.enabled && now - lastOnlineCountAt > 12000) {
+          if (now - lastOnlineCountAt > 15000) {
             lastOnlineCountAt = now;
             pollOnlineCount().catch(() => {});
           }
-          if (chatState.open && chatState.selectedId && now - (chatState.lastThreadPullAt || 0) > 1200) {
+          if (chatState.open && chatState.selectedId && now - (chatState.lastThreadPullAt || 0) > 2000) {
             chatState.lastThreadPullAt = now;
             loadChatThread(chatState.selectedId)
               .then(() => renderChatMessages())
               .catch(() => {});
           }
-          if ((friendsState.open || chatState.open) && now - lastFriendsPullAt > 4500) {
+          if ((friendsState.open || chatState.open) && now - lastFriendsPullAt > 5200) {
             lastFriendsPullAt = now;
             loadFriendsData().catch(() => {});
           }
-          updateTasksBadge();
-          updateProfileUI();
-        }, 1800);
+          if (now - lastUiPulseAt > 4500) {
+            lastUiPulseAt = now;
+            updateTasksBadge();
+            updateProfileUI();
+          }
+        }, 2500);
       }
 
       let fastSyncT = null;
@@ -12259,10 +12348,18 @@
         bgResizeT = setTimeout(() => buildBgPattern(), 180);
         if (el.profileDropBackdrop && el.profileDropBackdrop.classList.contains("show")) updateProfileDropPosition();
       });
-      window.addEventListener("focus", () => kickFastSync());
+      window.addEventListener("focus", () => {
+        if (cloud.enabled) startLivePolling();
+        kickFastSync();
+      });
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") kickFastSync();
-        else flushCloudNow();
+        if (document.visibilityState === "visible") {
+          if (cloud.enabled) startLivePolling();
+          kickFastSync();
+        } else {
+          stopLivePolling();
+          flushCloudNow();
+        }
       });
       window.addEventListener("pagehide", () => flushCloudNow());
 
@@ -12276,6 +12373,7 @@
             localStorage.setItem("lockgame_last_email_v1", u.email);
           } catch {}
           loadFriendsCache();
+          loadToastCursors();
         }
 
         app.state = loadState();
@@ -12334,7 +12432,7 @@
 
         applyTheme(initialTheme);
         applyLanguage(app.state.lang || "ar");
-        ensureCountryCode().catch(() => {});
+        if (cloud.enabled) ensureCountryCode().catch(() => {});
         applyReduceMotion();
         applyLockShape();
         updateCoinsUI();
@@ -12373,10 +12471,15 @@
         delete document.documentElement.dataset.booting;
         delete document.documentElement.dataset.bootScreen;
         updateDailyUI();
-        setInterval(() => updateDailyUI(), 1000);
-        startLivePolling();
-        kickFastSync();
-        if (cloud.enabled) setTimeout(() => loadFriendsData(true).catch(() => {}), 400);
+        setInterval(() => {
+          if (!document.hidden) updateDailyUI();
+        }, 2000);
+        if (cloud.enabled) {
+          fetchOnlineEnabledOnce(true).catch(() => {});
+          startLivePolling();
+          kickFastSync();
+          setTimeout(() => loadFriendsData(true).catch(() => {}), 400);
+        }
       })();
     </script>
   </body>
