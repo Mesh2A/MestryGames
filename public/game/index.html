@@ -9920,7 +9920,7 @@
               await friendsJson("/api/online/match/forfeit", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: matchId }),
+                body: JSON.stringify({ id: matchId, intent: "withdraw" }),
               });
             }
             onlineReturnToModeSelect();

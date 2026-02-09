@@ -29,6 +29,23 @@ function ensureStats(state: Record<string, unknown>) {
   };
 }
 
+function safeObj(raw: unknown) {
+  return raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+}
+
+function normalizePresenceState(state: unknown) {
+  const base = safeObj(state);
+  const presence = safeObj(base.presence);
+  const a = safeObj(presence.a);
+  const b = safeObj(presence.b);
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0);
+  const normSide = (side: Record<string, unknown>) => ({
+    lastSeenAt: num(side.lastSeenAt),
+    disconnectedAt: num(side.disconnectedAt),
+  });
+  return { base, presence: { a: normSide(a), b: normSide(b) } };
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
@@ -48,8 +65,11 @@ export async function POST(req: NextRequest) {
   }
 
   const idRaw = body && typeof body === "object" && "id" in body ? (body as { id?: unknown }).id : "";
+  const intentRaw = body && typeof body === "object" && "intent" in body ? (body as { intent?: unknown }).intent : "";
   const matchId = String(typeof idRaw === "string" ? idRaw : "").trim();
   if (!matchId) return NextResponse.json({ error: "missing_id" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const intent = String(typeof intentRaw === "string" ? intentRaw : "").trim().toLowerCase();
+  const isExplicitWithdraw = intent === "withdraw";
 
   try {
     const out = await prisma.$transaction(async (tx) => {
@@ -73,6 +93,23 @@ export async function POST(req: NextRequest) {
       if (m.endedAt || m.winnerEmail) return { ok: true as const, ended: true as const };
 
       const now = Date.now();
+
+      if (!isExplicitWithdraw) {
+        const role = m.aEmail === email ? ("a" as const) : ("b" as const);
+        const { base, presence } = normalizePresenceState(m.state);
+        const nextPresence =
+          role === "a"
+            ? { ...presence, a: { ...presence.a, disconnectedAt: now } }
+            : { ...presence, b: { ...presence.b, disconnectedAt: now } };
+        const nextState = { ...base, presence: nextPresence };
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+        return { ok: true as const, treated: "disconnect" as const };
+      }
+
       const winnerEmail = m.aEmail === email ? m.bEmail : m.aEmail;
       const loserEmail = email;
       const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
