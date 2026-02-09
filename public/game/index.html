@@ -2717,6 +2717,56 @@
       .miniSelect {
         width: 100%;
       }
+      .miniSelectWrap {
+        position: relative;
+        width: 100%;
+      }
+      .miniSelectBtn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .miniSelectBtn::after {
+        content: "▾";
+        opacity: 0.8;
+        font-weight: 900;
+      }
+      .miniSelectMenu {
+        position: absolute;
+        inset-inline: 0;
+        top: calc(100% + 8px);
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(13, 18, 34, 0.98);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+        padding: 6px;
+        display: none;
+        gap: 6px;
+        z-index: 1000;
+        max-height: 240px;
+        overflow: auto;
+      }
+      .miniSelectMenu.show {
+        display: grid;
+      }
+      .miniSelectOption {
+        width: 100%;
+        text-align: right;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.92);
+        padding: 10px 10px;
+        cursor: pointer;
+        font-weight: 900;
+      }
+      .miniSelectOption.active {
+        border-color: rgba(34, 211, 238, 0.58);
+        background: rgba(34, 211, 238, 0.12);
+      }
       .miniTextarea {
         width: 100%;
         min-height: 110px;
@@ -4565,13 +4615,11 @@
           <div id="reportTitle" class="confirmMiniQ">إبلاغ</div>
           <button id="reportCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
         </div>
-        <select id="reportType" class="miniInput miniSelect" aria-label="نوع البلاغ">
-          <option value="غش">غش</option>
-          <option value="إساءة / سب">إساءة / سب</option>
-          <option value="سبام">سبام</option>
-          <option value="استغلال ثغرة">استغلال ثغرة</option>
-          <option value="أخرى">أخرى</option>
-        </select>
+        <div id="reportTypeWrap" class="miniSelectWrap" aria-label="نوع البلاغ">
+          <button id="reportTypeBtn" class="miniInput miniSelect miniSelectBtn" type="button">—</button>
+          <div id="reportTypeMenu" class="miniSelectMenu" aria-hidden="true"></div>
+          <input id="reportTypeValue" type="hidden" value="" />
+        </div>
         <textarea id="reportText" class="miniTextarea" placeholder="اكتب البلاغ هنا..." maxlength="1200"></textarea>
         <div class="confirmMiniRow">
           <button id="reportSendBtn" class="btn danger" type="button">إرسال البلاغ</button>
@@ -5533,7 +5581,10 @@
         reportBackdrop: document.getElementById("reportBackdrop"),
         reportTitle: document.getElementById("reportTitle"),
         reportCloseBtn: document.getElementById("reportCloseBtn"),
-        reportType: document.getElementById("reportType"),
+        reportTypeWrap: document.getElementById("reportTypeWrap"),
+        reportTypeBtn: document.getElementById("reportTypeBtn"),
+        reportTypeMenu: document.getElementById("reportTypeMenu"),
+        reportTypeValue: document.getElementById("reportTypeValue"),
         reportText: document.getElementById("reportText"),
         reportSendBtn: document.getElementById("reportSendBtn"),
         reportCancelBtn: document.getElementById("reportCancelBtn"),
@@ -6257,6 +6308,65 @@
         return typeof v === "function" ? v(vars) : v;
       }
 
+      function reportTypeOptionsFor(lang) {
+        return lang === "en"
+          ? [
+              { value: "Cheating", label: "Cheating" },
+              { value: "Harassment", label: "Harassment" },
+              { value: "Spam", label: "Spam" },
+              { value: "Exploit", label: "Exploit" },
+              { value: "Other", label: "Other" },
+            ]
+          : [
+              { value: "غش", label: "غش" },
+              { value: "إساءة / سب", label: "إساءة / سب" },
+              { value: "سبام", label: "سبام" },
+              { value: "استغلال ثغرة", label: "استغلال ثغرة" },
+              { value: "أخرى", label: "أخرى" },
+            ];
+      }
+
+      function syncReportTypeUI() {
+        if (!el.reportTypeBtn || !el.reportTypeMenu || !el.reportTypeValue) return;
+        const val = String(el.reportTypeValue.value || "").trim();
+        const opts = reportTypeOptionsFor(currentLang());
+        const cur = opts.find((o) => o.value === val) || opts[0];
+        if (cur) el.reportTypeBtn.textContent = cur.label;
+        const nodes = el.reportTypeMenu.querySelectorAll("[data-value]");
+        nodes.forEach((n) => {
+          const b = n;
+          const v = String(b.getAttribute("data-value") || "");
+          if (v === val) b.classList.add("active");
+          else b.classList.remove("active");
+        });
+      }
+
+      function setReportTypeOptions(lang) {
+        if (!el.reportTypeMenu || !el.reportTypeValue) return;
+        const opts = reportTypeOptionsFor(lang);
+        el.reportTypeMenu.innerHTML = opts.map((o) => `<button type="button" class="miniSelectOption" data-value="${o.value}">${o.label}</button>`).join("");
+        const val = String(el.reportTypeValue.value || "").trim();
+        if (!val) el.reportTypeValue.value = opts[0] ? opts[0].value : "";
+        syncReportTypeUI();
+      }
+
+      function closeReportTypeMenu() {
+        if (!el.reportTypeMenu) return;
+        el.reportTypeMenu.classList.remove("show");
+        el.reportTypeMenu.setAttribute("aria-hidden", "true");
+      }
+
+      function toggleReportTypeMenu() {
+        if (!el.reportTypeMenu) return;
+        const next = !el.reportTypeMenu.classList.contains("show");
+        if (!next) {
+          closeReportTypeMenu();
+          return;
+        }
+        el.reportTypeMenu.classList.add("show");
+        el.reportTypeMenu.setAttribute("aria-hidden", "false");
+      }
+
       function applyLanguage(lang) {
         const next = normalizeLang(lang);
         app.state.lang = next;
@@ -6287,13 +6397,8 @@
         if (el.feedbackText) el.feedbackText.placeholder = t("feedbackPlaceholder");
         if (el.feedbackSendBtn) el.feedbackSendBtn.textContent = t("feedbackSendBtn");
         if (el.reportTitle) el.reportTitle.textContent = t("reportTitle");
-        if (el.reportType) {
-          el.reportType.setAttribute("aria-label", t("reportTypeLabel"));
-          el.reportType.innerHTML =
-            next === "en"
-              ? `<option value="Cheating">Cheating</option><option value="Harassment">Harassment</option><option value="Spam">Spam</option><option value="Exploit">Exploit</option><option value="Other">Other</option>`
-              : `<option value="غش">غش</option><option value="إساءة / سب">إساءة / سب</option><option value="سبام">سبام</option><option value="استغلال ثغرة">استغلال ثغرة</option><option value="أخرى">أخرى</option>`;
-        }
+        if (el.reportTypeBtn) el.reportTypeBtn.setAttribute("aria-label", t("reportTypeLabel"));
+        setReportTypeOptions(next);
         if (el.reportText) el.reportText.placeholder = t("reportPlaceholder");
         if (el.reportSendBtn) el.reportSendBtn.textContent = t("reportSendBtn");
         if (el.reportCancelBtn) el.reportCancelBtn.textContent = t("reportCancelBtn");
@@ -10466,7 +10571,14 @@
           body: JSON.stringify({ toId: peerId, text, clientId }),
         });
         if (!r.ok) {
-          enqueueToast({ title: "فشل", body: (r.data && r.data.error) || "تعذر الإرسال.", autoMs: 2200 });
+          if (r.status === 403 && r.data && r.data.error === "muted" && typeof r.data.mutedUntilMs === "number") {
+            const ms = Math.max(0, Math.floor(r.data.mutedUntilMs - Date.now()));
+            const m = Math.floor(ms / 60000);
+            const s = Math.floor((ms % 60000) / 1000);
+            enqueueToast({ title: "ميوت", body: `ممنوع الشات لمدة ${m}د ${s}ث.`, autoMs: 2600 });
+          } else {
+            enqueueToast({ title: "فشل", body: (r.data && r.data.error) || "تعذر الإرسال.", autoMs: 2200 });
+          }
           const cur = readChatThread(peerId).filter((m) => !(m && typeof m === "object" && m.id === clientId));
           writeChatThread(peerId, cur);
           renderChatMessages();
@@ -11722,7 +11834,10 @@
         el.reportBackdrop.dataset.targetId = id;
         el.reportBackdrop.dataset.targetName = name;
         if (el.reportTitle) el.reportTitle.textContent = name ? `${t("reportTitle")} • ${name}` : t("reportTitle");
-        if (el.reportType) el.reportType.value = el.reportType.value || (currentLang() === "en" ? "Cheating" : "غش");
+        if (el.reportTypeValue && typeof el.reportTypeValue.value === "string") {
+          el.reportTypeValue.value = el.reportTypeValue.value || (currentLang() === "en" ? "Cheating" : "غش");
+        }
+        syncReportTypeUI();
         el.reportText.value = "";
         el.reportBackdrop.classList.add("show");
         el.reportBackdrop.setAttribute("aria-hidden", "false");
@@ -11741,7 +11856,7 @@
       async function submitReport() {
         const targetId = el.reportBackdrop ? String(el.reportBackdrop.dataset.targetId || "") : "";
         if (!targetId) return;
-        const type = el.reportType && typeof el.reportType.value === "string" ? String(el.reportType.value).trim() : "";
+        const type = el.reportTypeValue && typeof el.reportTypeValue.value === "string" ? String(el.reportTypeValue.value).trim() : "";
         const msg = el.reportText ? String(el.reportText.value || "").replace(/\s+/g, " ").trim() : "";
         if (!type || msg.length < 3) {
           enqueueToast({ title: t("reportTitle"), body: currentLang() === "en" ? "Write more details." : "اكتب تفاصيل أكثر.", autoMs: 2200 });
@@ -12150,6 +12265,27 @@
       if (el.reportCloseBtn) el.reportCloseBtn.addEventListener("click", () => closeReportModal());
       if (el.reportCancelBtn) el.reportCancelBtn.addEventListener("click", () => closeReportModal());
       if (el.reportSendBtn) el.reportSendBtn.addEventListener("click", () => submitReport());
+      if (el.reportTypeBtn) el.reportTypeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleReportTypeMenu();
+      });
+      if (el.reportTypeMenu) el.reportTypeMenu.addEventListener("click", (e) => {
+        const t = e.target;
+        const b = t && t.closest ? t.closest("[data-value]") : null;
+        if (!b) return;
+        const v = String(b.getAttribute("data-value") || "");
+        if (el.reportTypeValue) el.reportTypeValue.value = v;
+        syncReportTypeUI();
+        closeReportTypeMenu();
+      });
+      document.addEventListener("click", (e) => {
+        if (!el.reportTypeWrap || !el.reportTypeMenu) return;
+        const target = e.target;
+        if (!target || !target.closest) return;
+        if (target.closest("#reportTypeWrap")) return;
+        closeReportTypeMenu();
+      });
       if (el.reportBackdrop)
         el.reportBackdrop.addEventListener("click", (e) => {
           if (e.target === el.reportBackdrop) closeReportModal();

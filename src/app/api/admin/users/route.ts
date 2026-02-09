@@ -41,6 +41,31 @@ function readPhotoFromState(state: unknown) {
   return /^data:image\/(png|jpeg|webp);base64,/i.test(s) && s.length < 150000 ? s : "";
 }
 
+function readWarningsFromState(state: unknown) {
+  if (!state || typeof state !== "object") return 0;
+  const v = (state as Record<string, unknown>).warnings;
+  return Math.max(0, intFromUnknown(v));
+}
+
+function readChatMutedUntilMsFromState(state: unknown) {
+  if (!state || typeof state !== "object") return 0;
+  const v = (state as Record<string, unknown>).chatMutedUntilMs;
+  return Math.max(0, intFromUnknown(v));
+}
+
+function readAdminNoteFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).adminNote;
+  return typeof v === "string" ? v.trim() : "";
+}
+
+function readRiskLevelFromState(state: unknown) {
+  if (!state || typeof state !== "object") return "";
+  const v = (state as Record<string, unknown>).riskLevel;
+  const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+  return s === "high" || s === "med" || s === "low" ? s : "";
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const adminEmail = session?.user?.email;
@@ -111,6 +136,8 @@ export async function GET(req: NextRequest) {
       const ban = banMap.get(String(r.email).toLowerCase());
       const bannedUntilMs = ban && Number.isFinite(ban.until) ? Math.max(0, Math.floor(ban.until)) : 0;
       const banCount = banCountMap.get(String(r.email).toLowerCase()) || 0;
+      const warnings = readWarningsFromState(r.state);
+      const chatMutedUntilMs = readChatMutedUntilMsFromState(r.state);
       return {
         email: r.email,
         id: r.publicId || "",
@@ -121,6 +148,10 @@ export async function GET(req: NextRequest) {
         stats: getProfileStats(r.state),
         reportsReceived: r.publicId ? reportMap.get(r.publicId) || 0 : 0,
         banCount,
+        warnings,
+        chatMutedUntilMs,
+        adminNote: readAdminNoteFromState(r.state),
+        riskLevel: readRiskLevelFromState(r.state),
         bannedUntilMs,
         banReason: ban ? String(ban.reason || "") : "",
         banned: !!(bannedUntilMs && bannedUntilMs > now),

@@ -463,3 +463,70 @@
   border-color: rgba(56, 189, 248, 0.5);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
 }
+
+.selectWrap {
+  position: relative;
+  width: 100%;
+}
+
+.selectBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.selectChevron {
+  opacity: 0.85;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.selectBackdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: default;
+  z-index: 40;
+}
+
+.selectMenu {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 8px);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 14, 28, 0.98);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+  max-height: 280px;
+  overflow: auto;
+  z-index: 50;
+}
+
+.selectOption {
+  text-align: right;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 10px 10px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.selectOption:hover {
+  filter: brightness(1.06);
+}
+
+.selectOptionActive {
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(56, 189, 248, 0.14);
+}

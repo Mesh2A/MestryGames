@@ -1,8 +1,62 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import styles from "./AdminUsersPanel.module.css";
+
+type SelectOption = { value: string; label: string };
+
+function SelectBox({
+  value,
+  options,
+  onChange,
+  disabled,
+  style,
+  className,
+}: {
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  style?: CSSProperties;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.value === value) || options[0] || { value: "", label: "" };
+  return (
+    <div className={styles.selectWrap} style={style}>
+      <button
+        type="button"
+        disabled={disabled}
+        className={`${styles.selectBtn} ${styles.select} ${className || ""}`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>{current.label}</span>
+        <span className={styles.selectChevron}>▾</span>
+      </button>
+      {open ? (
+        <>
+          <button type="button" className={styles.selectBackdrop} onClick={() => setOpen(false)} aria-label="Close" />
+          <div className={styles.selectMenu} role="listbox">
+            {options.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className={`${styles.selectOption} ${o.value === value ? styles.selectOptionActive : ""}`}
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 type AdminUser = {
   id: string;
@@ -14,6 +68,10 @@ type AdminUser = {
   stats: { streak: number; wins: number; unlocked: number; completed: number };
   reportsReceived?: number;
   banCount?: number;
+  warnings?: number;
+  chatMutedUntilMs?: number;
+  adminNote?: string;
+  riskLevel?: string;
   banned?: boolean;
   bannedUntilMs?: number;
   banReason?: string;
@@ -65,6 +123,7 @@ export default function AdminUsersPanel() {
     }[] | null
   >(null);
   const [reportsStatus, setReportsStatus] = useState<"" | "new" | "reviewing" | "action_taken">("");
+  const [reportsQ, setReportsQ] = useState("");
   const [matches, setMatches] = useState<
     | {
         queueWaiting: number;
@@ -105,6 +164,9 @@ export default function AdminUsersPanel() {
   const [banDurationMs, setBanDurationMs] = useState("300000");
   const [banReason, setBanReason] = useState("");
   const [warnNote, setWarnNote] = useState("");
+  const [muteMs, setMuteMs] = useState("0");
+  const [adminNoteDraft, setAdminNoteDraft] = useState("");
+  const [riskLevelDraft, setRiskLevelDraft] = useState<"" | "low" | "med" | "high">("");
   const [usersFilter, setUsersFilter] = useState<"all" | "banned" | "reported">("all");
   const [usersSort, setUsersSort] = useState<"updated" | "coins">("updated");
 
@@ -125,6 +187,20 @@ export default function AdminUsersPanel() {
       { label: "7 أيام", ms: 7 * 24 * 60 * 60_000 },
       { label: "30 يوم", ms: 30 * 24 * 60 * 60_000 },
       { label: "3 شهور", ms: 90 * 24 * 60 * 60_000 },
+    ],
+    []
+  );
+
+  const muteOptions = useMemo(
+    () => [
+      { label: "بدون ميوت", ms: 0 },
+      { label: "5 دقائق", ms: 5 * 60_000 },
+      { label: "30 دقيقة", ms: 30 * 60_000 },
+      { label: "ساعة", ms: 60 * 60_000 },
+      { label: "6 ساعات", ms: 6 * 60 * 60_000 },
+      { label: "يوم", ms: 24 * 60 * 60_000 },
+      { label: "7 أيام", ms: 7 * 24 * 60 * 60_000 },
+      { label: "30 يوم", ms: 30 * 24 * 60 * 60_000 },
     ],
     []
   );
@@ -217,13 +293,13 @@ export default function AdminUsersPanel() {
 
   const loadReports = useCallback(async () => {
     try {
-      const url = `/api/admin/reports?take=120&status=${encodeURIComponent(reportsStatus)}`;
+      const url = `/api/admin/reports?take=120&status=${encodeURIComponent(reportsStatus)}&q=${encodeURIComponent(reportsQ.trim())}`;
       const r = await fetch(url, { method: "GET" });
       const data = (await r.json().catch(() => null)) as { ok?: boolean; items?: unknown; error?: string } | null;
       if (!r.ok || !data || !data.ok || !Array.isArray(data.items)) return;
       setReports(data.items.filter((x) => x && typeof x === "object") as typeof reports);
     } catch {}
-  }, [reportsStatus]);
+  }, [reportsQ, reportsStatus]);
 
   async function updateReportStatus(id: string, status: "new" | "reviewing" | "action_taken") {
     setMessage("");
@@ -341,6 +417,37 @@ export default function AdminUsersPanel() {
     }
   }
 
+  async function saveUserMeta(patch: { adminNote?: string; riskLevel?: string; muteMs?: number }) {
+    if (!selected) return;
+    setMessage("");
+    setLoading(true);
+    try {
+      const r = await fetch("/api/admin/user-meta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: selected.email, ...patch }),
+      });
+      const data = (await r.json().catch(() => null)) as
+        | { ok?: boolean; error?: string; adminNote?: string; riskLevel?: string; chatMutedUntilMs?: number }
+        | null;
+      if (!r.ok || !data || !data.ok) {
+        setMessage((data && data.error) || "فشل حفظ بيانات اللاعب.");
+        return;
+      }
+      const next = {
+        ...selected,
+        adminNote: typeof data.adminNote === "string" ? data.adminNote : selected.adminNote,
+        riskLevel: typeof data.riskLevel === "string" ? data.riskLevel : selected.riskLevel,
+        chatMutedUntilMs: typeof data.chatMutedUntilMs === "number" ? data.chatMutedUntilMs : selected.chatMutedUntilMs,
+      };
+      setSelected(next);
+      setUsers((prev) => (prev ? prev.map((u) => (u.email === selected.email ? { ...u, ...next } : u)) : prev));
+      setMessage("تم الحفظ.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (tab !== "players" && tab !== "stats") return;
     loadSummary();
@@ -353,6 +460,14 @@ export default function AdminUsersPanel() {
     if (tab === "matches") loadMatches();
     if (tab === "settings") loadSettings();
   }, [tab, loadLogs, loadMatches, loadMe, loadReports, loadSettings]);
+
+  useEffect(() => {
+    if (!selected) return;
+    setAdminNoteDraft(String(selected.adminNote || ""));
+    const r = String(selected.riskLevel || "").toLowerCase();
+    setRiskLevelDraft(r === "low" || r === "med" || r === "high" ? (r as "low" | "med" | "high") : "");
+    setMuteMs("0");
+  }, [selected]);
 
   function fmtRemaining(ms: number) {
     const s = Math.max(0, Math.floor(ms / 1000));
@@ -391,13 +506,14 @@ export default function AdminUsersPanel() {
     }
   }
 
-  async function load() {
+  async function load(nextQ?: string) {
     setMessage("");
     setSelected(null);
     setDetailTab("coins");
     setLoading(true);
     try {
-      const url = `/api/admin/users?q=${encodeURIComponent(q.trim())}&take=200`;
+      const qv = typeof nextQ === "string" ? nextQ : q;
+      const url = `/api/admin/users?q=${encodeURIComponent(qv.trim())}&take=200`;
       const r = await fetch(url, { method: "GET" });
       const data = (await r.json().catch(() => null)) as UsersResponse | null;
       if (!r.ok || !data || "error" in data) {
@@ -611,7 +727,7 @@ export default function AdminUsersPanel() {
 
           <div className={styles.inputRow}>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالإيميل أو ID" className={styles.input} />
-            <button type="button" onClick={load} disabled={loading} className={styles.btn} style={{ minWidth: 140 }}>
+            <button type="button" onClick={() => load()} disabled={loading} className={styles.btn} style={{ minWidth: 140 }}>
               جلب اللاعبين
             </button>
           </div>
@@ -658,7 +774,10 @@ export default function AdminUsersPanel() {
                   visibleUsers.map((u) => {
                     const reportsCount = Math.max(0, Math.floor(u.reportsReceived || 0));
                     const banCount = Math.max(0, Math.floor(u.banCount || 0));
+                    const warningsCount = Math.max(0, Math.floor(u.warnings || 0));
+                    const mutedUntilMs = Math.max(0, Math.floor(u.chatMutedUntilMs || 0));
                     const banned = !!(u.bannedUntilMs && u.bannedUntilMs > now);
+                    const muted = !!(mutedUntilMs && mutedUntilMs > now);
                     return (
                       <button
                         type="button"
@@ -684,6 +803,8 @@ export default function AdminUsersPanel() {
                         <div className={styles.rowMetaRow}>
                           <span className={styles.badge}>{reportsCount} بلاغ</span>
                           <span className={styles.badge}>{banCount} باند</span>
+                          <span className={styles.badge}>{warningsCount} تحذير</span>
+                          {muted ? <span className={styles.badge}>ميوت</span> : null}
                           {banned ? <span className={`${styles.badge} ${styles.badgeDanger}`}>مبند</span> : null}
                         </div>
                       </button>
@@ -719,7 +840,10 @@ export default function AdminUsersPanel() {
                       </div>
                     </div>
 
-                    <div className={styles.small}>الكوينز: {selected.coins} — المباريات: {selected.stats?.wins ?? 0} فوز — بلاغات: {Math.max(0, Math.floor(selected.reportsReceived || 0))}</div>
+                    <div className={styles.small}>
+                      الكوينز: {selected.coins} — فوز: {selected.stats?.wins ?? 0} — بلاغات: {Math.max(0, Math.floor(selected.reportsReceived || 0))} — باند:{" "}
+                      {Math.max(0, Math.floor(selected.banCount || 0))} — تحذيرات: {Math.max(0, Math.floor(selected.warnings || 0))}
+                    </div>
 
                     <div className={styles.tabsSub}>
                       <button type="button" onClick={() => setDetailTab("coins")} className={`${styles.tabBtn} ${detailTab === "coins" ? styles.tabBtnActive : ""}`}>
@@ -733,7 +857,7 @@ export default function AdminUsersPanel() {
                         }}
                         className={`${styles.tabBtn} ${detailTab === "ban" ? styles.tabBtnActive : ""}`}
                       >
-                        الباند / التحذير
+                        الإشراف
                       </button>
                     </div>
 
@@ -771,13 +895,12 @@ export default function AdminUsersPanel() {
                           </div>
                         )}
 
-                        <select value={banDurationMs} onChange={(e) => setBanDurationMs(e.target.value)} className={styles.select}>
-                          {banOptions.map((o) => (
-                            <option key={o.ms} value={String(o.ms)}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
+                        <SelectBox
+                          value={banDurationMs}
+                          onChange={(v) => setBanDurationMs(v)}
+                          options={banOptions.map((o) => ({ value: String(o.ms), label: o.label }))}
+                          disabled={banBusy || loading}
+                        />
 
                         <input value={banReason} onChange={(e) => setBanReason(e.target.value)} placeholder="سبب الباند (اختياري)" className={styles.input} />
 
@@ -794,6 +917,70 @@ export default function AdminUsersPanel() {
                         <div className={styles.actionsRow}>
                           <button type="button" onClick={warnUser} disabled={loading} className={`${styles.btn}`}>
                             تحذير
+                          </button>
+                        </div>
+
+                        <div className={styles.sectionTitle} style={{ marginTop: 6 }}>
+                          ميوت الشات
+                        </div>
+                        <div className={styles.actionsRow}>
+                          <SelectBox
+                            value={muteMs}
+                            onChange={(v) => setMuteMs(v)}
+                            options={muteOptions.map((o) => ({ value: String(o.ms), label: o.label }))}
+                            disabled={loading}
+                            style={{ flex: "1 1 220px" }}
+                          />
+                          <button
+                            type="button"
+                            className={styles.btn}
+                            disabled={loading}
+                            onClick={() => saveUserMeta({ muteMs: Math.max(0, Math.floor(parseInt(muteMs || "0", 10) || 0)) })}
+                          >
+                            تطبيق
+                          </button>
+                        </div>
+                        {selected.chatMutedUntilMs && selected.chatMutedUntilMs > now ? (
+                          <div className={styles.small} style={{ opacity: 0.9 }}>
+                            ميوت حتى: {new Date(selected.chatMutedUntilMs).toLocaleString()} ({fmtRemaining(selected.chatMutedUntilMs - now)})
+                          </div>
+                        ) : (
+                          <div className={styles.small} style={{ opacity: 0.8 }}>
+                            غير ميوت حالياً.
+                          </div>
+                        )}
+
+                        <div className={styles.sectionTitle} style={{ marginTop: 6 }}>
+                          ملاحظة داخلية / خطورة
+                        </div>
+                        <input value={adminNoteDraft} onChange={(e) => setAdminNoteDraft(e.target.value)} placeholder="ملاحظة داخلية (اختياري)" className={styles.input} />
+                        <div className={styles.actionsRow}>
+                          <button
+                            type="button"
+                            className={`${styles.btn} ${riskLevelDraft === "low" ? styles.btnChipActive : ""}`}
+                            onClick={() => setRiskLevelDraft("low")}
+                            disabled={loading}
+                          >
+                            Low
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.btn} ${riskLevelDraft === "med" ? styles.btnChipActive : ""}`}
+                            onClick={() => setRiskLevelDraft("med")}
+                            disabled={loading}
+                          >
+                            Med
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.btn} ${riskLevelDraft === "high" ? styles.btnChipActive : ""}`}
+                            onClick={() => setRiskLevelDraft("high")}
+                            disabled={loading}
+                          >
+                            High
+                          </button>
+                          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} disabled={loading} onClick={() => saveUserMeta({ adminNote: adminNoteDraft, riskLevel: riskLevelDraft })}>
+                            حفظ
                           </button>
                         </div>
 
@@ -885,12 +1072,19 @@ export default function AdminUsersPanel() {
         <div className={styles.panel}>
           <div className={styles.sectionTitle}>البلاغات</div>
           <div className={styles.actionsRow} style={{ marginTop: 10 }}>
-            <select value={reportsStatus} onChange={(e) => setReportsStatus(e.target.value as typeof reportsStatus)} className={styles.select} style={{ maxWidth: 240 }}>
-              <option value="">الكل</option>
-              <option value="new">جديد</option>
-              <option value="reviewing">تحت المراجعة</option>
-              <option value="action_taken">تم الإجراء</option>
-            </select>
+            <input value={reportsQ} onChange={(e) => setReportsQ(e.target.value)} placeholder="بحث (ID/إيميل/سبب/هدف...)" className={styles.input} style={{ flex: "1 1 260px" }} />
+            <SelectBox
+              value={reportsStatus}
+              onChange={(v) => setReportsStatus(v as typeof reportsStatus)}
+              options={[
+                { value: "", label: "الكل" },
+                { value: "new", label: "جديد" },
+                { value: "reviewing", label: "تحت المراجعة" },
+                { value: "action_taken", label: "تم الإجراء" },
+              ]}
+              disabled={loading}
+              style={{ flex: "0 0 220px" }}
+            />
             <button type="button" className={styles.btn} onClick={() => loadReports()} disabled={loading}>
               تحديث
             </button>
@@ -915,6 +1109,17 @@ export default function AdminUsersPanel() {
                     مباراة: {r.matchId || "—"} — محادثة: {r.chatId || "—"}
                   </div>
                   <div className={styles.actionsRow} style={{ marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className={styles.btn}
+                      onClick={() => {
+                        setTab("players");
+                        setQ(r.targetId || "");
+                        load(r.targetId || "");
+                      }}
+                    >
+                      فتح اللاعب
+                    </button>
                     <button type="button" className={styles.btn} onClick={() => updateReportStatus(r.id, "new")}>
                       جديد
                     </button>

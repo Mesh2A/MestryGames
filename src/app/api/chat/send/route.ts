@@ -25,6 +25,13 @@ function readStateObj(state: unknown) {
   return state && typeof state === "object" ? (state as Record<string, unknown>) : {};
 }
 
+function readMutedUntilMs(state: Record<string, unknown>) {
+  const v = state.chatMutedUntilMs;
+  if (typeof v === "number" && Number.isFinite(v)) return Math.max(0, Math.floor(v));
+  if (typeof v === "string") return Math.max(0, Math.floor(parseInt(v, 10) || 0));
+  return 0;
+}
+
 function readThreads(state: Record<string, unknown>) {
   const raw = state.chatThreads;
   if (!raw || typeof raw !== "object") return {};
@@ -104,6 +111,9 @@ export async function POST(req: NextRequest) {
       const fromState = fromPruned.next;
       const toState = toPruned.next;
 
+      const mutedUntilMs = readMutedUntilMs(fromState);
+      if (mutedUntilMs && mutedUntilMs > now) return { ok: false as const, status: 403 as const, mutedUntilMs };
+
       const fromName = firstNameFromDisplayNameOrEmail(readDisplayNameFromState(fromState), fromRow.email);
 
       const msg = { id, fromId: fromRow.publicId, toId: toRow.publicId, fromName, text, createdAt: now, deliveredAt: now, readAt: 0 };
@@ -129,7 +139,10 @@ export async function POST(req: NextRequest) {
       return { ok: true as const, msg };
     });
 
-    if (!out.ok) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (!out.ok) {
+      if (out.status === 403 && "mutedUntilMs" in out) return NextResponse.json({ error: "muted", mutedUntilMs: out.mutedUntilMs }, { status: 403 });
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
     return NextResponse.json({ ok: true, msg: out.msg }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
