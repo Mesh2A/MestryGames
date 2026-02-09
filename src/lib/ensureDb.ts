@@ -101,6 +101,40 @@ export async function ensureDbReady() {
             )
           `);
           await prisma.$executeRawUnsafe(`INSERT INTO "AppConfig" ("id") VALUES ('global') ON CONFLICT ("id") DO NOTHING`);
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "PlayerReport" (
+              "id" TEXT PRIMARY KEY,
+              "reporterEmail" TEXT NOT NULL,
+              "reporterId" TEXT,
+              "targetId" TEXT NOT NULL,
+              "reason" TEXT,
+              "details" TEXT,
+              "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE INDEX IF NOT EXISTS "PlayerReport_targetId_createdAt_idx"
+            ON "PlayerReport"("targetId", "createdAt")
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE INDEX IF NOT EXISTS "PlayerReport_reporterEmail_createdAt_idx"
+            ON "PlayerReport"("reporterEmail", "createdAt")
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "UserBan" (
+              "email" TEXT PRIMARY KEY,
+              "publicId" TEXT,
+              "bannedUntil" BIGINT NOT NULL,
+              "reason" TEXT,
+              "bannedBy" TEXT,
+              "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE INDEX IF NOT EXISTS "UserBan_bannedUntil_idx"
+            ON "UserBan"("bannedUntil")
+          `);
           globalForEnsure.ensured = true;
           return;
         } catch (e) {

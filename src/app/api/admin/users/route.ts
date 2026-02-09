@@ -1,8 +1,10 @@
 import { isAdminEmail } from "@/lib/admin";
 import { authOptions } from "@/lib/auth";
+import { ensureDbReady } from "@/lib/ensureDb";
 import { prisma } from "@/lib/prisma";
 import { getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 function intFromUnknown(x: unknown) {
@@ -50,6 +52,7 @@ export async function GET(req: NextRequest) {
   const take = Math.max(1, Math.min(200, intFromUnknown(takeRaw)));
 
   try {
+    await ensureDbReady();
     const rows = await prisma.gameProfile.findMany({
       where: q ? { email: { contains: q, mode: "insensitive" } } : undefined,
       orderBy: { updatedAt: "desc" },
@@ -57,9 +60,34 @@ export async function GET(req: NextRequest) {
       select: { email: true, publicId: true, createdAt: true, updatedAt: true, state: true },
     });
 
+    const ids = rows.map((r) => r.publicId).filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+    const emails = rows.map((r) => r.email).filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+
+    const reports = ids.length
+      ? await prisma.$queryRaw<{ targetId: string; n: bigint }[]>`
+          SELECT "targetId", COUNT(*) AS "n"
+          FROM "PlayerReport"
+          WHERE "targetId" IN (${Prisma.join(ids)})
+          GROUP BY "targetId"
+        `
+      : [];
+    const reportMap = new Map(reports.map((r) => [String(r.targetId), Number(r.n || 0)]));
+
+    const bans = emails.length
+      ? await prisma.$queryRaw<{ email: string; bannedUntil: bigint; reason: string | null }[]>`
+          SELECT "email","bannedUntil","reason"
+          FROM "UserBan"
+          WHERE "email" IN (${Prisma.join(emails)})
+        `
+      : [];
+    const banMap = new Map(bans.map((b) => [String(b.email).toLowerCase(), { until: Number(b.bannedUntil || 0), reason: b.reason || "" }]));
+    const now = Date.now();
+
     const users = rows.map((r) => {
       const displayName = readDisplayNameFromState(r.state);
       const firstName = displayName || firstNameFromEmail(r.email);
+      const ban = banMap.get(String(r.email).toLowerCase());
+      const bannedUntilMs = ban && Number.isFinite(ban.until) ? Math.max(0, Math.floor(ban.until)) : 0;
       return {
         email: r.email,
         id: r.publicId || "",
@@ -68,6 +96,10 @@ export async function GET(req: NextRequest) {
         photo: readPhotoFromState(r.state),
         coins: readCoinsFromState(r.state),
         stats: getProfileStats(r.state),
+        reportsReceived: r.publicId ? reportMap.get(r.publicId) || 0 : 0,
+        bannedUntilMs,
+        banReason: ban ? String(ban.reason || "") : "",
+        banned: !!(bannedUntilMs && bannedUntilMs > now),
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
       };

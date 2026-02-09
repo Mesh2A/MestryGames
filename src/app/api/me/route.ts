@@ -1,4 +1,5 @@
 import { authOptions } from "@/lib/auth";
+import { getActiveBan } from "@/lib/ban";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
@@ -30,6 +31,7 @@ export async function GET() {
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   try {
+    const ban = await getActiveBan(email);
     const profile = await ensureGameProfile(email);
     const displayEmail = profile.contactEmail || profile.email;
     const displayName = readDisplayNameFromState(profile.state);
@@ -49,6 +51,7 @@ export async function GET() {
         level: level.level,
         xp: level.xp,
         nextXp: level.nextXp,
+        ban: ban ? { bannedUntilMs: ban.bannedUntilMs, reason: ban.reason } : null,
       },
       { status: 200 }
     );

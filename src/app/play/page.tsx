@@ -1,11 +1,15 @@
 import { authOptions } from "@/lib/auth";
+import { getActiveBan } from "@/lib/ban";
 import AuthButtons from "@/components/AuthButtons";
+import BannedScreen from "@/components/BannedScreen";
 import { getServerSession } from "next-auth/next";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlayPage() {
   const session = await getServerSession(authOptions);
+  const email = session?.user?.email || "";
+  const ban = email ? await getActiveBan(email) : null;
 
   const name = session?.user?.name || "";
   const firstName = String(name).trim().split(/\s+/).filter(Boolean)[0] || "";
@@ -56,17 +60,21 @@ export default async function PlayPage() {
           </div>
         </div>
       ) : null}
-      <iframe
-        title="game"
-        src={src}
-        style={{
-          width: "100%",
-          height: "100%",
-          border: 0,
-          display: "block",
-        }}
-        allow="clipboard-write; fullscreen"
-      />
+      {ban ? (
+        <BannedScreen bannedUntilMs={ban.bannedUntilMs} reason={ban.reason} />
+      ) : (
+        <iframe
+          title="game"
+          src={src}
+          style={{
+            width: "100%",
+            height: "100%",
+            border: 0,
+            display: "block",
+          }}
+          allow="clipboard-write; fullscreen"
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { authOptions } from "@/lib/auth";
+import { getActiveBan } from "@/lib/ban";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+
+  const ban = await getActiveBan(email);
+  if (ban) return NextResponse.json({ error: "banned", bannedUntilMs: ban.bannedUntilMs, reason: ban.reason }, { status: 403, headers: { "Cache-Control": "no-store" } });
 
   try {
     await ensureDbReady();

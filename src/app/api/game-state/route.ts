@@ -1,4 +1,5 @@
 import { authOptions } from "@/lib/auth";
+import { getActiveBan } from "@/lib/ban";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -8,6 +9,9 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const ban = await getActiveBan(email);
+  if (ban) return NextResponse.json({ error: "banned", bannedUntilMs: ban.bannedUntilMs, reason: ban.reason }, { status: 403 });
 
   try {
     await ensureGameProfile(email);
@@ -29,6 +33,9 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const ban = await getActiveBan(email);
+  if (ban) return NextResponse.json({ error: "banned", bannedUntilMs: ban.bannedUntilMs, reason: ban.reason }, { status: 403 });
 
   let body: unknown = null;
   try {

@@ -1,5 +1,6 @@
 import { authOptions } from "@/lib/auth";
 import { notifyDiscord } from "@/lib/discord";
+import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rateLimit";
@@ -80,6 +81,15 @@ export async function POST(req: NextRequest) {
       { name: "Details", value: details || "—", inline: false },
     ],
   });
+
+  try {
+    await ensureDbReady();
+    await prisma.$executeRaw`
+      INSERT INTO "PlayerReport" ("id","reporterEmail","reporterId","targetId","reason","details","createdAt")
+      VALUES (${id}, ${email.toLowerCase()}, ${reporterId || null}, ${targetId}, ${reason || null}, ${details || null}, NOW())
+      ON CONFLICT ("id") DO NOTHING
+    `;
+  } catch {}
 
   return NextResponse.json({ ok: true, id }, { status: 200 });
 }
