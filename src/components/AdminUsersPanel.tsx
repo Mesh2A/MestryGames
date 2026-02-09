@@ -13,6 +13,7 @@ type AdminUser = {
   coins: number;
   stats: { streak: number; wins: number; unlocked: number; completed: number };
   reportsReceived?: number;
+  banCount?: number;
   banned?: boolean;
   bannedUntilMs?: number;
   banReason?: string;
@@ -105,7 +106,7 @@ export default function AdminUsersPanel() {
   const [banReason, setBanReason] = useState("");
   const [warnNote, setWarnNote] = useState("");
   const [usersFilter, setUsersFilter] = useState<"all" | "banned" | "reported">("all");
-  const [usersSort, setUsersSort] = useState<"updated" | "reports" | "coins">("updated");
+  const [usersSort, setUsersSort] = useState<"updated" | "coins">("updated");
 
   const parsedAmount = useMemo(() => Math.max(0, Math.floor(parseInt(amount || "0", 10) || 0)), [amount]);
 
@@ -422,7 +423,6 @@ export default function AdminUsersPanel() {
 
     filtered.sort((a, b) => {
       if (usersSort === "coins") return Math.max(0, b.coins) - Math.max(0, a.coins);
-      if (usersSort === "reports") return Math.max(0, Math.floor(b.reportsReceived || 0)) - Math.max(0, Math.floor(a.reportsReceived || 0));
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
     return filtered;
@@ -633,7 +633,7 @@ export default function AdminUsersPanel() {
                     onClick={() => setUsersFilter("reported")}
                     className={`${styles.filterBtn} ${usersFilter === "reported" ? styles.filterBtnActive : ""}`}
                   >
-                    عليهم بلاغات
+                    بلاغات
                   </button>
                   <button type="button" onClick={() => setUsersFilter("banned")} className={`${styles.filterBtn} ${usersFilter === "banned" ? styles.filterBtnActive : ""}`}>
                     مبندين
@@ -647,13 +647,6 @@ export default function AdminUsersPanel() {
                   >
                     أحدث
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setUsersSort("reports")}
-                    className={`${styles.filterBtn} ${usersSort === "reports" ? styles.filterBtnActive : ""}`}
-                  >
-                    بلاغات
-                  </button>
                   <button type="button" onClick={() => setUsersSort("coins")} className={`${styles.filterBtn} ${usersSort === "coins" ? styles.filterBtnActive : ""}`}>
                     كوينز
                   </button>
@@ -664,6 +657,7 @@ export default function AdminUsersPanel() {
                 {users && users.length ? (
                   visibleUsers.map((u) => {
                     const reportsCount = Math.max(0, Math.floor(u.reportsReceived || 0));
+                    const banCount = Math.max(0, Math.floor(u.banCount || 0));
                     const banned = !!(u.bannedUntilMs && u.bannedUntilMs > now);
                     return (
                       <button
@@ -689,6 +683,7 @@ export default function AdminUsersPanel() {
                         </div>
                         <div className={styles.rowMetaRow}>
                           <span className={styles.badge}>{reportsCount} بلاغ</span>
+                          <span className={styles.badge}>{banCount} باند</span>
                           {banned ? <span className={`${styles.badge} ${styles.badgeDanger}`}>مبند</span> : null}
                         </div>
                       </button>

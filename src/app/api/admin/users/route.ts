@@ -93,11 +93,24 @@ export async function GET(req: NextRequest) {
     const banMap = new Map(bans.map((b) => [String(b.email).toLowerCase(), { until: Number(b.bannedUntil || 0), reason: b.reason || "" }]));
     const now = Date.now();
 
+    const emailKeys = emails.map((e) => String(e || "").trim().toLowerCase()).filter(Boolean);
+    const banCounts = emailKeys.length
+      ? await prisma.$queryRaw<{ email: string; n: bigint }[]>`
+          SELECT (("details"->>'email')::text) AS "email", COUNT(*) AS "n"
+          FROM "AdminLog"
+          WHERE "action" = 'ban'
+            AND (("details"->>'email')::text) IN (${Prisma.join(emailKeys)})
+          GROUP BY (("details"->>'email')::text)
+        `
+      : [];
+    const banCountMap = new Map(banCounts.map((r) => [String(r.email).toLowerCase(), Number(r.n || 0)]));
+
     const users = rows.map((r) => {
       const displayName = readDisplayNameFromState(r.state);
       const firstName = displayName || firstNameFromEmail(r.email);
       const ban = banMap.get(String(r.email).toLowerCase());
       const bannedUntilMs = ban && Number.isFinite(ban.until) ? Math.max(0, Math.floor(ban.until)) : 0;
+      const banCount = banCountMap.get(String(r.email).toLowerCase()) || 0;
       return {
         email: r.email,
         id: r.publicId || "",
@@ -107,6 +120,7 @@ export async function GET(req: NextRequest) {
         coins: readCoinsFromState(r.state),
         stats: getProfileStats(r.state),
         reportsReceived: r.publicId ? reportMap.get(r.publicId) || 0 : 0,
+        banCount,
         bannedUntilMs,
         banReason: ban ? String(ban.reason || "") : "",
         banned: !!(bannedUntilMs && bannedUntilMs > now),

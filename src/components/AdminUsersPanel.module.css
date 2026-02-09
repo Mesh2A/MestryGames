@@ -284,6 +284,8 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.14);
   scrollbar-width: thin;
+  align-content: start;
+  grid-auto-rows: max-content;
 }
 
 .namesList::-webkit-scrollbar {
@@ -315,6 +317,7 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  align-items: flex-start;
 }
 
 .rowName {
@@ -325,14 +328,18 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .rowCoins {
   opacity: 0.9;
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .rowLine {
