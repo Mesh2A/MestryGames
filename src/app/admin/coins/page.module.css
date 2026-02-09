@@ -8,12 +8,12 @@
   color: rgba(255, 255, 255, 0.92);
   display: grid;
   align-content: start;
-  justify-items: stretch;
+  justify-items: center;
   gap: 14px;
 }
 
 .head {
-  width: 100%;
+  width: min(1240px, 100%);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -34,7 +34,7 @@
 }
 
 .shell {
-  width: 100%;
+  width: min(1240px, 100%);
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
@@ -45,7 +45,7 @@
 }
 
 .notice {
-  width: 100%;
+  width: min(1240px, 100%);
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.18);

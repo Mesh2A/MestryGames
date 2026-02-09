@@ -1,6 +1,7 @@
 .root {
   display: grid;
   gap: 14px;
+  width: 100%;
 }
 
 .bar {
@@ -205,8 +206,15 @@
 .panel {
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.16);
+  background: rgba(0, 0, 0, 0.12);
   padding: 12px;
+}
+
+.listCard {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.1);
+  padding: 10px;
 }
 
 .layout {
@@ -221,7 +229,7 @@
 
 @media (min-width: 880px) {
   .layout {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.15fr 0.85fr;
     align-items: start;
   }
   .list {
@@ -262,12 +270,34 @@
 .list {
   display: grid;
   gap: 8px;
-  max-height: min(560px, calc(100dvh - 280px));
-  overflow: auto;
+}
+
+.namesList {
+  display: grid;
+  gap: 8px;
+  height: clamp(360px, calc(100dvh - 340px), 760px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
   padding: 10px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.14);
+  scrollbar-width: thin;
+}
+
+.namesList::-webkit-scrollbar {
+  width: 10px;
+}
+
+.namesList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+}
+
+.namesList::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .rowBtn {

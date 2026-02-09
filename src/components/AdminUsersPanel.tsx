@@ -660,7 +660,7 @@ export default function AdminUsersPanel() {
                 </div>
               </div>
 
-              <div className={styles.list}>
+              <div className={styles.namesList}>
                 {users && users.length ? (
                   visibleUsers.map((u) => {
                     const reportsCount = Math.max(0, Math.floor(u.reportsReceived || 0));
@@ -841,7 +841,7 @@ export default function AdminUsersPanel() {
           <div className={styles.list}>
             {matches && matches.ongoing.length ? (
               matches.ongoing.slice(0, 60).map((m) => (
-                <div key={m.id} className={styles.panel} style={{ padding: 10 }}>
+                <div key={m.id} className={styles.listCard}>
                   <div className={styles.small} style={{ opacity: 0.95 }}>
                     {m.id} — {m.mode} — {m.fee} كوينز
                   </div>
@@ -867,7 +867,7 @@ export default function AdminUsersPanel() {
           <div className={styles.list}>
             {matches && matches.recentEnded && matches.recentEnded.length ? (
               matches.recentEnded.slice(0, 20).map((m) => (
-                <div key={m.id} className={styles.panel} style={{ padding: 10 }}>
+                <div key={m.id} className={styles.listCard}>
                   <div className={styles.small} style={{ opacity: 0.95 }}>
                     {m.id} — {m.mode} — {m.fee} كوينز
                   </div>
@@ -903,7 +903,7 @@ export default function AdminUsersPanel() {
           <div className={styles.list} style={{ marginTop: 10 }}>
             {reports && reports.length ? (
               reports.map((r) => (
-                <div key={r.id} className={styles.panel} style={{ padding: 10 }}>
+                <div key={r.id} className={styles.listCard}>
                   <div className={styles.small} style={{ opacity: 0.95 }}>
                     {r.id} — {r.status}
                   </div>
@@ -994,7 +994,7 @@ export default function AdminUsersPanel() {
           <div className={styles.list} style={{ marginTop: 10 }}>
             {logs && logs.length ? (
               logs.slice(0, 60).map((l) => (
-                <div key={l.id} className={styles.panel} style={{ padding: 10 }}>
+                <div key={l.id} className={styles.listCard}>
                   <div className={styles.small} style={{ opacity: 0.95 }}>
                     {l.action} — {l.adminEmail}
                   </div>
@@ -1085,7 +1085,7 @@ export default function AdminUsersPanel() {
           <div className={styles.list} style={{ marginTop: 10 }}>
             {logs && logs.length ? (
               logs.map((l) => (
-                <div key={l.id} className={styles.panel} style={{ padding: 10 }}>
+                <div key={l.id} className={styles.listCard}>
                   <div className={styles.small} style={{ opacity: 0.95 }}>
                     {l.action} — {l.adminEmail}
                   </div>
