@@ -1,5 +1,7 @@
 import { isAdminEmail } from "@/lib/admin";
 import { authOptions } from "@/lib/auth";
+import { logAdminAction } from "@/lib/adminLog";
+import { ensureDbReady } from "@/lib/ensureDb";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -27,6 +29,7 @@ export async function GET(req: NextRequest) {
   if (!email) return NextResponse.json({ error: "missing_email" }, { status: 400 });
 
   try {
+    await ensureDbReady();
     const profile = await prisma.gameProfile.findUnique({ where: { email } });
     const coins = readCoinsFromState(profile?.state);
     return NextResponse.json({ email, exists: !!profile, coins }, { status: 200 });
@@ -66,6 +69,7 @@ export async function POST(req: NextRequest) {
   const normalizedAmount = Math.max(0, Math.floor(amount));
 
   try {
+    await ensureDbReady();
     const out = await prisma.$transaction(async (tx) => {
       const profile = await tx.gameProfile.findUnique({ where: { email } });
       const existingState =
@@ -89,9 +93,18 @@ export async function POST(req: NextRequest) {
       return { email, previousCoins, totalCoins, created: false };
     });
 
+    const delta = (out.totalCoins as number) - (out.previousCoins as number);
+    await logAdminAction(String(adminEmail), "coins", {
+      email: out.email,
+      op,
+      amount: normalizedAmount,
+      previousCoins: out.previousCoins,
+      totalCoins: out.totalCoins,
+      delta,
+    });
+
     return NextResponse.json({ ok: true, ...out }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

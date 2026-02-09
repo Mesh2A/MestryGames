@@ -14,7 +14,22 @@
 .tabs {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.tabs > * {
+  flex: 0 0 auto;
 }
 
 .tabBtn {
@@ -214,6 +229,18 @@
   }
 }
 
+@media (max-width: 520px) {
+  .rowName {
+    font-size: 15px;
+  }
+  .rowBtn {
+    padding: 14px 14px;
+  }
+  .rowLine {
+    white-space: normal;
+  }
+}
+
 .listHead {
   display: flex;
   align-items: baseline;
@@ -246,6 +273,7 @@
 .rowBtn {
   text-align: right;
   width: 100%;
+  padding: 12px 14px;
 }
 
 .rowBtnActive {
@@ -264,6 +292,11 @@
   font-size: 14px;
   color: rgba(255, 255, 255, 0.96);
   letter-spacing: 0.2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rowCoins {

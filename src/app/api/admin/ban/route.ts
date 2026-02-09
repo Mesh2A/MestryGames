@@ -1,5 +1,6 @@
 import { isAdminEmail } from "@/lib/admin";
 import { authOptions } from "@/lib/auth";
+import { logAdminAction } from "@/lib/adminLog";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -107,6 +108,14 @@ export async function POST(req: NextRequest) {
         "updatedAt" = NOW()
     `;
 
+    await logAdminAction(String(adminEmail), "ban", {
+      email: resolvedEmail.toLowerCase(),
+      id: pid,
+      durationMs: clamped,
+      bannedUntilMs: bannedUntil,
+      reason,
+    });
+
     return NextResponse.json({ ok: true, email: resolvedEmail.toLowerCase(), bannedUntilMs: bannedUntil, reason }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
@@ -125,9 +134,9 @@ export async function DELETE(req: NextRequest) {
   try {
     await ensureDbReady();
     await prisma.$executeRaw`DELETE FROM "UserBan" WHERE "email" = ${email}`;
+    await logAdminAction(String(adminEmail), "unban", { email });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }
-

@@ -97,10 +97,18 @@ export async function ensureDbReady() {
             CREATE TABLE IF NOT EXISTS "AppConfig" (
               "id" TEXT PRIMARY KEY,
               "onlineEnabled" BOOLEAN NOT NULL DEFAULT TRUE,
+              "turnMs" INTEGER NOT NULL DEFAULT 30000,
+              "reportAlertThreshold" INTEGER NOT NULL DEFAULT 5,
+              "maintenanceMode" BOOLEAN NOT NULL DEFAULT FALSE,
+              "profanityFilterEnabled" BOOLEAN NOT NULL DEFAULT FALSE,
               "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
           `);
           await prisma.$executeRawUnsafe(`INSERT INTO "AppConfig" ("id") VALUES ('global') ON CONFLICT ("id") DO NOTHING`);
+          await prisma.$executeRawUnsafe('ALTER TABLE "AppConfig" ADD COLUMN IF NOT EXISTS "turnMs" INTEGER NOT NULL DEFAULT 30000');
+          await prisma.$executeRawUnsafe('ALTER TABLE "AppConfig" ADD COLUMN IF NOT EXISTS "reportAlertThreshold" INTEGER NOT NULL DEFAULT 5');
+          await prisma.$executeRawUnsafe('ALTER TABLE "AppConfig" ADD COLUMN IF NOT EXISTS "maintenanceMode" BOOLEAN NOT NULL DEFAULT FALSE');
+          await prisma.$executeRawUnsafe('ALTER TABLE "AppConfig" ADD COLUMN IF NOT EXISTS "profanityFilterEnabled" BOOLEAN NOT NULL DEFAULT FALSE');
           await prisma.$executeRawUnsafe(`
             CREATE TABLE IF NOT EXISTS "PlayerReport" (
               "id" TEXT PRIMARY KEY,
@@ -109,6 +117,9 @@ export async function ensureDbReady() {
               "targetId" TEXT NOT NULL,
               "reason" TEXT,
               "details" TEXT,
+              "status" TEXT NOT NULL DEFAULT 'new',
+              "matchId" TEXT,
+              "chatId" TEXT,
               "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
           `);
@@ -120,6 +131,9 @@ export async function ensureDbReady() {
             CREATE INDEX IF NOT EXISTS "PlayerReport_reporterEmail_createdAt_idx"
             ON "PlayerReport"("reporterEmail", "createdAt")
           `);
+          await prisma.$executeRawUnsafe('ALTER TABLE "PlayerReport" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT \'new\'');
+          await prisma.$executeRawUnsafe('ALTER TABLE "PlayerReport" ADD COLUMN IF NOT EXISTS "matchId" TEXT');
+          await prisma.$executeRawUnsafe('ALTER TABLE "PlayerReport" ADD COLUMN IF NOT EXISTS "chatId" TEXT');
           await prisma.$executeRawUnsafe(`
             CREATE TABLE IF NOT EXISTS "UserBan" (
               "email" TEXT PRIMARY KEY,
@@ -134,6 +148,19 @@ export async function ensureDbReady() {
           await prisma.$executeRawUnsafe(`
             CREATE INDEX IF NOT EXISTS "UserBan_bannedUntil_idx"
             ON "UserBan"("bannedUntil")
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "AdminLog" (
+              "id" TEXT PRIMARY KEY,
+              "adminEmail" TEXT NOT NULL,
+              "action" TEXT NOT NULL,
+              "details" JSONB NOT NULL DEFAULT '{}'::jsonb,
+              "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `);
+          await prisma.$executeRawUnsafe(`
+            CREATE INDEX IF NOT EXISTS "AdminLog_createdAt_idx"
+            ON "AdminLog"("createdAt")
           `);
           globalForEnsure.ensured = true;
           return;

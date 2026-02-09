@@ -1,5 +1,6 @@
 import { isAdminEmail } from "@/lib/admin";
 import { authOptions } from "@/lib/auth";
+import { logAdminAction } from "@/lib/adminLog";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { prisma } from "@/lib/prisma";
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest) {
       return { onlineEnabled };
     });
 
+    await logAdminAction(String(adminEmail), "online_toggle", { onlineEnabled: out.onlineEnabled });
     return NextResponse.json(out, { status: 200 });
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });

@@ -418,16 +418,17 @@
       }
       .playerName {
         font-weight: 900;
+        font-size: clamp(12px, 2.4vw, 15px);
         letter-spacing: 0.2px;
         color: rgba(255, 255, 255, 0.95);
-        max-width: 220px;
+        max-width: min(48vw, 360px);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
       @media (max-width: 900px) {
         .playerName {
-          max-width: 160px;
+          max-width: min(56vw, 320px);
         }
       }
       #tasksBtn {
