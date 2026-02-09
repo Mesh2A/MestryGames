@@ -121,6 +121,24 @@ export async function POST(req: NextRequest) {
     const out = await prisma.$transaction(async (tx) => {
       await ensureGameProfile(email);
 
+      const activeMatch = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id"
+        FROM "OnlineMatch"
+        WHERE ("aEmail" = ${email} OR "bEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
+        ORDER BY "createdAt" DESC
+        LIMIT 1
+      `;
+      if (activeMatch && activeMatch[0]) return { status: "error" as const, error: "already_in_match" as const, matchId: activeMatch[0].id };
+
+      const activeRoom = await tx.$queryRaw<{ code: string }[]>`
+        SELECT "code"
+        FROM "OnlineRoom"
+        WHERE ("hostEmail" = ${email} OR "guestEmail" = ${email}) AND "status" = 'waiting'
+        ORDER BY "createdAt" DESC
+        LIMIT 1
+      `;
+      if (activeRoom && activeRoom[0]) return { status: "error" as const, error: "already_in_room" as const, roomCode: activeRoom[0].code };
+
       const existing = await tx.$queryRaw<
         { id: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number }[]
       >`SELECT "id", "status", "matchId", "mode", "fee", "codeLen" FROM "OnlineQueue" WHERE "email" = ${email} AND "status" = 'waiting' ORDER BY "createdAt" DESC LIMIT 1`;

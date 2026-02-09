@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
+const SEARCH_TIMEOUT_MS = 45_000;
+
 function parseQueueMode(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
   if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
@@ -32,8 +34,8 @@ export async function GET(req: NextRequest) {
     if (!onlineEnabled) {
       const out = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<
-          { id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number }[]
-        >`SELECT "id","email","status","matchId","mode","fee","codeLen" FROM "OnlineQueue" WHERE "id" = ${id} LIMIT 1 FOR UPDATE`;
+          { id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number; createdAt: Date }[]
+        >`SELECT "id","email","status","matchId","mode","fee","codeLen","createdAt" FROM "OnlineQueue" WHERE "id" = ${id} LIMIT 1 FOR UPDATE`;
         const row = rows && rows[0] ? rows[0] : null;
         if (!row || row.email !== email) return { ok: false as const };
         if (row.status !== "waiting") {
@@ -79,14 +81,61 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
     }
 
-    const rows = await prisma.$queryRaw<{ id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number }[]>`
-      SELECT "id", "email", "status", "matchId", "mode", "fee", "codeLen"
+    const rows = await prisma.$queryRaw<
+      { id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number; createdAt: Date }[]
+    >`
+      SELECT "id", "email", "status", "matchId", "mode", "fee", "codeLen", "createdAt"
       FROM "OnlineQueue"
       WHERE "id" = ${id}
       LIMIT 1
     `;
     const row = rows && rows[0] ? rows[0] : null;
     if (!row || row.email !== email) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+
+    if (row.status === "waiting") {
+      const createdAtMs = row.createdAt ? row.createdAt.getTime() : 0;
+      if (createdAtMs && Date.now() - createdAtMs >= SEARCH_TIMEOUT_MS) {
+        const out = await prisma.$transaction(async (tx) => {
+          const lockedRows = await tx.$queryRaw<
+            { id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number }[]
+          >`SELECT "id","email","status","matchId","mode","fee","codeLen" FROM "OnlineQueue" WHERE "id" = ${id} LIMIT 1 FOR UPDATE`;
+          const locked = lockedRows && lockedRows[0] ? lockedRows[0] : null;
+          if (!locked || locked.email !== email) return { ok: false as const };
+          if (locked.status !== "waiting") {
+            const parsed = parseQueueMode(locked.mode);
+            return { ok: true as const, status: locked.status, matchId: locked.matchId, mode: parsed.mode, kind: parsed.kind, fee: locked.fee, codeLen: locked.codeLen };
+          }
+
+          await tx.$executeRaw`UPDATE "OnlineQueue" SET "status" = 'cancelled', "updatedAt" = NOW() WHERE "id" = ${id}`;
+
+          const profile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+          const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+          const coins = readCoinsFromState(stateObj);
+          const peak = readCoinsPeakFromState(stateObj);
+          const fee = Math.max(0, Math.floor(locked.fee));
+          const nextCoins = coins + fee;
+          const nextState = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
+          await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
+
+          const parsed = parseQueueMode(locked.mode);
+          return {
+            ok: true as const,
+            status: "cancelled" as const,
+            matchId: null,
+            mode: parsed.mode,
+            kind: parsed.kind,
+            fee: locked.fee,
+            codeLen: locked.codeLen,
+            refunded: true as const,
+            coins: nextCoins,
+            reason: "timeout" as const,
+          };
+        });
+        if (!out.ok) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+        return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
+      }
+    }
+
     const parsed = parseQueueMode(row.mode);
     return NextResponse.json(
       { status: row.status, matchId: row.matchId, mode: parsed.mode, kind: parsed.kind, fee: row.fee, codeLen: row.codeLen },

@@ -8,6 +8,50 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
 const TURN_MS = 30_000;
+const DISCONNECT_GRACE_MS = 60_000;
+const OFFLINE_MARK_MS = 12_000;
+const PRESENCE_MIN_WRITE_MS = 2500;
+
+function ensureStats(state: Record<string, unknown>) {
+  const raw = state.stats && typeof state.stats === "object" ? (state.stats as Record<string, unknown>) : {};
+  const num = (k: string) => {
+    const v = raw[k];
+    return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
+  };
+  return {
+    wins: num("wins"),
+    attempts: num("attempts"),
+    streakNoHint: num("streakNoHint"),
+    bestNoHint: num("bestNoHint"),
+    winStreak: num("winStreak"),
+    bestWinStreak: num("bestWinStreak"),
+    winsNormal: num("winsNormal"),
+    winsTimed: num("winsTimed"),
+    winsLimited: num("winsLimited"),
+    winsDaily: num("winsDaily"),
+    winsOnline: num("winsOnline"),
+    winsOnlineEasy: num("winsOnlineEasy"),
+    winsOnlineMedium: num("winsOnlineMedium"),
+    winsOnlineHard: num("winsOnlineHard"),
+  };
+}
+
+function safeObj(raw: unknown) {
+  return raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+}
+
+function normalizePresenceState(state: unknown) {
+  const base = safeObj(state);
+  const presence = safeObj(base.presence);
+  const a = safeObj(presence.a);
+  const b = safeObj(presence.b);
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0);
+  const normSide = (side: Record<string, unknown>) => ({
+    lastSeenAt: num(side.lastSeenAt),
+    disconnectedAt: num(side.disconnectedAt),
+  });
+  return { base, presence: { a: normSide(a), b: normSide(b) } };
+}
 
 function readDisplayNameFromState(state: unknown) {
   if (!state || typeof state !== "object") return "";
@@ -255,6 +299,134 @@ export async function GET(req: NextRequest) {
         locked.state = nextStateForReturn;
         return locked;
       });
+      if (updated) m = updated;
+    }
+
+    if (!m.endedAt && !m.winnerEmail) {
+      const updated = await prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<MatchRow[]>`
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          FROM "OnlineMatch"
+          WHERE "id" = ${matchId}
+          LIMIT 1
+          FOR UPDATE
+        `;
+        const locked = rows && rows[0] ? rows[0] : null;
+        if (!locked) return null;
+        if (locked.aEmail !== email && locked.bEmail !== email) return null;
+        if (locked.endedAt || locked.winnerEmail) return locked;
+
+        const now2 = Date.now();
+        const role = locked.aEmail === email ? ("a" as const) : ("b" as const);
+        const oppEmail = role === "a" ? locked.bEmail : locked.aEmail;
+
+        const { base, presence } = normalizePresenceState(locked.state);
+        const me = role === "a" ? presence.a : presence.b;
+        const opp = role === "a" ? presence.b : presence.a;
+
+        const nextMe = {
+          lastSeenAt: now2,
+          disconnectedAt: 0,
+        };
+        const shouldWriteMe = !!me.disconnectedAt || !me.lastSeenAt || now2 - me.lastSeenAt >= PRESENCE_MIN_WRITE_MS;
+
+        let nextOpp = opp;
+        const oppSilenceMs = opp.lastSeenAt ? now2 - opp.lastSeenAt : 0;
+        if (!opp.disconnectedAt && opp.lastSeenAt && oppSilenceMs >= OFFLINE_MARK_MS) {
+          nextOpp = { ...opp, disconnectedAt: now2 };
+        }
+
+        const nextPresence =
+          role === "a"
+            ? { a: shouldWriteMe ? nextMe : presence.a, b: nextOpp }
+            : { a: nextOpp, b: shouldWriteMe ? nextMe : presence.b };
+
+        const nextState = { ...base, presence: nextPresence };
+
+        const discAt = nextOpp.disconnectedAt || 0;
+        if (discAt && now2 - discAt >= DISCONNECT_GRACE_MS) {
+          const prevState = locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {};
+          const kind = prevState.kind === "custom" ? ("custom" as const) : ("normal" as const);
+          const phase = kind === "custom" && prevState.phase === "setup" ? ("setup" as const) : ("play" as const);
+          const fee = Math.max(0, Math.floor(locked.fee));
+          const isSetupCancel = kind === "custom" && phase === "setup";
+          const endedState = { ...nextState, endedReason: "disconnect", forfeitedBy: oppEmail, forfeitedAt: now2 };
+
+          if (isSetupCancel) {
+            await tx.$executeRaw`
+              UPDATE "OnlineMatch"
+              SET "winnerEmail" = NULL, "endedAt" = NOW(), "state" = ${JSON.stringify(endedState)}::jsonb, "updatedAt" = NOW()
+              WHERE "id" = ${matchId}
+            `;
+            const refund = async (who: string) => {
+              const profile = await tx.gameProfile.findUnique({ where: { email: who }, select: { state: true } });
+              const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+              const coins = readCoinsFromState(stateObj);
+              const peak = readCoinsPeakFromState(stateObj);
+              const nextCoins = coins + fee;
+              const next = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: now2 };
+              await tx.gameProfile.update({ where: { email: who }, data: { state: next } });
+            };
+            await refund(locked.aEmail);
+            await refund(locked.bEmail);
+            return { ...locked, winnerEmail: null, endedAt: new Date(), state: endedState };
+          }
+
+          const winnerEmail = email;
+          const loserEmail = oppEmail;
+          const pot = fee * 2;
+
+          await tx.$executeRaw`
+            UPDATE "OnlineMatch"
+            SET "winnerEmail" = ${winnerEmail}, "endedAt" = NOW(), "state" = ${JSON.stringify(endedState)}::jsonb, "updatedAt" = NOW()
+            WHERE "id" = ${matchId}
+          `;
+
+          const [winnerProfile, loserProfile] = await Promise.all([
+            tx.gameProfile.findUnique({ where: { email: winnerEmail }, select: { state: true } }),
+            tx.gameProfile.findUnique({ where: { email: loserEmail }, select: { state: true } }),
+          ]);
+
+          const wState = winnerProfile?.state && typeof winnerProfile.state === "object" ? (winnerProfile.state as Record<string, unknown>) : {};
+          const wCoins = readCoinsFromState(wState);
+          const wPeak = readCoinsPeakFromState(wState);
+          const wEarned = typeof wState.coinsEarnedTotal === "number" && Number.isFinite(wState.coinsEarnedTotal) ? Math.max(0, Math.floor(wState.coinsEarnedTotal)) : 0;
+          const wStats = ensureStats(wState);
+          wStats.wins += 1;
+          wStats.winsOnline += 1;
+          if (locked.mode === "easy") wStats.winsOnlineEasy += 1;
+          else if (locked.mode === "medium") wStats.winsOnlineMedium += 1;
+          else if (locked.mode === "hard") wStats.winsOnlineHard += 1;
+          wStats.winStreak += 1;
+          wStats.bestWinStreak = Math.max(wStats.bestWinStreak, wStats.winStreak);
+          const wNextCoins = wCoins + pot;
+          const wUpdated = { ...wState, coins: wNextCoins, coinsEarnedTotal: wEarned + pot, coinsPeak: Math.max(wPeak, wNextCoins), stats: wStats, lastWriteAt: now2 };
+
+          const lState = loserProfile?.state && typeof loserProfile.state === "object" ? (loserProfile.state as Record<string, unknown>) : {};
+          const lStats = ensureStats(lState);
+          lStats.winStreak = 0;
+          const lUpdated = { ...lState, stats: lStats, lastWriteAt: now2 };
+
+          await Promise.all([
+            tx.gameProfile.update({ where: { email: winnerEmail }, data: { state: wUpdated } }),
+            tx.gameProfile.update({ where: { email: loserEmail }, data: { state: lUpdated } }),
+          ]);
+
+          return { ...locked, winnerEmail, endedAt: new Date(), state: endedState };
+        }
+
+        if (shouldWriteMe || nextOpp !== opp) {
+          await tx.$executeRaw`
+            UPDATE "OnlineMatch"
+            SET "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+            WHERE "id" = ${matchId}
+          `;
+          locked.state = nextState;
+        }
+
+        return locked;
+      });
+
       if (updated) m = updated;
     }
 

@@ -9929,22 +9929,37 @@
         );
       }
 
-      function onlineForfeitBestEffort() {
-        if (onlineState.forfeitSent) return;
+      function onlineDisconnectBestEffort() {
         if (!cloud.enabled) return;
         if (!app.stage || app.stage.kind !== "online") return;
         if (app.session && app.session.over) return;
         const id = app.stage.matchId;
         if (!id) return;
-        onlineState.forfeitSent = true;
         try {
-          fetch("/api/online/match/forfeit", {
+          fetch("/api/online/match/disconnect", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id }),
             keepalive: true,
             credentials: "include",
+            cache: "no-store",
           });
+        } catch {}
+      }
+
+      function onlineConnectBestEffort() {
+        if (!cloud.enabled) return;
+        if (!app.stage || app.stage.kind !== "online") return;
+        const id = app.stage.matchId;
+        if (!id) return;
+        try {
+          fetch("/api/online/match/connect", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+            credentials: "include",
+            cache: "no-store",
+          }).catch(() => {});
         } catch {}
       }
 
@@ -10012,17 +10027,10 @@
       el.clearBtn.addEventListener("click", () => clearSlots());
       el.retryBtn.addEventListener("click", () => openStage({ ...app.stage }));
       el.shareBtn.addEventListener("click", () => shareResult());
-      window.addEventListener("pagehide", () => onlineForfeitBestEffort());
+      window.addEventListener("pagehide", () => onlineDisconnectBestEffort());
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          stopOnlineHiddenForfeitTimer();
-          onlineState.hiddenForfeitId = setTimeout(() => {
-            onlineState.hiddenForfeitId = null;
-            onlineForfeitBestEffort();
-          }, 12000);
-          return;
-        }
-        stopOnlineHiddenForfeitTimer();
+        if (document.hidden) onlineDisconnectBestEffort();
+        else onlineConnectBestEffort();
       });
 
       el.goStageBtn.addEventListener("click", () => {

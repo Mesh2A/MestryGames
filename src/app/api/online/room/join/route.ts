@@ -108,6 +108,33 @@ export async function POST(req: NextRequest) {
     const out = await prisma.$transaction(async (tx) => {
       await ensureGameProfile(email);
 
+      const activeMatch = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id"
+        FROM "OnlineMatch"
+        WHERE ("aEmail" = ${email} OR "bEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
+        ORDER BY "createdAt" DESC
+        LIMIT 1
+      `;
+      if (activeMatch && activeMatch[0]) return { status: "error" as const, error: "already_in_match" as const, matchId: activeMatch[0].id };
+
+      const activeQueue = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id"
+        FROM "OnlineQueue"
+        WHERE "email" = ${email} AND "status" = 'waiting'
+        ORDER BY "createdAt" DESC
+        LIMIT 1
+      `;
+      if (activeQueue && activeQueue[0]) return { status: "error" as const, error: "already_in_queue" as const, queueId: activeQueue[0].id };
+
+      const activeRoomAny = await tx.$queryRaw<{ code: string }[]>`
+        SELECT "code"
+        FROM "OnlineRoom"
+        WHERE ("hostEmail" = ${email} OR "guestEmail" = ${email}) AND "status" = 'waiting'
+        ORDER BY "createdAt" DESC
+        LIMIT 1
+      `;
+      if (activeRoomAny && activeRoomAny[0]) return { status: "error" as const, error: "already_in_room" as const, code: activeRoomAny[0].code };
+
       const rows = await tx.$queryRaw<
         { code: string; mode: string; fee: number; codeLen: number; hostEmail: string; guestEmail: string | null; status: string; matchId: string | null }[]
       >`SELECT "code","mode","fee","codeLen","hostEmail","guestEmail","status","matchId" FROM "OnlineRoom" WHERE "code" = ${code} LIMIT 1 FOR UPDATE`;
