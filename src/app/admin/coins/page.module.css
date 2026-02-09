@@ -8,16 +8,17 @@
   color: rgba(255, 255, 255, 0.92);
   display: grid;
   align-content: start;
-  justify-items: center;
+  justify-items: stretch;
   gap: 14px;
 }
 
 .head {
-  width: min(980px, 100%);
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .title {
@@ -33,7 +34,7 @@
 }
 
 .shell {
-  width: min(980px, 100%);
+  width: 100%;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
@@ -44,11 +45,10 @@
 }
 
 .notice {
-  width: min(980px, 100%);
+  width: 100%;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.18);
   padding: 12px 14px;
   line-height: 1.7;
 }
-

@@ -49,6 +49,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .input {
@@ -58,7 +59,8 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
   color: rgba(255, 255, 255, 0.92);
   outline: none;
-  min-width: 220px;
+  min-width: 0;
+  flex: 1 1 220px;
 }
 
 .input:focus {
@@ -158,6 +160,9 @@
     grid-template-columns: 1fr 1fr;
     align-items: start;
   }
+  .list {
+    max-height: calc(100dvh - 240px);
+  }
 }
 
 .listHead {
@@ -181,7 +186,7 @@
 .list {
   display: grid;
   gap: 8px;
-  max-height: 360px;
+  max-height: min(560px, calc(100dvh - 280px));
   overflow: auto;
   padding: 10px;
   border-radius: 18px;
