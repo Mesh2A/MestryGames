@@ -24,6 +24,14 @@ type UsersResponse = { users: AdminUser[] } | { error: string };
 
 export default function AdminUsersPanel() {
   const [tab, setTab] = useState<"users" | "online">("users");
+  const [summary, setSummary] = useState<{
+    usersTotal: number;
+    reportsTotal: number;
+    reports24h: number;
+    bansActive: number;
+    onlineEnabled: boolean;
+    lastReportAt: string;
+  } | null>(null);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
@@ -37,6 +45,8 @@ export default function AdminUsersPanel() {
   const [banBusy, setBanBusy] = useState(false);
   const [banDurationMs, setBanDurationMs] = useState("300000");
   const [banReason, setBanReason] = useState("");
+  const [usersFilter, setUsersFilter] = useState<"all" | "banned" | "reported">("all");
+  const [usersSort, setUsersSort] = useState<"updated" | "reports" | "coins">("updated");
 
   const parsedAmount = useMemo(() => Math.max(0, Math.floor(parseInt(amount || "0", 10) || 0)), [amount]);
 
@@ -84,6 +94,38 @@ export default function AdminUsersPanel() {
       mounted = false;
     };
   }, []);
+
+  async function loadSummary() {
+    try {
+      const r = await fetch("/api/admin/summary", { method: "GET" });
+      const data = (await r.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            usersTotal?: number;
+            reportsTotal?: number;
+            reports24h?: number;
+            bansActive?: number;
+            onlineEnabled?: boolean;
+            lastReportAt?: string;
+          }
+        | { error?: string }
+        | null;
+      if (!r.ok || !data || typeof data !== "object" || !("ok" in data) || !data.ok) return;
+      setSummary({
+        usersTotal: typeof data.usersTotal === "number" ? data.usersTotal : 0,
+        reportsTotal: typeof data.reportsTotal === "number" ? data.reportsTotal : 0,
+        reports24h: typeof data.reports24h === "number" ? data.reports24h : 0,
+        bansActive: typeof data.bansActive === "number" ? data.bansActive : 0,
+        onlineEnabled: data.onlineEnabled === true,
+        lastReportAt: typeof data.lastReportAt === "string" ? data.lastReportAt : "",
+      });
+    } catch {}
+  }
+
+  useEffect(() => {
+    if (tab !== "users") return;
+    loadSummary();
+  }, [tab]);
 
   function fmtRemaining(ms: number) {
     const s = Math.max(0, Math.floor(ms / 1000));
@@ -137,10 +179,28 @@ export default function AdminUsersPanel() {
         return;
       }
       setUsers(data.users);
+      loadSummary();
     } finally {
       setLoading(false);
     }
   }
+
+  const visibleUsers = useMemo(() => {
+    const base = Array.isArray(users) ? users.slice() : [];
+    const filtered =
+      usersFilter === "all"
+        ? base
+        : usersFilter === "banned"
+          ? base.filter((u) => !!(u.bannedUntilMs && u.bannedUntilMs > now))
+          : base.filter((u) => Math.max(0, Math.floor(u.reportsReceived || 0)) > 0);
+
+    filtered.sort((a, b) => {
+      if (usersSort === "coins") return Math.max(0, b.coins) - Math.max(0, a.coins);
+      if (usersSort === "reports") return Math.max(0, Math.floor(b.reportsReceived || 0)) - Math.max(0, Math.floor(a.reportsReceived || 0));
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    return filtered;
+  }, [users, usersFilter, usersSort, now]);
 
   async function applyBan() {
     setMessage("");
@@ -305,8 +365,34 @@ export default function AdminUsersPanel() {
         </div>
       ) : (
         <>
+          <div className={styles.summaryGrid}>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryLabel}>اللاعبين</div>
+              <div className={styles.summaryValue}>{summary ? summary.usersTotal : "—"}</div>
+            </div>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryLabel}>بلاغات (24س)</div>
+              <div className={styles.summaryValue}>{summary ? summary.reports24h : "—"}</div>
+            </div>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryLabel}>بلاغات (الإجمالي)</div>
+              <div className={styles.summaryValue}>{summary ? summary.reportsTotal : "—"}</div>
+            </div>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryLabel}>المبندين الآن</div>
+              <div className={styles.summaryValue}>{summary ? summary.bansActive : "—"}</div>
+            </div>
+            <div className={styles.summaryCard}>
+              <div className={styles.summaryLabel}>حالة الأونلاين</div>
+              <div className={styles.summaryValue}>{summary ? (summary.onlineEnabled ? "شغال" : "موقوف") : "—"}</div>
+            </div>
+            <button type="button" className={styles.summaryBtn} onClick={() => loadSummary()} disabled={loading}>
+              تحديث الملخص
+            </button>
+          </div>
+
           <div className={styles.inputRow}>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالإيميل" className={styles.input} />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالإيميل أو ID" className={styles.input} />
             <button type="button" onClick={load} disabled={loading} className={styles.btn} style={{ minWidth: 140 }}>
               جلب اللاعبين
             </button>
@@ -316,12 +402,61 @@ export default function AdminUsersPanel() {
             <div className={styles.col}>
               <div className={styles.listHead}>
                 <div className={styles.listTitle}>اللاعبين</div>
-                <div className={styles.listMeta}>{users ? `${users.length} لاعب` : ""}</div>
+                <div className={styles.listMeta}>{users ? `${visibleUsers.length} لاعب` : ""}</div>
+              </div>
+
+              <div className={styles.filtersRow}>
+                <div className={styles.filtersGroup}>
+                  <button
+                    type="button"
+                    onClick={() => setUsersFilter("all")}
+                    className={`${styles.filterBtn} ${usersFilter === "all" ? styles.filterBtnActive : ""}`}
+                  >
+                    الكل
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsersFilter("reported")}
+                    className={`${styles.filterBtn} ${usersFilter === "reported" ? styles.filterBtnActive : ""}`}
+                  >
+                    عليهم بلاغات
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsersFilter("banned")}
+                    className={`${styles.filterBtn} ${usersFilter === "banned" ? styles.filterBtnActive : ""}`}
+                  >
+                    مبندين
+                  </button>
+                </div>
+                <div className={styles.filtersGroup}>
+                  <button
+                    type="button"
+                    onClick={() => setUsersSort("updated")}
+                    className={`${styles.filterBtn} ${usersSort === "updated" ? styles.filterBtnActive : ""}`}
+                  >
+                    أحدث
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsersSort("reports")}
+                    className={`${styles.filterBtn} ${usersSort === "reports" ? styles.filterBtnActive : ""}`}
+                  >
+                    بلاغات
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsersSort("coins")}
+                    className={`${styles.filterBtn} ${usersSort === "coins" ? styles.filterBtnActive : ""}`}
+                  >
+                    كوينز
+                  </button>
+                </div>
               </div>
 
               <div className={styles.list}>
                 {users && users.length ? (
-                  users.map((u) => {
+                  visibleUsers.map((u) => {
                     const reports = Math.max(0, Math.floor(u.reportsReceived || 0));
                     const banned = !!(u.bannedUntilMs && u.bannedUntilMs > now);
                     return (
@@ -337,7 +472,7 @@ export default function AdminUsersPanel() {
                         className={`${styles.btn} ${styles.rowBtn} ${selected?.email === u.email ? styles.rowBtnActive : ""}`}
                       >
                         <div className={styles.rowTop}>
-                          <div className={styles.rowName}>{u.firstName}</div>
+                          <div className={styles.rowName}>{u.displayName || u.firstName}</div>
                           <div className={styles.rowCoins}>{u.coins} كوينز</div>
                         </div>
                         <div className={styles.rowLine}>

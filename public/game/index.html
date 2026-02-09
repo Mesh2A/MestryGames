@@ -3746,6 +3746,34 @@
         flex-wrap: wrap;
       }
       @media (max-width: 520px) {
+        header {
+          padding: calc(12px + var(--safe-top)) calc(12px + var(--safe-right)) 10px calc(12px + var(--safe-left));
+          flex-wrap: wrap;
+          align-items: flex-start;
+        }
+        header .brand {
+          width: 100%;
+          justify-content: space-between;
+        }
+        header .actions {
+          width: 100%;
+          justify-content: flex-start;
+          flex-wrap: nowrap;
+          gap: 10px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 2px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        header .actions::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+        }
+        header .actions > * {
+          flex: 0 0 auto;
+        }
         header .sub {
           display: none;
         }
@@ -3773,6 +3801,12 @@
           left: 12px;
           right: 12px;
           width: auto;
+        }
+        .friendsCard {
+          max-height: calc(100dvh - 86px - var(--safe-bottom));
+        }
+        .chatCard {
+          max-height: calc(100dvh - 86px - var(--safe-bottom));
         }
         .chatLayout {
           grid-template-columns: 1fr;

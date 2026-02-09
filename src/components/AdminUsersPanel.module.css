@@ -45,6 +45,55 @@
   margin-top: 8px;
 }
 
+.summaryGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 740px) {
+  .summaryGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+
+.summaryCard {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.16);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.82;
+}
+
+.summaryValue {
+  font-size: 18px;
+  font-weight: 900;
+  opacity: 0.96;
+}
+
+.summaryBtn {
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.16);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.summaryBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .inputRow {
   display: flex;
   gap: 10px;
@@ -212,6 +261,9 @@
 
 .rowName {
   font-weight: 900;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.96);
+  letter-spacing: 0.2px;
 }
 
 .rowCoins {
@@ -222,8 +274,11 @@
 
 .rowLine {
   font-size: 11px;
-  opacity: 0.78;
+  opacity: 0.92;
   margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rowMetaRow {
@@ -249,6 +304,35 @@
 .badgeDanger {
   border-color: rgba(239, 68, 68, 0.45);
   background: rgba(239, 68, 68, 0.14);
+}
+
+.filtersRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filtersGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.filterBtnActive {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.16);
 }
 
 .sectionTitle {

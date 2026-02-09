@@ -47,14 +47,24 @@ export async function GET(req: NextRequest) {
   if (!adminEmail) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!isAdminEmail(adminEmail)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const q = (req.nextUrl.searchParams.get("q") || "").trim().toLowerCase();
+  const qRaw = (req.nextUrl.searchParams.get("q") || "").trim();
+  const q = qRaw.toLowerCase();
   const takeRaw = req.nextUrl.searchParams.get("take");
   const take = Math.max(1, Math.min(200, intFromUnknown(takeRaw)));
 
   try {
     await ensureDbReady();
+    const where = q
+      ? (() => {
+          const or: { email?: { contains: string; mode: "insensitive" }; publicId?: { equals: string } }[] = [
+            { email: { contains: q, mode: "insensitive" } },
+          ];
+          if (/^[a-z0-9]{2,32}$/i.test(qRaw)) or.push({ publicId: { equals: qRaw } });
+          return { OR: or };
+        })()
+      : undefined;
     const rows = await prisma.gameProfile.findMany({
-      where: q ? { email: { contains: q, mode: "insensitive" } } : undefined,
+      where,
       orderBy: { updatedAt: "desc" },
       take,
       select: { email: true, publicId: true, createdAt: true, updatedAt: true, state: true },
