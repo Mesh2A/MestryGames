@@ -12629,6 +12629,7 @@
         if (cloud.enabled) pollOnlineCount().catch(() => {});
 
         const remote = await cloudGet();
+        let appliedRemote = false;
         if (remote) {
           const localTs = app.state.lastWriteAt || 0;
           const remoteTs = remote.lastWriteAt || 0;
@@ -12640,6 +12641,7 @@
           ) {
             app.state = remote;
             saveStateSilent(app.state);
+            appliedRemote = true;
           } else if (remoteDefaultish && !localDefaultish) {
             cloudPut(app.state).catch(() => {});
           } else {
@@ -12647,6 +12649,13 @@
           }
         } else if (cloud.enabled) {
           cloudPut(app.state).catch(() => {});
+        }
+        if (appliedRemote) {
+          updateUserCenter();
+          updateCoinsUI();
+          updateSettingsUI();
+          renderMap();
+          updateDailyUI();
         }
 
         if (u && u.email && !String(app.state.displayName || "").trim()) {
