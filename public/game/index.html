@@ -4957,7 +4957,7 @@
         base.hintTokens = typeof s.hintTokens === "number" && Number.isFinite(s.hintTokens) ? Math.max(0, Math.floor(s.hintTokens)) : 0;
         base.displayName = typeof s.displayName === "string" ? String(s.displayName).replace(/\s+/g, " ").trim().slice(0, 18) : "";
         base.photo =
-          typeof s.photo === "string" && /^data:image\/(png|jpeg|webp);base64,/i.test(s.photo) && s.photo.length < 150000 ? s.photo : "";
+          typeof s.photo === "string" && /^data:image\/(png|jpeg|webp);base64,/i.test(s.photo) && s.photo.length < 400000 ? s.photo : "";
         base.nameChange = s.nameChange && typeof s.nameChange === "object" ? s.nameChange : base.nameChange;
         base.nameChange.freeUsed = !!base.nameChange.freeUsed;
         base.nameChange.credits =
@@ -12635,9 +12635,11 @@
           const remoteTs = remote.lastWriteAt || 0;
           const localDefaultish = isDefaultishState(app.state);
           const remoteDefaultish = isDefaultishState(remote);
+          const localScore = scoreState(app.state);
+          const remoteScore = scoreState(remote);
           if (
             !remoteDefaultish &&
-            (localDefaultish || remoteTs > localTs || (remoteTs === localTs && remoteTs === 0))
+            (localDefaultish || remoteTs > localTs || (remoteTs === localTs && remoteScore > localScore))
           ) {
             app.state = remote;
             saveStateSilent(app.state);
