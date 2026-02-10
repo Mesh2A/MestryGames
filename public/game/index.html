@@ -8854,6 +8854,15 @@
             if (!m) return;
             if (!opponent && m.opponent) opponent = m.opponent;
             if (typeof m.kind === "string") kind = m.kind === "custom" ? "custom" : m.kind === "props" ? "props" : "normal";
+            const ended = !!m.endedAt || m.winner === "me" || m.winner === "them" || !!m.endedReason;
+            if (ended) {
+              stopOnlinePreEnter();
+              try {
+                closeHowTo();
+              } catch {}
+              startOnlineMatch(id, mode, fee, codeLen, meResolved, opponent, kind);
+              return;
+            }
             if (typeof m.serverNowMs === "number" && Number.isFinite(m.serverNowMs)) serverNowMs = Math.floor(m.serverNowMs);
             if (typeof m.turnStartedAtMs === "number" && Number.isFinite(m.turnStartedAtMs)) turnStartedAtMs = Math.floor(m.turnStartedAtMs);
             if (serverNowMs > 0 && turnStartedAtMs > 0) {
