@@ -223,7 +223,7 @@
         height: auto;
       }
       .page {
-        height: 100dvh;
+        height: var(--app-h, 100dvh);
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -302,7 +302,7 @@
         flex: 1 1 auto;
       }
       header {
-        padding: calc(14px + var(--safe-top)) calc(16px + var(--safe-right)) 14px calc(16px + var(--safe-left));
+        padding: calc(14px + var(--safe-top) + var(--app-top, 0px)) calc(16px + var(--safe-right)) 14px calc(16px + var(--safe-left));
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -968,7 +968,7 @@
       html[data-mobile="1"] .page,
       html[data-mobile="1"] .app,
       html[data-mobile="1"] main {
-        height: 100dvh;
+        height: var(--app-h, 100dvh);
         min-height: 100vh;
         overflow: hidden;
       }
@@ -1081,7 +1081,7 @@
         background: linear-gradient(0deg, rgba(18, 24, 44, 0.94), rgba(12, 16, 30, 0.72));
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        padding: 12px calc(16px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(16px + var(--safe-left));
+        padding: 12px calc(16px + var(--safe-right)) calc(12px + var(--safe-bottom) + var(--app-bottom, 0px)) calc(16px + var(--safe-left));
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -2133,7 +2133,7 @@
         inset: 0;
         display: grid;
         place-items: center;
-        padding: calc(20px + var(--safe-top)) calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left));
+        padding: calc(20px + var(--safe-top) + var(--app-top, 0px)) calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom) + var(--app-bottom, 0px)) calc(20px + var(--safe-left));
         background: rgba(0, 0, 0, 0.55);
         backdrop-filter: blur(var(--ui-blur));
         -webkit-backdrop-filter: blur(var(--ui-blur));
@@ -3180,8 +3180,8 @@
       }
       .chatFriendRow {
         width: 100%;
-        padding: 14px 16px;
-        min-height: 72px;
+        padding: 16px 18px;
+        min-height: 80px;
         border-radius: 14px;
         border: 1px solid var(--btn-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
@@ -3196,8 +3196,8 @@
         overflow: hidden;
       }
       html[data-mobile="1"] .chatFriendRow {
-        padding: 16px 18px;
-        min-height: 78px;
+        padding: 18px 20px;
+        min-height: 88px;
       }
       .chatFriendRow:hover {
         transform: translateY(-1px);
@@ -5927,6 +5927,20 @@
         const mobile = /iPhone|iPad|iPod|Android/i.test(ua) || Math.min(window.innerWidth || 0, window.innerHeight || 0) < 820;
         document.documentElement.dataset.mobile = mobile ? "1" : "0";
       })();
+
+      function setAppHeight() {
+        const vv = window.visualViewport;
+        const h = vv && vv.height ? vv.height : window.innerHeight || 0;
+        if (h) document.documentElement.style.setProperty("--app-h", `${h}px`);
+        const top = vv && typeof vv.offsetTop === "number" ? vv.offsetTop : 0;
+        const layoutH = window.innerHeight || h || 0;
+        const bottom = Math.max(0, layoutH - (vv ? vv.height + vv.offsetTop : h));
+        document.documentElement.style.setProperty("--app-top", `${top}px`);
+        document.documentElement.style.setProperty("--app-bottom", `${bottom}px`);
+      }
+      setAppHeight();
+      window.addEventListener("resize", setAppHeight);
+      if (window.visualViewport) window.visualViewport.addEventListener("resize", setAppHeight);
 
       let lastFocusedEl = null;
       let modalMode = "howto";
@@ -12662,6 +12676,56 @@
       window.addEventListener("pagehide", () => flushCloudNow());
 
       (async function bootstrap() {
+        app.state = loadState();
+        const initialTheme = normalizeTheme(app.state.theme || "crimson");
+        if (app.state.theme !== initialTheme) {
+          app.state.theme = initialTheme;
+          saveStateSilent(app.state);
+        }
+        applyTheme(initialTheme);
+        applyLanguage(app.state.lang || "ar");
+        applyReduceMotion();
+        applyLockShape();
+        updateCoinsUI();
+        updateSettingsUI();
+        document.addEventListener(
+          "click",
+          (e) => {
+            const t = e && e.target && e.target.closest ? e.target.closest("button") : null;
+            if (!t || t.disabled) return;
+            playClickSound();
+          },
+          { capture: true }
+        );
+        enableMapControls();
+        buildBgPattern();
+        renderMap();
+        consumeCheckoutReturn();
+        const initialScreen = app.state.lastScreen === "map" || app.state.lastScreen === "level" ? app.state.lastScreen : "home";
+        if (initialScreen === "level" && app.state.lastStage && typeof app.state.lastStage === "object") {
+          const kind = app.state.lastStage.kind === "daily" ? "daily" : "level";
+          const idRaw = typeof app.state.lastStage.id === "number" && Number.isFinite(app.state.lastStage.id) ? app.state.lastStage.id : 1;
+          const id = clamp(Math.floor(idRaw), 1, TOTAL_LEVELS);
+          if (kind === "level") {
+            if (id <= (app.state.unlocked || 1)) openStage({ kind, id });
+            else goMap();
+          } else {
+            const dailyIdRaw = app.state.dailyChallenge && typeof app.state.dailyChallenge.id === "number" ? app.state.dailyChallenge.id : id;
+            const dailyId = Math.max(1, Math.floor(dailyIdRaw));
+            openStage({ kind: "daily", id: dailyId });
+          }
+        } else if (initialScreen === "map") {
+          goMap();
+        } else {
+          goHome();
+        }
+        delete document.documentElement.dataset.booting;
+        delete document.documentElement.dataset.bootScreen;
+        updateDailyUI();
+        setInterval(() => {
+          if (!document.hidden) updateDailyUI();
+        }, 2000);
+
         const u = await fetchSessionUser();
         if (u) {
           cloud.enabled = true;
@@ -12674,7 +12738,6 @@
           loadToastCursors();
         }
 
-        app.state = loadState();
         if (u && u.name && !String(app.state.displayName || "").trim()) {
           app.state.displayName = u.name;
           saveStateSilent(app.state);
@@ -12722,56 +12785,12 @@
           saveStateSilent(app.state);
         }
 
-        const initialTheme = normalizeTheme(app.state.theme || "crimson");
-        if (app.state.theme !== initialTheme) {
-          app.state.theme = initialTheme;
-          saveStateSilent(app.state);
-        }
-
-        applyTheme(initialTheme);
-        applyLanguage(app.state.lang || "ar");
         if (cloud.enabled) ensureCountryCode().catch(() => {});
-        applyReduceMotion();
-        applyLockShape();
+        updateUserCenter();
         updateCoinsUI();
         updateSettingsUI();
-        document.addEventListener(
-          "click",
-          (e) => {
-            const t = e && e.target && e.target.closest ? e.target.closest("button") : null;
-            if (!t || t.disabled) return;
-            playClickSound();
-          },
-          { capture: true }
-        );
-        enableMapControls();
-        buildBgPattern();
         renderMap();
-        consumeCheckoutReturn();
-        const initialScreen = app.state.lastScreen === "map" || app.state.lastScreen === "level" ? app.state.lastScreen : "home";
-        if (initialScreen === "level" && app.state.lastStage && typeof app.state.lastStage === "object") {
-          const kind = app.state.lastStage.kind === "daily" ? "daily" : "level";
-          const idRaw = typeof app.state.lastStage.id === "number" && Number.isFinite(app.state.lastStage.id) ? app.state.lastStage.id : 1;
-          const id = clamp(Math.floor(idRaw), 1, TOTAL_LEVELS);
-          if (kind === "level") {
-            if (id <= (app.state.unlocked || 1)) openStage({ kind, id });
-            else goMap();
-          } else {
-            const dailyIdRaw = app.state.dailyChallenge && typeof app.state.dailyChallenge.id === "number" ? app.state.dailyChallenge.id : id;
-            const dailyId = Math.max(1, Math.floor(dailyIdRaw));
-            openStage({ kind: "daily", id: dailyId });
-          }
-        } else if (initialScreen === "map") {
-          goMap();
-        } else {
-          goHome();
-        }
-        delete document.documentElement.dataset.booting;
-        delete document.documentElement.dataset.bootScreen;
         updateDailyUI();
-        setInterval(() => {
-          if (!document.hidden) updateDailyUI();
-        }, 2000);
         if (cloud.enabled) {
           fetchOnlineEnabledOnce(true).catch(() => {});
           startLivePolling();
