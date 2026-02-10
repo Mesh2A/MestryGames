@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
 
   const rl = consumeRateLimit(`chat_send:${email}`, { limit: 18, windowMs: 30_000 });
   if (!rl.ok) return NextResponse.json({ error: "rate_limited", retryAfterMs: rl.retryAfterMs }, { status: 429 });
+  const rlBurst = consumeRateLimit(`chat_send_burst:${email}`, { limit: 5, windowMs: 2_000 });
+  if (!rlBurst.ok) return NextResponse.json({ error: "rate_limited", retryAfterMs: rlBurst.retryAfterMs }, { status: 429 });
 
   let body: unknown = null;
   try {
@@ -121,16 +123,23 @@ export async function POST(req: NextRequest) {
       const fromThreads = { ...readThreads(fromState) };
       const fromThreadRaw = fromThreads[toRow.publicId];
       const fromThread = Array.isArray(fromThreadRaw) ? fromThreadRaw : [];
-      fromThreads[toRow.publicId] = capArray([...fromThread, msg], 220);
+      if (clientId) {
+        const existing = fromThread.find((m) => m && typeof m === "object" && typeof (m as { id?: unknown }).id === "string" && (m as { id: string }).id === clientId);
+        if (existing) return { ok: true as const, msg: existing as typeof msg };
+      }
+      const hasFrom = fromThread.some((m) => m && typeof m === "object" && typeof (m as { id?: unknown }).id === "string" && (m as { id: string }).id === id);
+      if (!hasFrom) fromThreads[toRow.publicId] = capArray([...fromThread, msg], 220);
       const nextFromState = { ...fromState, chatThreads: fromThreads } as Prisma.InputJsonValue;
 
       const toThreads = { ...readThreads(toState) };
       const toThreadRaw = toThreads[fromRow.publicId];
       const toThread = Array.isArray(toThreadRaw) ? toThreadRaw : [];
-      toThreads[fromRow.publicId] = capArray([...toThread, msg], 220);
+      const hasTo = toThread.some((m) => m && typeof m === "object" && typeof (m as { id?: unknown }).id === "string" && (m as { id: string }).id === id);
+      if (!hasTo) toThreads[fromRow.publicId] = capArray([...toThread, msg], 220);
 
       const inbox = readInbox(toState);
-      const nextInbox = capArray([...inbox, msg], 500);
+      const hasInbox = inbox.some((m) => m && typeof m === "object" && typeof (m as { id?: unknown }).id === "string" && (m as { id: string }).id === id);
+      const nextInbox = hasInbox ? inbox : capArray([...inbox, msg], 500);
       const nextToState = { ...toState, chatThreads: toThreads, chatInbox: nextInbox } as Prisma.InputJsonValue;
 
       await tx.gameProfile.update({ where: { email: fromRow.email }, data: { state: nextFromState } });

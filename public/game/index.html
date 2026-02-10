@@ -10325,6 +10325,8 @@
         lastInboxAt: 0,
         unreadPeers: {},
         lastThreadPullAt: 0,
+        threadSince: {},
+        threadSig: {},
       };
       const toastUI = { host: document.getElementById("toastHost") };
       const toastState = { busy: false, queue: [], lastInboxAt: 0, lastGiftAt: 0, lastReqEventAt: 0 };
@@ -10507,12 +10509,102 @@
         chatState.threads[id] = Array.isArray(messages) ? messages.slice(-220) : [];
       }
 
+      function normalizeChatMsg(raw) {
+        if (!raw || typeof raw !== "object") return null;
+        const id = typeof raw.id === "string" ? raw.id : "";
+        if (!id) return null;
+        const createdAt = typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt) ? Math.floor(raw.createdAt) : 0;
+        const deliveredAt = typeof raw.deliveredAt === "number" && Number.isFinite(raw.deliveredAt) ? Math.floor(raw.deliveredAt) : 0;
+        const readAt = typeof raw.readAt === "number" && Number.isFinite(raw.readAt) ? Math.floor(raw.readAt) : 0;
+        const fromId = typeof raw.fromId === "string" ? raw.fromId : "";
+        const toId = typeof raw.toId === "string" ? raw.toId : "";
+        const text = typeof raw.text === "string" ? raw.text : "";
+        const pending = !!raw.pending;
+        const failed = !!raw.failed;
+        return { id, fromId, toId, text, createdAt, deliveredAt, readAt, pending, failed };
+      }
+
+      function chatMsgSort(a, b) {
+        const ta = typeof a.createdAt === "number" ? a.createdAt : 0;
+        const tb = typeof b.createdAt === "number" ? b.createdAt : 0;
+        if (ta !== tb) return ta < tb ? -1 : 1;
+        const ia = typeof a.id === "string" ? a.id : "";
+        const ib = typeof b.id === "string" ? b.id : "";
+        if (ia === ib) return 0;
+        return ia < ib ? -1 : 1;
+      }
+
+      function mergeChatThread(peerId, incoming) {
+        const current = readChatThread(peerId);
+        const map = new Map();
+        let changed = false;
+        for (const m of current) {
+          const n = normalizeChatMsg(m);
+          if (!n) continue;
+          map.set(n.id, n);
+        }
+        const list = Array.isArray(incoming) ? incoming : [];
+        for (const raw of list) {
+          const n = normalizeChatMsg(raw);
+          if (!n) continue;
+          const prev = map.get(n.id);
+          if (!prev) {
+            map.set(n.id, { ...n, pending: false, failed: false });
+            changed = true;
+            continue;
+          }
+          const merged = {
+            ...prev,
+            ...n,
+            pending: false,
+            failed: false,
+          };
+          if (
+            merged.createdAt !== prev.createdAt ||
+            merged.deliveredAt !== prev.deliveredAt ||
+            merged.readAt !== prev.readAt ||
+            merged.text !== prev.text ||
+            merged.pending !== prev.pending ||
+            merged.failed !== prev.failed
+          ) {
+            map.set(n.id, merged);
+            changed = true;
+          }
+        }
+        const next = Array.from(map.values()).sort(chatMsgSort);
+        if (changed || next.length !== current.length) {
+          writeChatThread(peerId, next);
+        }
+        const maxAt = next.reduce((acc, m) => (m && typeof m.createdAt === "number" ? Math.max(acc, m.createdAt) : acc), 0);
+        if (!chatState.threadSince || typeof chatState.threadSince !== "object") chatState.threadSince = {};
+        if (maxAt > (chatState.threadSince[peerId] || 0)) chatState.threadSince[peerId] = maxAt;
+        return next;
+      }
+
+      function threadSignature(messages) {
+        const list = Array.isArray(messages) ? messages : [];
+        return list
+          .map((m) => {
+            const n = normalizeChatMsg(m);
+            if (!n) return "";
+            return `${n.id}:${n.readAt}:${n.deliveredAt}:${n.pending ? 1 : 0}:${n.failed ? 1 : 0}`;
+          })
+          .join("|");
+      }
+
       async function loadChatThread(id) {
         if (!cloud.enabled) return;
-        const r = await chatJson(`/api/chat/thread?with=${encodeURIComponent(String(id || ""))}`, { method: "GET" });
+        const since =
+          chatState.threadSince && typeof chatState.threadSince === "object" && typeof chatState.threadSince[id] === "number"
+            ? Math.max(0, Math.floor(chatState.threadSince[id]))
+            : 0;
+        const url = since
+          ? `/api/chat/thread?with=${encodeURIComponent(String(id || ""))}&since=${encodeURIComponent(String(since))}`
+          : `/api/chat/thread?with=${encodeURIComponent(String(id || ""))}`;
+        const r = await chatJson(url, { method: "GET" });
         if (!r.ok) return;
         const messages = r.data && Array.isArray(r.data.messages) ? r.data.messages : [];
-        writeChatThread(id, messages);
+        mergeChatThread(id, messages);
       }
 
       async function markChatRead(withId) {
@@ -10543,6 +10635,10 @@
           chatUI.messages.innerHTML = `<div class="friendsTiny">لا توجد رسائل.</div>`;
           return;
         }
+        const sig = threadSignature(msgs);
+        if (chatState.threadSig && typeof chatState.threadSig === "object" && chatState.threadSig[peerId] === sig) return;
+        if (!chatState.threadSig || typeof chatState.threadSig !== "object") chatState.threadSig = {};
+        chatState.threadSig[peerId] = sig;
         chatUI.messages.innerHTML = msgs
           .map((m) => {
             const fromId = m && typeof m.fromId === "string" ? m.fromId : "";
@@ -10551,14 +10647,17 @@
             const pending = !!(m && typeof m === "object" && m.pending);
             const deliveredAt = m && typeof m.deliveredAt === "number" ? m.deliveredAt : 0;
             const readAt = m && typeof m.readAt === "number" ? m.readAt : 0;
+            const failed = !!(m && typeof m === "object" && m.failed);
+            const mid = m && typeof m === "object" && typeof m.id === "string" ? m.id : "";
             const mine = myId && fromId === myId;
-            const status = pending ? "..." : readAt ? "تمت القراءة" : deliveredAt || createdAt ? "تم الإرسال" : "";
+            const status = failed ? "فشل الإرسال" : pending ? "جارٍ الإرسال..." : readAt ? "تمت القراءة" : deliveredAt || createdAt ? "تم الإرسال" : "";
             return `<div class="chatMsgRow ${mine ? "me" : "them"}">
               <div class="chatBubble ${mine ? "me" : ""}">
                 <div>${escapeHtml(text)}</div>
                 <div class="chatMetaLine">
                   <span>${escapeHtml(formatHm(createdAt))}</span>
                   ${mine ? `<span class="chatStatus">${escapeHtml(status)}</span>` : ""}
+                  ${mine && failed && mid ? `<button class="chatRetryBtn" data-mid="${escapeHtml(mid)}">إعادة إرسال</button>` : ""}
                 </div>
               </div>
             </div>`;
@@ -10587,9 +10686,9 @@
         const myId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
         const clientId = makeClientMsgId();
         const now = Date.now();
-        const optimistic = { id: clientId, fromId: myId, toId: peerId, text, createdAt: now, pending: true };
+        const optimistic = { id: clientId, fromId: myId, toId: peerId, text, createdAt: now, pending: true, failed: false };
         if (chatUI.input) chatUI.input.value = "";
-        writeChatThread(peerId, [...readChatThread(peerId), optimistic]);
+        mergeChatThread(peerId, [optimistic]);
         renderChatMessages();
 
         const r = await chatJson("/api/chat/send", {
@@ -10606,18 +10705,16 @@
           } else {
             enqueueToast({ title: "فشل", body: (r.data && r.data.error) || "تعذر الإرسال.", autoMs: 2200 });
           }
-          const cur = readChatThread(peerId).filter((m) => !(m && typeof m === "object" && m.id === clientId));
+          const cur = readChatThread(peerId).map((m) => {
+            if (m && typeof m === "object" && m.id === clientId) return { ...m, pending: false, failed: true };
+            return m;
+          });
           writeChatThread(peerId, cur);
           renderChatMessages();
         } else {
           const msg = r.data && r.data.msg ? r.data.msg : null;
           if (msg) {
-            const current = readChatThread(peerId);
-            const next = current.map((m) => {
-              if (m && typeof m === "object" && m.id === clientId) return msg;
-              return m;
-            });
-            writeChatThread(peerId, next);
+            mergeChatThread(peerId, [msg]);
             renderChatMessages();
           } else {
             loadChatThread(peerId)
@@ -10627,6 +10724,42 @@
         }
         kickFastSync();
         if (chatUI.input) chatUI.input.focus();
+      }
+
+      async function retryChatMessage(messageId) {
+        const peerId = chatState.selectedId;
+        if (!peerId) return;
+        const id = String(messageId || "").trim();
+        if (!id) return;
+        const myId = friendsState.me && typeof friendsState.me.id === "string" ? friendsState.me.id : "";
+        const current = readChatThread(peerId);
+        const target = current.find((m) => m && typeof m === "object" && m.id === id);
+        if (!target || !myId || target.fromId !== myId) return;
+        const text = typeof target.text === "string" ? target.text : "";
+        if (!text) return;
+        const now = Date.now();
+        const next = current.map((m) => (m && typeof m === "object" && m.id === id ? { ...m, pending: true, failed: false, createdAt: now } : m));
+        writeChatThread(peerId, next);
+        renderChatMessages();
+        const r = await chatJson("/api/chat/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ toId: peerId, text, clientId: id }),
+        });
+        if (!r.ok) {
+          const cur = readChatThread(peerId).map((m) => {
+            if (m && typeof m === "object" && m.id === id) return { ...m, pending: false, failed: true };
+            return m;
+          });
+          writeChatThread(peerId, cur);
+          renderChatMessages();
+          return;
+        }
+        const msg = r.data && r.data.msg ? r.data.msg : null;
+        if (msg) {
+          mergeChatThread(peerId, [msg]);
+          renderChatMessages();
+        }
       }
 
       async function pollChatInbox() {
@@ -10646,12 +10779,7 @@
           if (createdAt > maxAt) maxAt = createdAt;
           const peerId = myId && fromId === myId ? toId : fromId;
           if (!peerId) continue;
-          const current = readChatThread(peerId);
-          const mid = m && typeof m.id === "string" ? m.id : "";
-          if (!mid) continue;
-          const exists = current.some((x) => x && typeof x === "object" && typeof x.id === "string" && x.id === mid);
-          if (exists) continue;
-          writeChatThread(peerId, [...current, m]);
+          mergeChatThread(peerId, [m]);
           const incoming = myId && fromId && fromId !== myId;
           if (incoming && (!chatState.open || chatState.selectedId !== peerId)) {
             if (!chatState.unreadPeers || typeof chatState.unreadPeers !== "object") chatState.unreadPeers = {};
@@ -11627,6 +11755,15 @@
       }
       if (chatUI.close) chatUI.close.addEventListener("click", () => closeChat());
       if (chatUI.sendBtn) chatUI.sendBtn.addEventListener("click", () => sendChatMessage().catch(() => {}));
+      if (chatUI.messages) {
+        chatUI.messages.addEventListener("click", (e) => {
+          const btn = e && e.target && e.target.closest ? e.target.closest("button.chatRetryBtn") : null;
+          if (!btn) return;
+          const id = btn.getAttribute("data-mid") || "";
+          if (!id) return;
+          retryChatMessage(id).catch(() => {});
+        });
+      }
       if (chatUI.input) {
         chatUI.input.addEventListener("keydown", (e) => {
           if (e.key !== "Enter") return;
