@@ -958,7 +958,8 @@
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;
-        padding-bottom: calc(20px + var(--safe-bottom));
+        padding-top: calc(20px + var(--header-h, 0px));
+        padding-bottom: calc(20px + var(--safe-bottom) + var(--footer-h, 0px));
         transform: none;
         filter: none;
         will-change: auto;
@@ -987,6 +988,10 @@
         filter: blur(0px);
         pointer-events: auto;
         z-index: 3;
+      }
+      html[data-mobile="1"] .screen.active {
+        transform: none;
+        filter: none;
       }
       html[data-booting="1"] .screen {
         opacity: 0 !important;
@@ -5937,6 +5942,12 @@
         const bottom = Math.max(0, layoutH - (vv ? vv.height + vv.offsetTop : h));
         document.documentElement.style.setProperty("--app-top", `${top}px`);
         document.documentElement.style.setProperty("--app-bottom", `${bottom}px`);
+        const headerEl = document.querySelector("header");
+        const footerEl = document.getElementById("homeFooterBar");
+        const headerH = headerEl ? headerEl.getBoundingClientRect().height : 0;
+        const footerH = footerEl ? footerEl.getBoundingClientRect().height : 0;
+        document.documentElement.style.setProperty("--header-h", `${headerH}px`);
+        document.documentElement.style.setProperty("--footer-h", `${footerH}px`);
       }
       setAppHeight();
       window.addEventListener("resize", setAppHeight);
