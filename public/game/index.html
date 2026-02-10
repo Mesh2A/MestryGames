@@ -2726,7 +2726,7 @@
         transform: translate(-50%, -50%) scale(1.06);
         width: min(360px, calc(100vw - 24px));
         max-height: calc(100vh - 24px - var(--safe-top) - var(--safe-bottom));
-        overflow: hidden;
+        overflow: auto;
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(13, 18, 34, 0.92);
@@ -2756,7 +2756,7 @@
         transform: translate(-50%, -50%) scale(1.06);
         width: min(420px, calc(100vw - 24px));
         max-height: calc(100vh - 24px - var(--safe-top) - var(--safe-bottom));
-        overflow: hidden;
+        overflow: auto;
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(13, 18, 34, 0.92);
@@ -3149,6 +3149,7 @@
         grid-template-rows: auto 1fr;
         gap: 10px;
         overflow: hidden;
+        min-height: 0;
       }
       .chatFriendsList {
         display: grid;
@@ -3159,9 +3160,12 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.12));
         align-content: start;
+        min-height: 0;
       }
       html[data-mobile="1"] .chatFriendsList {
         gap: 12px;
+        max-height: none;
+        flex: 1 1 auto;
       }
       .chatFriendRow {
         width: 100%;
@@ -3180,7 +3184,8 @@
         overflow: hidden;
       }
       html[data-mobile="1"] .chatFriendRow {
-        padding: 12px 16px;
+        padding: 14px 16px;
+        min-height: 72px;
       }
       .chatFriendRow:hover {
         transform: translateY(-1px);
@@ -3537,8 +3542,8 @@
         min-height: 0;
       }
       html[data-mobile="1"] .friendRow {
-        padding: 14px 16px;
-        min-height: 64px;
+        padding: 16px 16px;
+        min-height: 72px;
       }
       html[data-mobile="1"] .friendNameText {
         -webkit-line-clamp: unset;
