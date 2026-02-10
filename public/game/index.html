@@ -3092,8 +3092,8 @@
       }
       .chatFriendRow {
         width: 100%;
-        padding: 16px 18px;
-        min-height: 80px;
+        padding: 18px 20px;
+        min-height: 88px;
         border-radius: 14px;
         border: 1px solid var(--btn-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
@@ -3535,8 +3535,8 @@
       .friendRow {
         text-align: right;
         width: 100%;
-        padding: 16px 18px;
-        min-height: 80px;
+        padding: 18px 20px;
+        min-height: 88px;
         border-radius: 14px;
         border: 1px solid var(--btn-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
@@ -12549,6 +12549,10 @@
       window.addEventListener("pagehide", () => flushCloudNow());
 
       (async function bootstrap() {
+        try {
+          const lastEmail = String(localStorage.getItem("lockgame_last_email_v1") || "").trim();
+          if (lastEmail) setStorageKeyForEmail(lastEmail);
+        } catch {}
         app.state = loadState();
         const initialTheme = "crimson";
         if (app.state.theme !== initialTheme) {
@@ -12606,12 +12610,19 @@
         if (u) {
           cloud.enabled = true;
           cloud.email = u.email;
+          const prevKey = storageKey;
           setStorageKeyForEmail(u.email);
           try {
             localStorage.setItem("lockgame_last_email_v1", u.email);
           } catch {}
           loadFriendsCache();
           loadToastCursors();
+          if (prevKey !== storageKey) {
+            app.state = loadState();
+            updateUserCenter();
+            updateCoinsUI();
+            updateSettingsUI();
+          }
         }
 
         if (u && u.name && !String(app.state.displayName || "").trim()) {
@@ -12627,7 +12638,10 @@
           const remoteTs = remote.lastWriteAt || 0;
           const localDefaultish = isDefaultishState(app.state);
           const remoteDefaultish = isDefaultishState(remote);
-          if ((localDefaultish && !remoteDefaultish) || remoteTs > localTs || (remoteTs === localTs && remoteTs === 0)) {
+          if (
+            !remoteDefaultish &&
+            (localDefaultish || remoteTs > localTs || (remoteTs === localTs && remoteTs === 0))
+          ) {
             app.state = remote;
             saveStateSilent(app.state);
           } else if (remoteDefaultish && !localDefaultish) {
