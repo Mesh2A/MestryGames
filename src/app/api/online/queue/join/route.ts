@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
       const aEmail = aStarts ? email : opp.email;
       const bEmail = aStarts ? opp.email : email;
       const turnEmail = aStarts ? email : opp.email;
-      const turnStartedAt = kind === "custom" ? nowMs() : nowMs() + 5000;
+      const turnStartedAt = kind === "custom" ? nowMs() : 0;
 
       await tx.$executeRaw`
         UPDATE "OnlineQueue"
@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
                 b: [],
                 lastMasked: null,
               }
-            : { a: [], b: [], lastMasked: null };
+            : { kind: "normal", phase: "waiting", a: [], b: [], lastMasked: null };
 
       await tx.$executeRaw`
         INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")

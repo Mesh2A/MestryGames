@@ -8842,12 +8842,16 @@
         let serverNowMs = 0;
         let turnStartedAtMs = 0;
         let opponent = opponentFromJoin && typeof opponentFromJoin === "object" ? opponentFromJoin : null;
-        try {
-          const t0 = Date.now();
-          const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(id)}`, { method: "GET" });
-          const t1 = Date.now();
-          const m = r && r.ok && r.data && r.data.match ? r.data.match : null;
-          if (m) {
+        let lastSyncAt = 0;
+        const syncCountdown = async () => {
+          if (Date.now() - lastSyncAt < 700) return;
+          lastSyncAt = Date.now();
+          try {
+            const t0 = Date.now();
+            const r = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(id)}`, { method: "GET" });
+            const t1 = Date.now();
+            const m = r && r.ok && r.data && r.data.match ? r.data.match : null;
+            if (!m) return;
             if (!opponent && m.opponent) opponent = m.opponent;
             if (typeof m.kind === "string") kind = m.kind === "custom" ? "custom" : m.kind === "props" ? "props" : "normal";
             if (typeof m.serverNowMs === "number" && Number.isFinite(m.serverNowMs)) serverNowMs = Math.floor(m.serverNowMs);
@@ -8855,10 +8859,15 @@
             if (serverNowMs > 0 && turnStartedAtMs > 0) {
               const mid = Math.floor((t0 + t1) / 2);
               const offset = serverNowMs - mid;
-              onlineState.preEnterUntil = Math.max(Date.now(), turnStartedAtMs - offset + 60);
+              if (turnStartedAtMs <= serverNowMs + 120) {
+                onlineState.preEnterUntil = Date.now() + 80;
+              } else {
+                onlineState.preEnterUntil = Math.max(Date.now(), turnStartedAtMs - offset + 60);
+              }
             }
-          }
-        } catch {}
+          } catch {}
+        };
+        await syncCountdown();
 
         const oppName =
           opponent && typeof opponent.firstName === "string" && String(opponent.firstName || "").trim() ? String(opponent.firstName).trim() : "خصم";
@@ -8868,7 +8877,7 @@
         if (countdownEl) countdownEl.style.display = "";
 
         onlineState.preEnterMatchId = id;
-        if (!onlineState.preEnterUntil || onlineState.preEnterUntil <= Date.now()) onlineState.preEnterUntil = Date.now() + 5000;
+        if (!onlineState.preEnterUntil || onlineState.preEnterUntil <= Date.now()) onlineState.preEnterUntil = 0;
         if (onlineState.preEnterId) clearInterval(onlineState.preEnterId);
         onlineState.preEnterId = setInterval(() => {
           const curName = document.getElementById("onlineSearchOppName");
@@ -8876,6 +8885,12 @@
           const curCountdown = document.getElementById("onlineFoundCountdown");
           if (!curName || !curBar) {
             stopOnlinePreEnter();
+            return;
+          }
+          if (!onlineState.preEnterUntil) {
+            if (curCountdown) curCountdown.textContent = "بانتظار جاهزية الخصم...";
+            curBar.style.width = "100%";
+            syncCountdown().catch(() => {});
             return;
           }
           const rem = (onlineState.preEnterUntil || 0) - Date.now();
@@ -8894,8 +8909,12 @@
         }, 110);
         {
           const rem0 = (onlineState.preEnterUntil || 0) - Date.now();
-          const sec0 = Math.max(1, Math.ceil(rem0 / 1000));
-          if (countdownEl) countdownEl.textContent = `يبدأ خلال ${sec0}`;
+          if (onlineState.preEnterUntil) {
+            const sec0 = Math.max(1, Math.ceil(rem0 / 1000));
+            if (countdownEl) countdownEl.textContent = `يبدأ خلال ${sec0}`;
+          } else {
+            if (countdownEl) countdownEl.textContent = "بانتظار جاهزية الخصم...";
+          }
         }
         if (barEl) barEl.style.width = `100%`;
       }

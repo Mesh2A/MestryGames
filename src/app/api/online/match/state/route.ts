@@ -83,7 +83,13 @@ function safeState(raw: unknown) {
   const forfeitedBy = typeof s.forfeitedBy === "string" ? s.forfeitedBy : null;
   const kind = s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : ("normal" as const);
   const phase =
-    kind === "custom" && s.phase === "setup" ? ("setup" as const) : kind === "props" && s.phase === "cards" ? ("cards" as const) : ("play" as const);
+    kind === "custom" && s.phase === "setup"
+      ? ("setup" as const)
+      : kind === "props" && s.phase === "cards"
+        ? ("cards" as const)
+        : kind === "normal" && s.phase === "waiting"
+          ? ("waiting" as const)
+          : ("play" as const);
   const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
   const ready = s.ready && typeof s.ready === "object" ? (s.ready as Record<string, unknown>) : {};
   const secretA = typeof secrets.a === "string" ? secrets.a : "";
@@ -239,8 +245,9 @@ export async function GET(req: NextRequest) {
     const needExpire = state0.phase === "play" && !m.endedAt && turnStartedAt0 > 0 && now - turnStartedAt0 >= TURN_MS;
     const needCustomStart = state0.kind === "custom" && state0.phase === "setup" && state0.readyA && state0.readyB && !m.endedAt;
     const needPropsStart = state0.kind === "props" && state0.phase === "cards" && state0.pickA !== null && state0.pickB !== null && !m.endedAt;
+    const needNormalStart = state0.kind === "normal" && state0.phase === "waiting" && !m.endedAt;
 
-    if (needExpire || needCustomStart || needPropsStart) {
+    if (needExpire || needCustomStart || needPropsStart || needNormalStart) {
       const updated = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
           SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
@@ -298,6 +305,27 @@ export async function GET(req: NextRequest) {
           locked.turnEmail = turnEmail2;
           locked.turnStartedAt = BigInt(now3 + 5000);
           nextStateForReturn = nextState;
+        }
+
+        if (stateAfter.kind === "normal" && stateAfter.phase === "waiting" && !locked.endedAt && Number(locked.turnStartedAt || 0) <= 0) {
+          const now3 = Date.now();
+          const { presence } = normalizePresenceState(locked.state);
+          const readyWindowMs = 20_000;
+          const readyA = presence.a.lastSeenAt > 0 && !presence.a.disconnectedAt && now3 - presence.a.lastSeenAt < readyWindowMs;
+          const readyB = presence.b.lastSeenAt > 0 && !presence.b.disconnectedAt && now3 - presence.b.lastSeenAt < readyWindowMs;
+          if (readyA && readyB) {
+            const aStarts = (now3 & 1) === 1;
+            const turnEmail2 = aStarts ? locked.aEmail : locked.bEmail;
+            const nextState = { ...(locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {}), phase: "play" };
+            await tx.$executeRaw`
+              UPDATE "OnlineMatch"
+              SET "turnEmail" = ${turnEmail2}, "turnStartedAt" = ${now3 + 5000}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+              WHERE "id" = ${matchId}
+            `;
+            locked.turnEmail = turnEmail2;
+            locked.turnStartedAt = BigInt(now3 + 5000);
+            nextStateForReturn = nextState;
+          }
         }
 
         locked.state = nextStateForReturn;
@@ -521,7 +549,12 @@ export async function GET(req: NextRequest) {
           myId: myProfile?.publicId || null,
           myCoins,
           myLevel,
-          turn: m.endedAt ? "ended" : state.phase === "setup" || state.phase === "cards" ? "setup" : m.turnEmail === email ? "me" : "them",
+          turn:
+            m.endedAt || state.phase === "waiting" || state.phase === "setup" || state.phase === "cards"
+              ? "setup"
+              : m.turnEmail === email
+                ? "me"
+                : "them",
           timeLeftMs,
           serverNowMs,
           turnStartedAtMs,
