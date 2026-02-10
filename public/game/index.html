@@ -314,6 +314,10 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
+      html[data-mobile="1"] header {
+        position: relative;
+        z-index: 3000;
+      }
       header .brand {
         display: flex;
         align-items: center;
@@ -448,6 +452,9 @@
         white-space: normal;
         overflow: hidden;
         line-height: 1.2;
+      }
+      html[data-mobile="1"] .playerName {
+        max-width: min(70vw, 260px);
       }
       @media (max-width: 900px) {
         .playerName {
@@ -886,6 +893,7 @@
         height: 100%;
         overflow: hidden;
         min-height: 0;
+        z-index: 1;
       }
       .bgPattern {
         position: absolute;
@@ -2109,6 +2117,9 @@
         pointer-events: none;
         transition: opacity 220ms ease, visibility 0ms linear 220ms;
       }
+      html[data-mobile="1"] .modalBackdrop {
+        padding-top: calc(20px + var(--safe-top) + 8px);
+      }
       .modalBackdrop.show {
         opacity: 1;
         visibility: visible;
@@ -2130,6 +2141,9 @@
         grid-template-rows: auto 1fr;
         will-change: transform, opacity;
         transition: transform 280ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 220ms ease;
+      }
+      html[data-mobile="1"] .modal {
+        max-height: calc(100vh - 24px - var(--safe-top) - var(--safe-bottom));
       }
       html[data-mobile="0"] .modal {
         background-image: radial-gradient(520px 280px at 18% 0%, var(--shine), transparent 64%),
@@ -2644,13 +2658,16 @@
         left: 50%;
         transform: translateX(-50%);
         width: min(560px, calc(100vw - 24px));
-        max-height: calc(100dvh - 96px - var(--safe-bottom));
+        max-height: calc(100vh - 96px - var(--safe-bottom));
         overflow: auto;
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.16);
         background: rgba(13, 18, 34, 0.88);
         box-shadow: 0 18px 54px rgba(0, 0, 0, 0.38);
         padding: 10px;
+      }
+      html[data-mobile="1"] .friendDetailsCard {
+        max-height: calc(100vh - 24px - var(--safe-top) - var(--safe-bottom));
       }
       .friendDetailsTop {
         display: flex;
@@ -2693,6 +2710,8 @@
         top: 50%;
         transform: translate(-50%, -50%) scale(1.06);
         width: min(360px, calc(100vw - 24px));
+        max-height: calc(100vh - 24px - var(--safe-top) - var(--safe-bottom));
+        overflow: hidden;
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(13, 18, 34, 0.92);
@@ -2721,6 +2740,8 @@
         top: 50%;
         transform: translate(-50%, -50%) scale(1.06);
         width: min(420px, calc(100vw - 24px));
+        max-height: calc(100vh - 24px - var(--safe-top) - var(--safe-bottom));
+        overflow: hidden;
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background: rgba(13, 18, 34, 0.92);
@@ -3124,6 +3145,9 @@
         background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.12));
         align-content: start;
       }
+      html[data-mobile="1"] .chatFriendsList {
+        gap: 12px;
+      }
       .chatFriendRow {
         width: 100%;
         padding: 10px 14px;
@@ -3139,6 +3163,9 @@
         user-select: none;
         position: relative;
         overflow: hidden;
+      }
+      html[data-mobile="1"] .chatFriendRow {
+        padding: 12px 16px;
       }
       .chatFriendRow:hover {
         transform: translateY(-1px);
@@ -3487,6 +3514,18 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.12));
         align-content: start;
+      }
+      html[data-mobile="1"] .friendsList {
+        gap: 12px;
+        max-height: none;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      html[data-mobile="1"] .friendRow {
+        padding: 12px 16px;
+      }
+      html[data-mobile="1"] .friendNameText {
+        -webkit-line-clamp: 3;
       }
       .emptyCard {
         border-radius: 16px;
