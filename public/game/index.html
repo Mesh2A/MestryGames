@@ -223,7 +223,8 @@
         height: auto;
       }
       .page {
-        height: 100vh;
+        height: 100dvh;
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
         min-height: 0;
@@ -952,8 +953,11 @@
         will-change: opacity, transform;
       }
       html[data-mobile="1"] .screen {
-        overflow: hidden;
-        overscroll-behavior: none;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
         padding-bottom: calc(20px + var(--safe-bottom));
       }
       html[data-mobile="1"],
@@ -961,7 +965,8 @@
       html[data-mobile="1"] .page,
       html[data-mobile="1"] .app,
       html[data-mobile="1"] main {
-        height: 100vh;
+        height: 100dvh;
+        min-height: 100vh;
         overflow: hidden;
       }
       html[data-mobile="1"] #mapScreen {
@@ -3169,7 +3174,8 @@
       }
       .chatFriendRow {
         width: 100%;
-        padding: 10px 14px;
+        padding: 14px 16px;
+        min-height: 72px;
         border-radius: 14px;
         border: 1px solid var(--btn-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
@@ -3184,8 +3190,8 @@
         overflow: hidden;
       }
       html[data-mobile="1"] .chatFriendRow {
-        padding: 14px 16px;
-        min-height: 72px;
+        padding: 16px 18px;
+        min-height: 78px;
       }
       .chatFriendRow:hover {
         transform: translateY(-1px);
