@@ -959,6 +959,9 @@
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;
         padding-bottom: calc(20px + var(--safe-bottom));
+        transform: none;
+        filter: none;
+        will-change: auto;
       }
       html[data-mobile="1"],
       html[data-mobile="1"] body,
@@ -1086,6 +1089,9 @@
         direction: ltr;
       }
       html[data-mobile="1"] .homeFooterBar {
+        position: sticky;
+        bottom: 0;
+        z-index: 3000;
         flex-wrap: wrap;
         justify-content: center;
         gap: 8px;
