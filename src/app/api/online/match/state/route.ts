@@ -549,8 +549,9 @@ export async function GET(req: NextRequest) {
           myId: myProfile?.publicId || null,
           myCoins,
           myLevel,
-          turn:
-            m.endedAt || state.phase === "waiting" || state.phase === "setup" || state.phase === "cards"
+          turn: m.endedAt
+            ? "ended"
+            : state.phase === "waiting" || state.phase === "setup" || state.phase === "cards"
               ? "setup"
               : m.turnEmail === email
                 ? "me"
