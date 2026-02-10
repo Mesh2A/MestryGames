@@ -302,6 +302,33 @@
   background: transparent;
 }
 
+@media (max-width: 1024px) {
+  .root {
+    height: 100%;
+    min-height: 0;
+  }
+  .layout {
+    min-height: 0;
+  }
+  .col {
+    min-height: 0;
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .namesList {
+    height: auto;
+    flex: 1 1 auto;
+  }
+}
+
 .rowBtn {
   text-align: right;
   width: 100%;

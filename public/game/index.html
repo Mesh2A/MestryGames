@@ -226,12 +226,14 @@
         height: 100vh;
         display: flex;
         flex-direction: column;
+        min-height: 0;
       }
       .scrollable {
         flex: 1 1 auto;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         min-height: 0;
+        overscroll-behavior: contain;
       }
       button,
       input,
@@ -945,6 +947,14 @@
         overflow: hidden;
         overscroll-behavior: none;
         padding-bottom: calc(20px + var(--safe-bottom));
+      }
+      html[data-mobile="1"],
+      html[data-mobile="1"] body,
+      html[data-mobile="1"] .page,
+      html[data-mobile="1"] .app,
+      html[data-mobile="1"] main {
+        height: 100vh;
+        overflow: hidden;
       }
       html[data-mobile="1"] #mapScreen {
         overflow: hidden;
@@ -3056,9 +3066,12 @@
         padding: 12px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
         max-height: calc(100dvh - 96px - var(--safe-bottom));
-        overflow: auto;
+        overflow: hidden;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
       }
       .chatCard {
         border-radius: 16px;
@@ -4553,7 +4566,7 @@
     </div>
 
     <div id="friendsPanel" class="friendsPanel" aria-hidden="true">
-      <div class="friendsCard scrollable">
+      <div class="friendsCard">
         <div class="friendsTop">
           <div class="friendsTitle">الحساب</div>
           <button id="friendsCloseBtn" class="friendsClose" type="button" aria-label="Close">✕</button>
