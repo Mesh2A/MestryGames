@@ -34,8 +34,7 @@
             if (!lastScreen && state && typeof state.lastScreen === "string") lastScreen = state.lastScreen;
           }
 
-          if (theme === "dark") theme = "crimson";
-          if (!["crimson", "royal", "cream", "ocean"].includes(theme)) theme = "crimson";
+          theme = "crimson";
           document.documentElement.dataset.theme = theme || "crimson";
           document.documentElement.dataset.booting = "1";
           if (lastScreen === "map" || lastScreen === "level") document.documentElement.dataset.bootScreen = lastScreen;
@@ -3093,7 +3092,8 @@
       }
       .chatFriendRow {
         width: 100%;
-        padding: 10px 14px;
+        padding: 16px 18px;
+        min-height: 80px;
         border-radius: 14px;
         border: 1px solid var(--btn-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
@@ -3535,7 +3535,8 @@
       .friendRow {
         text-align: right;
         width: 100%;
-        padding: 10px 10px;
+        padding: 16px 18px;
+        min-height: 80px;
         border-radius: 14px;
         border: 1px solid var(--btn-border);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)), var(--btn-bg);
@@ -12484,10 +12485,7 @@
       }
 
       el.themeBtn.addEventListener("click", () => {
-        const order = ["ocean", "royal", "cream", "crimson"];
-        const cur = currentTheme();
-        const idx = Math.max(0, order.indexOf(cur));
-        const next = order[(idx + 1) % order.length];
+        const next = "crimson";
         applyTheme(next);
         app.state.theme = next;
         saveState(app.state);
@@ -12552,7 +12550,7 @@
 
       (async function bootstrap() {
         app.state = loadState();
-        const initialTheme = normalizeTheme(app.state.theme || "crimson");
+        const initialTheme = "crimson";
         if (app.state.theme !== initialTheme) {
           app.state.theme = initialTheme;
           saveStateSilent(app.state);
@@ -12574,8 +12572,6 @@
           { capture: true }
         );
         enableMapControls();
-        buildBgPattern();
-        renderMap();
         consumeCheckoutReturn();
         const initialScreen = app.state.lastScreen === "map" || app.state.lastScreen === "level" ? app.state.lastScreen : "home";
         if (initialScreen === "level" && app.state.lastStage && typeof app.state.lastStage === "object") {
@@ -12597,6 +12593,10 @@
         }
         delete document.documentElement.dataset.booting;
         delete document.documentElement.dataset.bootScreen;
+        setTimeout(() => {
+          buildBgPattern();
+          if (initialScreen !== "level") renderMap();
+        }, 0);
         updateDailyUI();
         setInterval(() => {
           if (!document.hidden) updateDailyUI();
