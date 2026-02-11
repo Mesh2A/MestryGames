@@ -1140,6 +1140,17 @@
         box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
         overflow: hidden;
         position: relative;
+        animation: panelFloat 9s ease-in-out infinite;
+      }
+      .panel::after {
+        content: "";
+        position: absolute;
+        inset: -30% -10%;
+        background: radial-gradient(420px 220px at 70% 20%, rgba(255, 255, 255, 0.08), transparent 70%),
+          radial-gradient(360px 240px at 10% 80%, rgba(255, 255, 255, 0.06), transparent 70%);
+        opacity: 0.7;
+        pointer-events: none;
+        animation: panelGlow 7s ease-in-out infinite;
       }
       html[data-mobile="0"] .panel {
         background-image: radial-gradient(420px 240px at 18% 10%, var(--shine), transparent 62%),
@@ -1151,6 +1162,32 @@
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: none;
+        animation: none;
+      }
+      html[data-reduce-motion="1"] .panel::after {
+        animation: none;
+      }
+      @keyframes panelFloat {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-4px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+      @keyframes panelGlow {
+        0% {
+          opacity: 0.45;
+        }
+        50% {
+          opacity: 0.85;
+        }
+        100% {
+          opacity: 0.45;
+        }
       }
       .panel .inner {
         padding: 28px;
@@ -1386,6 +1423,7 @@
         place-items: center;
         user-select: none;
         flex: 0 0 auto;
+        animation: stageFloat 6s ease-in-out infinite;
       }
       html[data-mobile="0"] .stage::before {
         content: "";
@@ -1402,12 +1440,14 @@
         -webkit-backdrop-filter: none;
         box-shadow: none;
         transition: none;
+        animation: none;
       }
       html[data-mobile="1"] .stage {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
         transition: none;
+        animation: none;
       }
       html[data-mobile="1"] .stage::after {
         display: none;
@@ -1430,6 +1470,23 @@
         padding: 14px;
         display: grid;
         gap: 10px;
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+      }
+      .assistCard:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.22);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25);
+      }
+      @keyframes stageFloat {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-3px);
+        }
+        100% {
+          transform: translateY(0);
+        }
       }
       html[data-mobile="0"] .assistCard {
         backdrop-filter: blur(var(--ui-blur));
@@ -1559,6 +1616,12 @@
         background: rgba(255, 255, 255, 0.08);
         color: var(--muted);
         font-size: 12px;
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+      }
+      .badge:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.26);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
       }
       html[data-mobile="0"] .badge {
         background-image: radial-gradient(220px 120px at 30% 0%, var(--shine), transparent 70%),
@@ -1627,7 +1690,26 @@
         -webkit-backdrop-filter: blur(var(--ui-blur));
         display: grid;
         place-items: center;
-        transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+        transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 180ms ease;
+      }
+      .slot:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      }
+      .slot.locked {
+        border-color: rgba(255, 255, 255, 0.12);
+        filter: saturate(0.7);
+      }
+      .slot.locked::after {
+        content: "🔒";
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-size: 24px;
+        color: rgba(255, 255, 255, 0.8);
+        text-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+        pointer-events: none;
       }
       html[data-mobile="0"] .slot::before {
         content: "";
@@ -1667,17 +1749,28 @@
         letter-spacing: 2px;
         caret-color: rgba(255, 255, 255, 0.85);
       }
+      .slot.locked input {
+        opacity: 0.08;
+      }
+      .slot:focus-within {
+        border-color: rgba(34, 211, 238, 0.6);
+        box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.15), 0 16px 40px rgba(0, 0, 0, 0.25);
+        transform: translateY(-1px);
+      }
       .slot.ok {
         background: rgba(34, 197, 94, 0.18);
         border-color: rgba(34, 197, 94, 0.55);
+        animation: slotPulseOk 520ms ease;
       }
       .slot.bad {
         background: rgba(239, 68, 68, 0.14);
         border-color: rgba(239, 68, 68, 0.55);
+        animation: slotPulseBad 520ms ease;
       }
       .slot.warn {
         background: rgba(245, 158, 11, 0.15);
         border-color: rgba(245, 158, 11, 0.58);
+        animation: slotPulseWarn 520ms ease;
       }
       html[data-mobile="1"] .slot.warn {
         background: rgba(245, 158, 11, 0.32);
@@ -1769,6 +1862,13 @@
         border-radius: 16px;
         border: 1px solid var(--panel-border);
         background: rgba(255, 255, 255, 0.05);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      }
+      .historyItem:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
       }
       html[data-theme="cream"] .historyItem {
         background: rgba(0, 0, 0, 0.03);
@@ -1819,6 +1919,53 @@
         background: rgba(245, 158, 11, 0.95);
         border-color: rgba(245, 158, 11, 1);
       }
+      @keyframes slotPulseOk {
+        0% {
+          transform: scale(0.98);
+          box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+        }
+        60% {
+          transform: scale(1.02);
+          box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.12);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+        }
+      }
+      @keyframes slotPulseBad {
+        0% {
+          transform: scale(0.98);
+          box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+        }
+        60% {
+          transform: scale(1.02);
+          box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.12);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+        }
+      }
+      @keyframes slotPulseWarn {
+        0% {
+          transform: scale(0.98);
+          box-shadow: 0 0 0 rgba(245, 158, 11, 0);
+        }
+        60% {
+          transform: scale(1.02);
+          box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.12);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 rgba(245, 158, 11, 0);
+        }
+      }
+      html[data-reduce-motion="1"] .slot.ok,
+      html[data-reduce-motion="1"] .slot.bad,
+      html[data-reduce-motion="1"] .slot.warn {
+        animation: none;
+      }
       .coach {
         margin-top: 12px;
         padding: 12px 14px;
@@ -1841,6 +1988,13 @@
         border-radius: 16px;
         border: 1px solid var(--panel-border);
         background: rgba(255, 255, 255, 0.05);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      }
+      .shopRow:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
       }
       html[data-theme="cream"] .shopRow {
         background: rgba(0, 0, 0, 0.03);
@@ -1969,13 +2123,28 @@
         padding: 14px 14px;
         color: rgba(255, 255, 255, 0.92);
         transform: scale(1.06);
-        transition: transform 180ms ease;
+        transition: transform 180ms ease, box-shadow 220ms ease;
         display: grid;
         gap: 10px;
         box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
       }
       .win.show .winPanel {
         transform: scale(1);
+        animation: winPop 520ms ease;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+      }
+      @keyframes winPop {
+        0% {
+          transform: scale(0.98);
+          opacity: 0.4;
+        }
+        60% {
+          transform: scale(1.02);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1);
+        }
       }
       .win.fx {
         overflow: hidden;
@@ -2129,6 +2298,11 @@
       .modalBackdrop[data-mode="shop"] .modal {
         transform: translateY(-16px) scale(0.975);
       }
+      .modalBackdrop[data-mode="online"] .modal {
+        width: min(860px, 100%);
+        background: radial-gradient(140% 120% at 90% 0%, rgba(239, 68, 68, 0.2), rgba(0, 0, 0, 0.1)) , var(--modal-bg);
+        box-shadow: 0 24px 90px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      }
       .modalBackdrop[data-mode="name"] .modal {
         width: min(420px, 100%);
         transform: translateY(-8px) scale(0.985);
@@ -2168,6 +2342,17 @@
       .onlineWrap {
         display: grid;
         gap: 14px;
+        animation: onlineFadeUp 360ms ease;
+      }
+      @keyframes onlineFadeUp {
+        0% {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
       .onlineTabs {
         display: inline-flex;
@@ -2190,10 +2375,25 @@
         user-select: none;
         position: relative;
         overflow: hidden;
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      }
+      .onlineTab:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.24);
+        background: rgba(255, 255, 255, 0.08);
       }
       .onlineTab.on {
         border-color: rgba(239, 68, 68, 0.42);
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+      }
+      .onlineTab.on::after {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border-radius: 14px;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        opacity: 0.65;
+        pointer-events: none;
       }
       .onlineRoomBox {
         border-radius: 18px;
@@ -2255,22 +2455,23 @@
         appearance: none;
         border-radius: 18px;
         border: 1px solid var(--panel-border);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
         padding: 14px;
         display: grid;
         gap: 12px;
         text-align: center;
         min-height: 140px;
-        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
         cursor: pointer;
         user-select: none;
         color: var(--text);
         font-family: inherit;
       }
       .onlinePack:hover {
-        transform: translateY(-2px);
+        transform: translateY(-4px);
         border-color: rgba(255, 255, 255, 0.2);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
       }
       .onlinePack:active {
         transform: translateY(0px) scale(0.995);
@@ -2302,6 +2503,25 @@
         background: rgba(255, 255, 255, 0.06);
         color: var(--text);
         font-weight: 800;
+        transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+      }
+      .onlinePack:hover .cta {
+        transform: translateY(-1px);
+        border-color: rgba(239, 68, 68, 0.35);
+        box-shadow: 0 8px 22px rgba(239, 68, 68, 0.18);
+      }
+      .onlineRoomBox,
+      .onlinePack,
+      .onlineTab {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .modalBackdrop[data-mode="online"] .modalBody::-webkit-scrollbar {
+        width: 8px;
+      }
+      .modalBackdrop[data-mode="online"] .modalBody::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
       }
       .coinChip {
         display: inline-flex;
@@ -4932,6 +5152,11 @@
         window.setTimeout(() => beep(980, 80, 0.045), 70);
       }
 
+      function playTurnSound() {
+        beep(520, 60, 0.035);
+        window.setTimeout(() => beep(760, 80, 0.04), 90);
+      }
+
       function triggerWinFx() {
         if (!el || !el.winBox || !el.winFxLayer) return;
         const reduce = document.documentElement && document.documentElement.getAttribute("data-reduce-motion") === "1";
@@ -6948,7 +7173,16 @@
         if (el.winFxLayer) el.winFxLayer.innerHTML = "";
         if (el.history) el.history.innerHTML = "";
         if (el.coach) el.coach.style.display = "none";
+        setSlotsLocked(false);
         if (document.documentElement.dataset.mobile !== "1" && app.inputs[0]) app.inputs[0].focus();
+      }
+
+      function setSlotsLocked(locked) {
+        for (const input of app.inputs) {
+          const slot = input && input.parentElement ? input.parentElement : null;
+          if (!slot) continue;
+          slot.classList.toggle("locked", !!locked);
+        }
       }
 
       function clearGuessOnly() {
@@ -6963,6 +7197,7 @@
           slot.classList.remove("ok", "bad", "warn");
         });
         app.hints.forEach((h) => h.classList.remove("show"));
+        setSlotsLocked(false);
       }
 
       function formatHMS(ms) {
@@ -8837,6 +9072,7 @@
         oppName: "",
         oppPhoto: "",
         groupPlayers: [],
+        lastTurn: "",
         turnEndAt: 0,
         barRafId: 0,
         endAnimKey: "",
@@ -9411,12 +9647,15 @@
           }
 
           const locked = m.turn !== "me";
+          if (m.turn === "me" && onlineState.lastTurn !== "me") playTurnSound();
+          onlineState.lastTurn = m.turn || "";
           if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
           for (const input of app.inputs) {
             input.disabled = locked;
             input.placeholder = locked ? "M" : "";
             if (locked) input.value = "";
           }
+          setSlotsLocked(locked);
 
           if (Array.isArray(m.myHistory)) {
             const my = m.myHistory
@@ -9519,12 +9758,15 @@
         if (el.onlineMeSub) el.onlineMeSub.textContent = myLevel ? `LV ${myLevel} • ${fee}🪙` : `${fee}🪙`;
 
         const locked = turn !== "me";
+        if (turn === "me" && onlineState.lastTurn !== "me") playTurnSound();
+        onlineState.lastTurn = turn || "";
         if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
         for (const input of app.inputs) {
           input.disabled = locked;
           input.placeholder = locked ? "M" : "";
           if (locked) input.value = "";
         }
+        setSlotsLocked(locked);
 
         if (Array.isArray(m.myHistory)) {
           const my = m.myHistory
@@ -10313,6 +10555,7 @@
         onlineState.oppFlashKey = "";
         onlineState.endAnimKey = "";
         onlineState.groupPlayers = [];
+        onlineState.lastTurn = "";
         onlineState.propsPendingPickUntil = 0;
         onlineState.propsPendingPickIndex = -1;
         onlineState.propsMyCard = "";
