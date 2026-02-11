@@ -2359,6 +2359,10 @@
         gap: 10px;
         flex-wrap: wrap;
         justify-content: flex-end;
+        padding: 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
       }
       .onlineTab {
         -webkit-appearance: none;
@@ -2385,6 +2389,7 @@
       .onlineTab.on {
         border-color: rgba(239, 68, 68, 0.42);
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+        background: linear-gradient(180deg, rgba(239, 68, 68, 0.22), rgba(239, 68, 68, 0.08));
       }
       .onlineTab.on::after {
         content: "";
@@ -2444,6 +2449,24 @@
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 12px;
+        animation: onlinePacksFade 320ms ease;
+      }
+      @keyframes onlinePacksFade {
+        0% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .onlineActions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        margin-top: 12px;
       }
       @media (max-width: 680px) {
         .onlinePacks {
@@ -9073,6 +9096,7 @@
         oppPhoto: "",
         groupPlayers: [],
         lastTurn: "",
+        endShownKey: "",
         turnEndAt: 0,
         barRafId: 0,
         endAnimKey: "",
@@ -9652,7 +9676,7 @@
           if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
           for (const input of app.inputs) {
             input.disabled = locked;
-            input.placeholder = locked ? "M" : "";
+            input.placeholder = "";
             if (locked) input.value = "";
           }
           setSlotsLocked(locked);
@@ -9688,6 +9712,9 @@
                 } catch {}
               }, 260);
             }
+            const endKey = `${onlineState.matchId}|g4|${String(m.endedAt || "")}`;
+            if (onlineState.endShownKey === endKey) return;
+            onlineState.endShownKey = endKey;
             onlineRenderGroupEndScreen(fee, players, typeof m.solution === "string" ? m.solution : "");
             if (el.nextBtn) {
               el.nextBtn.disabled = false;
@@ -9763,7 +9790,7 @@
         if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
         for (const input of app.inputs) {
           input.disabled = locked;
-          input.placeholder = locked ? "M" : "";
+          input.placeholder = "";
           if (locked) input.value = "";
         }
         setSlotsLocked(locked);
@@ -9873,6 +9900,9 @@
             }
             if (el.checkBtn) el.checkBtn.disabled = true;
           }
+          const endKey = `${onlineState.matchId}|p2|${String(m.endedAt || "")}|${String(m.endedReason || "")}|${String(winner || "")}`;
+          if (onlineState.endShownKey === endKey) return;
+          onlineState.endShownKey = endKey;
           onlineRenderEndScreen(fee, winner, m.endedReason, m.forfeitedBy, typeof m.solution === "string" ? m.solution : "");
           if (el.nextBtn) {
             el.nextBtn.disabled = false;
@@ -9983,7 +10013,7 @@
             ${card("medium")}
             ${card("hard")}
           </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
+          <div class="onlineActions">
             <button id="roomCreateBtn" class="btn" type="button">إنشاء غرفة</button>
             <button id="roomJoinBtn" class="btn" type="button">انضم لغرفة</button>
           </div>
@@ -10054,7 +10084,7 @@
                   </div>
                 </div>
                 <div class="onlineBar"><span id="onlineSearchBar"></span></div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
+                <div class="onlineActions">
                   <button id="onlineCancelBtn" class="btn" type="button">إلغاء</button>
                 </div>
               </div>`
@@ -10078,7 +10108,7 @@
                   </div>
                 </div>
                 <div class="onlineBar"><span id="onlineSearchBar"></span></div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
+                <div class="onlineActions">
                   <button id="onlineCancelBtn" class="btn" type="button">إلغاء</button>
                 </div>
               </div>`;
@@ -10554,6 +10584,7 @@
         onlineState.customFocused = false;
         onlineState.oppFlashKey = "";
         onlineState.endAnimKey = "";
+        onlineState.endShownKey = "";
         onlineState.groupPlayers = [];
         onlineState.lastTurn = "";
         onlineState.propsPendingPickUntil = 0;
