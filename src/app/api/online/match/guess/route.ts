@@ -83,10 +83,15 @@ function safeState(raw: unknown) {
   const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const a = Array.isArray(s.a) ? s.a : [];
   const b = Array.isArray(s.b) ? s.b : [];
+  const c = Array.isArray(s.c) ? s.c : [];
+  const d = Array.isArray(s.d) ? s.d : [];
   const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
-  const kind = s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : ("normal" as const);
+  const kind =
+    s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : s.kind === "group4" ? ("group4" as const) : ("normal" as const);
   const phase =
     kind === "custom" && s.phase === "setup" ? ("setup" as const) : kind === "props" && s.phase === "cards" ? ("cards" as const) : ("play" as const);
+  const winners = Array.isArray(s.winners) ? s.winners.filter((x) => typeof x === "string") : [];
+  const forfeits = Array.isArray(s.forfeits) ? s.forfeits.filter((x) => typeof x === "string") : [];
   const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
   const ready = s.ready && typeof s.ready === "object" ? (s.ready as Record<string, unknown>) : {};
   const secretA = typeof secrets.a === "string" ? secrets.a : "";
@@ -105,7 +110,27 @@ function safeState(raw: unknown) {
   const reverseFor = effects.reverseFor === "a" || effects.reverseFor === "b" ? (effects.reverseFor as "a" | "b") : null;
   const hideColorsFor = effects.hideColorsFor === "a" || effects.hideColorsFor === "b" ? (effects.hideColorsFor as "a" | "b") : null;
   const doubleAgainst = effects.doubleAgainst === "a" || effects.doubleAgainst === "b" ? (effects.doubleAgainst as "a" | "b") : null;
-  return { a, b, lastMasked, kind, phase, secretA, secretB, readyA, readyB, deck, pickA, pickB, usedA, usedB, skipBy, reverseFor, hideColorsFor, doubleAgainst };
+  return { a, b, c, d, lastMasked, kind, phase, winners, forfeits, secretA, secretB, readyA, readyB, deck, pickA, pickB, usedA, usedB, skipBy, reverseFor, hideColorsFor, doubleAgainst };
+}
+
+function nextGroup4Turn(emails: (string | null)[], current: string, state: ReturnType<typeof safeState>) {
+  const order = emails.filter((x): x is string => typeof x === "string" && x.length > 0);
+  if (!order.length) return current;
+  const finished = new Set<string>([...state.winners, ...state.forfeits]);
+  const start = Math.max(0, order.indexOf(current));
+  for (let i = 1; i <= order.length; i++) {
+    const next = order[(start + i) % order.length];
+    if (!finished.has(next)) return next;
+  }
+  return current;
+}
+
+function group4PayoutForRank(rank: number, fee: number) {
+  const f = Math.max(0, Math.floor(fee));
+  if (rank === 1) return f * 4;
+  if (rank === 2) return f * 3;
+  if (rank === 3) return f * 2;
+  return 0;
 }
 
 export async function POST(req: NextRequest) {
@@ -150,6 +175,8 @@ export async function POST(req: NextRequest) {
           codeLen: number;
           aEmail: string;
           bEmail: string;
+          cEmail: string | null;
+          dEmail: string | null;
           answer: string;
           turnEmail: string;
           turnStartedAt: bigint;
@@ -157,17 +184,22 @@ export async function POST(req: NextRequest) {
           endedAt: Date | null;
           state: unknown;
         }[]
-      >`SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
+      >`SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
-      if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
+      if (m.aEmail !== email && m.bEmail !== email && m.cEmail !== email && m.dEmail !== email) return { ok: false as const, error: "forbidden" as const };
       if (m.endedAt || m.winnerEmail) return { ok: false as const, error: "ended" as const };
 
       const now = Date.now();
       const turnStartedAt = Number(m.turnStartedAt || 0);
       const state0 = safeState(m.state);
       if (state0.phase === "play" && turnStartedAt > 0 && now - turnStartedAt >= TURN_MS) {
-        const nextTurn = m.turnEmail === m.aEmail ? m.bEmail : m.aEmail;
+        const nextTurn =
+          state0.kind === "group4"
+            ? nextGroup4Turn([m.aEmail, m.bEmail, m.cEmail, m.dEmail], m.turnEmail, state0)
+            : m.turnEmail === m.aEmail
+              ? m.bEmail
+              : m.aEmail;
         await tx.$executeRaw`
           UPDATE "OnlineMatch"
           SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "updatedAt" = NOW()
@@ -182,9 +214,92 @@ export async function POST(req: NextRequest) {
       const len = Math.max(3, Math.min(6, Math.floor(m.codeLen || 0)));
       if (!isDigitsN(guess, len)) return { ok: false as const, error: "bad_guess" as const };
 
+      const role = m.aEmail === email ? "a" : m.bEmail === email ? "b" : m.cEmail === email ? "c" : "d";
+      if (state0.kind === "group4") {
+        if (state0.winners.includes(email) || state0.forfeits.includes(email)) return { ok: false as const, error: "already_finished" as const };
+        const targetAnswer = m.answer;
+        if (!targetAnswer || !isDigitsN(targetAnswer, len)) return { ok: false as const, error: "not_ready" as const };
+        const rawResult = evaluateGuess(guess, targetAnswer);
+        const solved = rawResult.every((x) => x === "ok");
+        const result = rawResult;
+        const entry = { guess, result, at: now };
+        const nextA = role === "a" ? (state0.a as unknown[]).concat([entry]).slice(-160) : (state0.a as unknown[]).slice(-160);
+        const nextB = role === "b" ? (state0.b as unknown[]).concat([entry]).slice(-160) : (state0.b as unknown[]).slice(-160);
+        const nextC = role === "c" ? (state0.c as unknown[]).concat([entry]).slice(-160) : (state0.c as unknown[]).slice(-160);
+        const nextD = role === "d" ? (state0.d as unknown[]).concat([entry]).slice(-160) : (state0.d as unknown[]).slice(-160);
+
+        const winners = state0.winners.slice();
+        let rank: number | null = null;
+        if (solved && !winners.includes(email)) {
+          winners.push(email);
+          rank = winners.length;
+        }
+
+        const payout = rank ? group4PayoutForRank(rank, m.fee) : 0;
+        if (rank && payout > 0) {
+          const myProfile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+          const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
+          const myCoins = readCoinsFromState(myState);
+          const myEarned = readCoinsEarnedTotalFromState(myState);
+          const myPeak = readCoinsPeakFromState(myState);
+          const stats = ensureStats(myState);
+          stats.wins += 1;
+          stats.winsOnline += 1;
+          if (m.mode === "easy") stats.winsOnlineEasy += 1;
+          else if (m.mode === "medium") stats.winsOnlineMedium += 1;
+          else if (m.mode === "hard") stats.winsOnlineHard += 1;
+          stats.winStreak += 1;
+          stats.bestWinStreak = Math.max(stats.bestWinStreak, stats.winStreak);
+          const nextCoins = myCoins + payout;
+          const updated = {
+            ...myState,
+            coins: nextCoins,
+            coinsEarnedTotal: myEarned + payout,
+            coinsPeak: Math.max(myPeak, nextCoins),
+            stats,
+            lastWriteAt: now,
+          };
+          await tx.gameProfile.update({ where: { email }, data: { state: updated } });
+        } else if (rank && payout === 0) {
+          const myProfile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+          const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
+          const stats = ensureStats(myState);
+          stats.winStreak = 0;
+          const updated = { ...myState, stats, lastWriteAt: now };
+          await tx.gameProfile.update({ where: { email }, data: { state: updated } });
+        }
+
+        const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
+        const nextState: Record<string, unknown> = {
+          ...prevState,
+          a: nextA,
+          b: nextB,
+          c: nextC,
+          d: nextD,
+          winners,
+          forfeits: state0.forfeits,
+          lastMasked: { by: email, len, at: now },
+        };
+
+        const finished = new Set<string>([...winners, ...state0.forfeits]);
+        const isEnd = finished.size >= 4;
+        const nextTurn = isEnd ? m.turnEmail : nextGroup4Turn([m.aEmail, m.bEmail, m.cEmail, m.dEmail], m.turnEmail, { ...state0, winners });
+
+        if (isEnd) nextState.endedReason = "group_finished";
+
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "state" = ${JSON.stringify(nextState)}::jsonb, "winnerEmail" = ${
+            isEnd ? winners[0] || null : m.winnerEmail
+          }, "endedAt" = ${isEnd ? new Date(now) : null}, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+
+        return { ok: true as const, solved, result, rank, payout, ended: isEnd };
+      }
+
       if (state0.kind === "custom" && (!state0.readyA || !state0.readyB)) return { ok: false as const, error: "not_ready" as const };
       if (state0.kind === "props" && (state0.phase !== "play" || state0.pickA === null || state0.pickB === null)) return { ok: false as const, error: "not_ready" as const };
-      const role = m.aEmail === email ? "a" : "b";
       const targetAnswer = state0.kind === "custom" ? (role === "a" ? state0.secretB : state0.secretA) : m.answer;
       if (!targetAnswer || !isDigitsN(targetAnswer, len)) return { ok: false as const, error: "not_ready" as const };
 

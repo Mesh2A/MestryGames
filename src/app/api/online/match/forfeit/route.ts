@@ -86,17 +86,45 @@ export async function POST(req: NextRequest) {
           fee: number;
           aEmail: string;
           bEmail: string;
+          cEmail: string | null;
+          dEmail: string | null;
           winnerEmail: string | null;
           endedAt: Date | null;
           state: unknown;
         }[]
-      >`SELECT "id","mode","fee","aEmail","bEmail","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
+      >`SELECT "id","mode","fee","aEmail","bEmail","cEmail","dEmail","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
-      if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
+      if (m.aEmail !== email && m.bEmail !== email && m.cEmail !== email && m.dEmail !== email) return { ok: false as const, error: "forbidden" as const };
       if (m.endedAt || m.winnerEmail) return { ok: true as const, ended: true as const };
 
       const now = Date.now();
+      const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
+      const kind = prevState.kind === "group4" ? ("group4" as const) : prevState.kind === "custom" ? ("custom" as const) : ("normal" as const);
+
+      if (kind === "group4") {
+        const winners = Array.isArray(prevState.winners) ? prevState.winners.filter((x) => typeof x === "string") : [];
+        const forfeits = Array.isArray(prevState.forfeits) ? prevState.forfeits.filter((x) => typeof x === "string") : [];
+        if (!winners.includes(email) && !forfeits.includes(email)) forfeits.push(email);
+        const nextState = { ...prevState, forfeits, endedReason: "forfeit", forfeitedBy: email, forfeitedAt: now };
+        const finished = new Set([...winners, ...forfeits]);
+        const isEnd = finished.size >= 4;
+        if (isEnd) nextState.endedReason = "group_finished";
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "winnerEmail" = ${isEnd ? winners[0] || null : m.winnerEmail}, "endedAt" = ${isEnd ? new Date(now) : null}, "state" = ${JSON.stringify(
+            nextState
+          )}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+        const profile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+        const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+        const stats = ensureStats(stateObj);
+        stats.winStreak = 0;
+        const next = { ...stateObj, stats, lastWriteAt: now };
+        await tx.gameProfile.update({ where: { email }, data: { state: next } });
+        return { ok: true as const, ended: isEnd, forfeited: true as const };
+      }
 
       if (!isExplicitWithdraw) {
         const role = m.aEmail === email ? ("a" as const) : ("b" as const);
@@ -116,8 +144,6 @@ export async function POST(req: NextRequest) {
 
       const winnerEmail = m.aEmail === email ? m.bEmail : m.aEmail;
       const loserEmail = email;
-      const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
-      const kind = prevState.kind === "custom" ? ("custom" as const) : ("normal" as const);
       const phase = kind === "custom" && prevState.phase === "setup" ? ("setup" as const) : ("play" as const);
       const fee = Math.max(0, Math.floor(m.fee));
       const isSetupCancel = kind === "custom" && phase === "setup";

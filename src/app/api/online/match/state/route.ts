@@ -78,10 +78,13 @@ function safeState(raw: unknown) {
   const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const a = Array.isArray(s.a) ? s.a : [];
   const b = Array.isArray(s.b) ? s.b : [];
+  const c = Array.isArray(s.c) ? s.c : [];
+  const d = Array.isArray(s.d) ? s.d : [];
   const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
   const endedReason = typeof s.endedReason === "string" ? s.endedReason : null;
   const forfeitedBy = typeof s.forfeitedBy === "string" ? s.forfeitedBy : null;
-  const kind = s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : ("normal" as const);
+  const kind =
+    s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : s.kind === "group4" ? ("group4" as const) : ("normal" as const);
   const phase =
     kind === "custom" && s.phase === "setup"
       ? ("setup" as const)
@@ -90,6 +93,8 @@ function safeState(raw: unknown) {
         : kind === "normal" && s.phase === "waiting"
           ? ("waiting" as const)
           : ("play" as const);
+  const winners = Array.isArray(s.winners) ? s.winners.filter((x) => typeof x === "string") : [];
+  const forfeits = Array.isArray(s.forfeits) ? s.forfeits.filter((x) => typeof x === "string") : [];
   const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
   const ready = s.ready && typeof s.ready === "object" ? (s.ready as Record<string, unknown>) : {};
   const secretA = typeof secrets.a === "string" ? secrets.a : "";
@@ -113,11 +118,15 @@ function safeState(raw: unknown) {
   return {
     a,
     b,
+    c,
+    d,
     lastMasked,
     endedReason,
     forfeitedBy,
     kind,
     phase,
+    winners,
+    forfeits,
     secretA,
     secretB,
     hasSecretA,
@@ -134,6 +143,18 @@ function safeState(raw: unknown) {
     hideColorsFor,
     doubleAgainst,
   };
+}
+
+function nextGroup4Turn(emails: (string | null)[], current: string, state: ReturnType<typeof safeState>) {
+  const order = emails.filter((x): x is string => typeof x === "string" && x.length > 0);
+  if (!order.length) return current;
+  const finished = new Set<string>([...state.winners, ...state.forfeits]);
+  const start = Math.max(0, order.indexOf(current));
+  for (let i = 1; i <= order.length; i++) {
+    const next = order[(start + i) % order.length];
+    if (!finished.has(next)) return next;
+  }
+  return current;
 }
 
 function maskDigits(len: number) {
@@ -179,6 +200,8 @@ export async function GET(req: NextRequest) {
       codeLen: number;
       aEmail: string;
       bEmail: string;
+      cEmail: string | null;
+      dEmail: string | null;
       answer: string;
       turnEmail: string;
       turnStartedAt: bigint;
@@ -187,21 +210,21 @@ export async function GET(req: NextRequest) {
       state: unknown;
     };
 
-    const baseRows = await prisma.$queryRaw<MatchRow[]>`
-      SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+      const baseRows = await prisma.$queryRaw<MatchRow[]>`
+        SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
       FROM "OnlineMatch"
       WHERE "id" = ${matchId}
       LIMIT 1
     `;
     let m = baseRows && baseRows[0] ? baseRows[0] : null;
     if (!m) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
-    if (m.aEmail !== email && m.bEmail !== email)
+    if (m.aEmail !== email && m.bEmail !== email && m.cEmail !== email && m.dEmail !== email)
       return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
 
     if (!onlineEnabled && !m.endedAt) {
       m = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
@@ -209,7 +232,7 @@ export async function GET(req: NextRequest) {
         `;
         const locked = rows && rows[0] ? rows[0] : null;
         if (!locked) return null;
-        if (locked.aEmail !== email && locked.bEmail !== email) return null;
+        if (locked.aEmail !== email && locked.bEmail !== email && locked.cEmail !== email && locked.dEmail !== email) return null;
         if (locked.endedAt) return locked;
 
         const nextState = normalizeStateForDisabled(locked.state);
@@ -250,7 +273,7 @@ export async function GET(req: NextRequest) {
     if (needExpire || needCustomStart || needPropsStart || needNormalStart) {
       const updated = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
@@ -258,14 +281,19 @@ export async function GET(req: NextRequest) {
         `;
         const locked = rows && rows[0] ? rows[0] : null;
         if (!locked) return null;
-        if (locked.aEmail !== email && locked.bEmail !== email) return null;
+        if (locked.aEmail !== email && locked.bEmail !== email && locked.cEmail !== email && locked.dEmail !== email) return null;
 
         const stateForTurn = safeState(locked.state);
         const now2 = Date.now();
         const turnStartedAt = Number(locked.turnStartedAt || 0);
         const expired = stateForTurn.phase === "play" && !locked.endedAt && turnStartedAt > 0 && now2 - turnStartedAt >= TURN_MS;
         if (expired) {
-          const nextTurn = locked.turnEmail === locked.aEmail ? locked.bEmail : locked.aEmail;
+          const nextTurn =
+            stateForTurn.kind === "group4"
+              ? nextGroup4Turn([locked.aEmail, locked.bEmail, locked.cEmail, locked.dEmail], locked.turnEmail, stateForTurn)
+              : locked.turnEmail === locked.aEmail
+                ? locked.bEmail
+                : locked.aEmail;
           await tx.$executeRaw`
             UPDATE "OnlineMatch"
             SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now2}, "updatedAt" = NOW()
@@ -334,10 +362,10 @@ export async function GET(req: NextRequest) {
       if (updated) m = updated;
     }
 
-    if (!m.endedAt && !m.winnerEmail) {
+    if (!m.endedAt && !m.winnerEmail && state0.kind !== "group4") {
       const updated = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
@@ -345,7 +373,7 @@ export async function GET(req: NextRequest) {
         `;
         const locked = rows && rows[0] ? rows[0] : null;
         if (!locked) return null;
-        if (locked.aEmail !== email && locked.bEmail !== email) return null;
+        if (locked.aEmail !== email && locked.bEmail !== email && locked.cEmail !== email && locked.dEmail !== email) return null;
         if (locked.endedAt || locked.winnerEmail) return locked;
 
         const now2 = Date.now();
@@ -463,15 +491,12 @@ export async function GET(req: NextRequest) {
     }
 
     const state = safeState(m.state);
-    const myRole = m.aEmail === email ? "a" : "b";
-    const myHistory = (myRole === "a" ? state.a : state.b).filter((x) => x && typeof x === "object").slice(-120);
+    const myRole = m.aEmail === email ? "a" : m.bEmail === email ? "b" : m.cEmail === email ? "c" : "d";
+    const myHistory = (myRole === "a" ? state.a : myRole === "b" ? state.b : myRole === "c" ? state.c : state.d)
+      .filter((x) => x && typeof x === "object")
+      .slice(-120);
 
-    const oppEmail = m.aEmail === email ? m.bEmail : m.aEmail;
-    const [oppProfile, myProfile] = await Promise.all([
-      prisma.gameProfile.findUnique({ where: { email: oppEmail }, select: { email: true, publicId: true, state: true, createdAt: true } }),
-      prisma.gameProfile.findUnique({ where: { email }, select: { state: true, publicId: true } }),
-    ]);
-
+    const myProfile = await prisma.gameProfile.findUnique({ where: { email }, select: { state: true, publicId: true } });
     const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
     const myCoins = readCoinsFromState(myState);
     const myLevel = getProfileLevel(myProfile?.state).level;
@@ -506,6 +531,75 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    if (state.kind === "group4") {
+      const seatMap: Record<string, "right" | "top" | "left" | "bottom"> = { a: "right", b: "top", c: "left", d: "bottom" };
+      const roles = [
+        { role: "a", email: m.aEmail },
+        { role: "b", email: m.bEmail },
+        { role: "c", email: m.cEmail || "" },
+        { role: "d", email: m.dEmail || "" },
+      ].filter((x) => x.email);
+      const emails = roles.map((x) => x.email);
+      const profiles = await prisma.gameProfile.findMany({ where: { email: { in: emails } }, select: { email: true, publicId: true, state: true, createdAt: true } });
+      const map = new Map(profiles.map((p) => [p.email, p]));
+      const rankList = [...state.winners, ...state.forfeits];
+      const rankMap = new Map(rankList.map((e, i) => [e, i + 1]));
+      const players = roles.map((r) => {
+        const p = map.get(r.email);
+        const rank = rankMap.get(r.email) || null;
+        const won = state.winners.includes(r.email);
+        const lost = state.forfeits.includes(r.email) || (isEnded && !won);
+        return {
+          role: r.role,
+          seat: seatMap[r.role],
+          email: r.email,
+          id: p?.publicId || null,
+          firstName: p ? firstNameFromDisplayNameOrEmail(readDisplayNameFromState(p.state), p.email) : firstNameFromEmail(r.email),
+          photo: p ? readPhotoFromState(p.state) : "",
+          level: p ? getProfileLevel(p.state).level : 1,
+          stats: p ? getProfileStats(p.state) : null,
+          rank,
+          status: won ? "won" : lost ? "lost" : "playing",
+        };
+      });
+      return NextResponse.json(
+        {
+          ok: true as const,
+          match: {
+            id: m.id,
+            mode: m.mode,
+            fee: m.fee,
+            codeLen: m.codeLen,
+            kind: state.kind,
+            phase: state.phase,
+            groupSize: 4,
+            players,
+            myRole,
+            myId: myProfile?.publicId || null,
+            myCoins,
+            myLevel,
+            turn: m.endedAt ? "ended" : m.turnEmail === email ? "me" : "other",
+            turnRole: roles.find((r) => r.email === m.turnEmail)?.role || null,
+            turnEmail: m.turnEmail,
+            timeLeftMs,
+            serverNowMs,
+            turnStartedAtMs,
+            endedAt: m.endedAt ? m.endedAt.toISOString() : null,
+            endedReason: state.endedReason,
+            solution,
+            winners: state.winners,
+            forfeits: state.forfeits,
+            myHistory,
+            lastMasked,
+          },
+        },
+        { status: 200, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    const oppEmail = m.aEmail === email ? m.bEmail : m.aEmail;
+    const oppProfile = await prisma.gameProfile.findUnique({ where: { email: oppEmail }, select: { email: true, publicId: true, state: true, createdAt: true } });
+
     return NextResponse.json(
       {
         ok: true as const,
@@ -516,6 +610,7 @@ export async function GET(req: NextRequest) {
           codeLen: m.codeLen,
           kind: state.kind,
           phase: state.phase,
+          groupSize: 2,
           myReady: myRole === "a" ? state.readyA : state.readyB,
           oppReady: myRole === "a" ? state.readyB : state.readyA,
           myHasSecret: myRole === "a" ? state.hasSecretA : state.hasSecretB,

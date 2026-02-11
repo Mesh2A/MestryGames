@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       const activeMatch = await tx.$queryRaw<{ id: string }[]>`
         SELECT "id"
         FROM "OnlineMatch"
-        WHERE ("aEmail" = ${email} OR "bEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
+        WHERE ("aEmail" = ${email} OR "bEmail" = ${email} OR "cEmail" = ${email} OR "dEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
         ORDER BY "createdAt" DESC
         LIMIT 1
       `;

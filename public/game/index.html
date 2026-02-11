@@ -2428,6 +2428,71 @@
         gap: 12px;
         align-items: center;
       }
+      .onlineGroupHud {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 140px 1fr;
+        grid-template-rows: auto 140px auto;
+        gap: 12px;
+        align-items: center;
+        justify-items: center;
+        margin-bottom: 8px;
+      }
+      .onlineGroupSeat {
+        width: 100%;
+        max-width: 220px;
+        border-radius: 18px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px;
+        display: grid;
+        grid-template-columns: 46px 1fr;
+        gap: 10px;
+        align-items: center;
+      }
+      .onlineGroupSeat.top {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .onlineGroupSeat.right {
+        grid-column: 3;
+        grid-row: 2;
+      }
+      .onlineGroupSeat.left {
+        grid-column: 1;
+        grid-row: 2;
+      }
+      .onlineGroupSeat.bottom {
+        grid-column: 2;
+        grid-row: 3;
+      }
+      .onlineGroupTag {
+        font-weight: 800;
+        color: rgba(34, 197, 94, 0.9);
+      }
+      .onlineGroupSeat.lost .onlineGroupTag {
+        color: rgba(239, 68, 68, 0.9);
+      }
+      .onlineGroupSeat.turnActive {
+        border-color: rgba(34, 197, 94, 0.7);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(34, 197, 94, 0.35), 0 0 22px rgba(34, 197, 94, 0.22);
+        background: rgba(34, 197, 94, 0.12);
+      }
+      .onlineGroupCenter {
+        grid-column: 2;
+        grid-row: 2;
+        width: 140px;
+        height: 140px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .onlineGroupBox {
+        border-radius: 14px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.06);
+      }
       .onlineFoundCountdown {
         text-align: center;
         font-weight: 900;
@@ -4216,6 +4281,46 @@
                     </div>
                   </div>
                 </div>
+                <div id="onlineGroupHud" class="onlineGroupHud" style="display:none">
+                  <div class="onlineGroupSeat top">
+                    <div id="onlineGTopAvatar" class="onlineAvatar">T</div>
+                    <div class="onlineMeta">
+                      <div id="onlineGTopName" class="onlineName">—</div>
+                      <div id="onlineGTopSub" class="onlineTiny">—</div>
+                      <div id="onlineGTopTag" class="onlineTiny onlineGroupTag"></div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupSeat right">
+                    <div id="onlineGRightAvatar" class="onlineAvatar">R</div>
+                    <div class="onlineMeta">
+                      <div id="onlineGRightName" class="onlineName">—</div>
+                      <div id="onlineGRightSub" class="onlineTiny">—</div>
+                      <div id="onlineGRightTag" class="onlineTiny onlineGroupTag"></div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupSeat left">
+                    <div id="onlineGLeftAvatar" class="onlineAvatar">L</div>
+                    <div class="onlineMeta">
+                      <div id="onlineGLeftName" class="onlineName">—</div>
+                      <div id="onlineGLeftSub" class="onlineTiny">—</div>
+                      <div id="onlineGLeftTag" class="onlineTiny onlineGroupTag"></div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupSeat bottom">
+                    <div id="onlineGBottomAvatar" class="onlineAvatar">B</div>
+                    <div class="onlineMeta">
+                      <div id="onlineGBottomName" class="onlineName">—</div>
+                      <div id="onlineGBottomSub" class="onlineTiny">—</div>
+                      <div id="onlineGBottomTag" class="onlineTiny onlineGroupTag"></div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupCenter">
+                    <div class="onlineGroupBox"></div>
+                    <div class="onlineGroupBox"></div>
+                    <div class="onlineGroupBox"></div>
+                    <div class="onlineGroupBox"></div>
+                  </div>
+                </div>
                 <div id="onlineTurnText" class="onlineTiny">—</div>
                 <div class="onlineBar"><span id="onlineTurnBar"></span></div>
                 <div id="onlineOppLast" class="onlineTiny" style="text-align:right"></div>
@@ -5765,12 +5870,29 @@
         modeBadge: document.getElementById("modeBadge"),
         timerBadge: document.getElementById("timerBadge"),
         onlineHud: document.getElementById("onlineHud"),
+        onlineGroupHud: document.getElementById("onlineGroupHud"),
         onlineMeAvatar: document.getElementById("onlineMeAvatar"),
         onlineMeName: document.getElementById("onlineMeName"),
         onlineMeSub: document.getElementById("onlineMeSub"),
         onlineOppAvatar: document.getElementById("onlineOppAvatar"),
         onlineOppName: document.getElementById("onlineOppName"),
         onlineOppSub: document.getElementById("onlineOppSub"),
+        onlineGTopAvatar: document.getElementById("onlineGTopAvatar"),
+        onlineGTopName: document.getElementById("onlineGTopName"),
+        onlineGTopSub: document.getElementById("onlineGTopSub"),
+        onlineGTopTag: document.getElementById("onlineGTopTag"),
+        onlineGRightAvatar: document.getElementById("onlineGRightAvatar"),
+        onlineGRightName: document.getElementById("onlineGRightName"),
+        onlineGRightSub: document.getElementById("onlineGRightSub"),
+        onlineGRightTag: document.getElementById("onlineGRightTag"),
+        onlineGLeftAvatar: document.getElementById("onlineGLeftAvatar"),
+        onlineGLeftName: document.getElementById("onlineGLeftName"),
+        onlineGLeftSub: document.getElementById("onlineGLeftSub"),
+        onlineGLeftTag: document.getElementById("onlineGLeftTag"),
+        onlineGBottomAvatar: document.getElementById("onlineGBottomAvatar"),
+        onlineGBottomName: document.getElementById("onlineGBottomName"),
+        onlineGBottomSub: document.getElementById("onlineGBottomSub"),
+        onlineGBottomTag: document.getElementById("onlineGBottomTag"),
         onlineTurnText: document.getElementById("onlineTurnText"),
         onlineTurnBar: document.getElementById("onlineTurnBar"),
         onlineOppLast: document.getElementById("onlineOppLast"),
@@ -8704,6 +8826,7 @@
         mode: "",
         fee: 0,
         codeLen: 0,
+        groupSize: 2,
         queueId: "",
         matchId: "",
         roomCode: "",
@@ -8713,6 +8836,7 @@
         mePhoto: "",
         oppName: "",
         oppPhoto: "",
+        groupPlayers: [],
         turnEndAt: 0,
         barRafId: 0,
         endAnimKey: "",
@@ -8824,13 +8948,14 @@
         onlineState.preEnterMatchId = "";
       }
 
-      async function onlinePreEnterMatch(matchId, mode, fee, codeLen, me, opponentFromJoin, kind) {
+      async function onlinePreEnterMatch(matchId, mode, fee, codeLen, me, opponentFromJoin, kind, groupSize) {
         const id = String(matchId || "").trim();
         if (!id) return;
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
 
         const meResolved = me || (await ensureMeLoaded());
+        onlineState.groupSize = groupSize === 4 ? 4 : onlineState.groupSize === 4 ? 4 : 2;
         renderOnlineSearching(mode, meResolved || null, kind);
         const nameEl = document.getElementById("onlineSearchOppName");
         const countdownEl = document.getElementById("onlineFoundCountdown");
@@ -8853,14 +8978,17 @@
             const m = r && r.ok && r.data && r.data.match ? r.data.match : null;
             if (!m) return;
             if (!opponent && m.opponent) opponent = m.opponent;
-            if (typeof m.kind === "string") kind = m.kind === "custom" ? "custom" : m.kind === "props" ? "props" : "normal";
+            if (typeof m.kind === "string") {
+              kind = m.kind === "custom" ? "custom" : m.kind === "props" ? "props" : m.kind === "group4" ? "normal" : "normal";
+            }
+            if (m.kind === "group4" || m.groupSize === 4) onlineState.groupSize = 4;
             const ended = !!m.endedAt || m.winner === "me" || m.winner === "them" || !!m.endedReason;
             if (ended) {
               stopOnlinePreEnter();
               try {
                 closeHowTo();
               } catch {}
-              startOnlineMatch(id, mode, fee, codeLen, meResolved, opponent, kind);
+              startOnlineMatch(id, mode, fee, codeLen, meResolved, opponent, kind, onlineState.groupSize);
               return;
             }
             if (typeof m.serverNowMs === "number" && Number.isFinite(m.serverNowMs)) serverNowMs = Math.floor(m.serverNowMs);
@@ -8908,7 +9036,7 @@
             try {
               closeHowTo();
             } catch {}
-            startOnlineMatch(id, mode, fee, codeLen, meResolved, opponent, kind);
+            startOnlineMatch(id, mode, fee, codeLen, meResolved, opponent, kind, onlineState.groupSize);
             return;
           }
           const sec = Math.max(1, Math.ceil(rem / 1000));
@@ -9084,6 +9212,49 @@
         requestAnimationFrame(() => onlineAnimatePayout(fee, winner, endedReason));
       }
 
+      function onlineRenderGroupEndScreen(fee, players, solution) {
+        if (!el.winBox || !el.winSub || !el.winTitle) return;
+        const list = Array.isArray(players) ? players : [];
+        const sorted = list.slice().sort((a, b) => {
+          const ra = typeof a.rank === "number" ? a.rank : 99;
+          const rb = typeof b.rank === "number" ? b.rank : 99;
+          if (ra !== rb) return ra - rb;
+          return String(a.firstName || "").localeCompare(String(b.firstName || ""));
+        });
+        el.winBox.classList.remove("onlineWin", "onlineLose");
+        el.winTitle.textContent = "انتهت الجولة";
+        const sol = String(solution || "").trim();
+        const solLine = sol
+          ? `<div class="tiny" style="text-align:center">${escapeHtml(t("onlineSolutionLabel"))} <span class="maskM" dir="ltr" style="unicode-bidi:bidi-override">${escapeHtml(sol)}</span></div>`
+          : ``;
+        el.winSub.innerHTML = `<div class="onlineWrap">
+          ${solLine}
+          <div class="onlineEndRow" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+            ${sorted
+              .map((p) => {
+                const rank = typeof p.rank === "number" ? p.rank : null;
+                const tag = rank === 1 ? "فاز أول" : rank === 2 ? "فاز ثاني" : rank === 3 ? "فاز ثالث" : "خسر";
+                const payout = rank === 1 ? fee * 4 : rank === 2 ? fee * 3 : rank === 3 ? fee * 2 : 0;
+                return `<div class="onlineEndCard">
+                  <div class="onlineAvatar">P</div>
+                  <div class="onlineEndMeta">
+                    <div class="onlineEndName">${escapeHtml(String(p.firstName || "لاعب"))}</div>
+                    <div class="onlineEndTag">${escapeHtml(tag)}</div>
+                    <div class="onlineEndTag"><span class="coinChip">${payout}🪙</span></div>
+                  </div>
+                </div>`;
+              })
+              .join("")}
+          </div>
+        </div>`;
+        const cards = el.winSub.querySelectorAll(".onlineEndCard .onlineAvatar");
+        sorted.forEach((p, i) => {
+          const av = cards[i];
+          if (!av) return;
+          setAvatarSquare(av, p.photo || "", String((p.firstName || "P")).slice(0, 1).toUpperCase());
+        });
+      }
+
       function formatCoin(n) {
         return `${Math.max(0, Math.floor(n))}🪙`;
       }
@@ -9178,8 +9349,123 @@
 
       function onlineApplyMatchState(m, meEmail, fee) {
         if (!m) return;
+        if (m.kind === "group4") {
+          if (el.onlineGroupHud) el.onlineGroupHud.style.display = "";
+          const matchRow = el.onlineMeAvatar && el.onlineMeAvatar.closest ? el.onlineMeAvatar.closest(".onlineMatchRow") : null;
+          if (matchRow) matchRow.style.display = "none";
+          if (el.onlinePropsHud) el.onlinePropsHud.style.display = "none";
+          if (typeof m.myCoins === "number") setCoinsTotal(m.myCoins, 0, true);
+          const players = Array.isArray(m.players) ? m.players : [];
+          onlineState.groupPlayers = players;
+          onlineState.groupSize = 4;
+
+          const seatMap = {
+            top: { av: el.onlineGTopAvatar, name: el.onlineGTopName, sub: el.onlineGTopSub, tag: el.onlineGTopTag, cls: "top" },
+            right: { av: el.onlineGRightAvatar, name: el.onlineGRightName, sub: el.onlineGRightSub, tag: el.onlineGRightTag, cls: "right" },
+            left: { av: el.onlineGLeftAvatar, name: el.onlineGLeftName, sub: el.onlineGLeftSub, tag: el.onlineGLeftTag, cls: "left" },
+            bottom: { av: el.onlineGBottomAvatar, name: el.onlineGBottomName, sub: el.onlineGBottomSub, tag: el.onlineGBottomTag, cls: "bottom" },
+          };
+
+          const seatEl = (seat) => document.querySelector(`.onlineGroupSeat.${seat}`);
+          for (const k of Object.keys(seatMap)) {
+            const slot = seatMap[k];
+            if (slot.name) slot.name.textContent = "—";
+            if (slot.sub) slot.sub.textContent = `${fee}🪙`;
+            if (slot.tag) slot.tag.textContent = "";
+            if (slot.av) setAvatarSquare(slot.av, "", "?");
+            const seatNode = seatEl(k);
+            if (seatNode) {
+              seatNode.classList.remove("turnActive", "lost");
+            }
+          }
+          for (const p of players) {
+            const seat = p && typeof p.seat === "string" ? p.seat : "";
+            const slot = seatMap[seat];
+            if (!slot) continue;
+            if (slot.name) slot.name.textContent = p.firstName || "لاعب";
+            if (slot.sub) slot.sub.textContent = `${fee}🪙`;
+            if (slot.tag) {
+              const rank = typeof p.rank === "number" ? p.rank : null;
+              slot.tag.textContent = rank === 1 ? "فاز أول" : rank === 2 ? "فاز ثاني" : rank === 3 ? "فاز ثالث" : p.status === "lost" ? "خسر" : "";
+            }
+            if (slot.av) setAvatarSquare(slot.av, p.photo || "", String((p.firstName || "P")).slice(0, 1).toUpperCase());
+            const seatNode = seatEl(seat);
+            if (seatNode) {
+              seatNode.classList.toggle("turnActive", m.turnRole && p.role === m.turnRole);
+              seatNode.classList.toggle("lost", p.status === "lost");
+            }
+          }
+
+          const turnName = players.find((p) => p && p.role === m.turnRole)?.firstName || "لاعب";
+          if (el.onlineTurnText) el.onlineTurnText.textContent = m.turn === "ended" ? t("onlineTurnEnded") : `دور ${turnName}`;
+
+          const timeLeftMs = typeof m.timeLeftMs === "number" ? Math.max(0, Math.floor(m.timeLeftMs)) : 0;
+          onlineState.turnEndAt = m.turn === "ended" ? 0 : Date.now() + timeLeftMs;
+          const pct = onlineState.turnEndAt ? Math.min(100, Math.max(0, Math.floor((timeLeftMs / ONLINE_TURN_MS) * 100))) : 0;
+          if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
+          if (m.turn === "ended") {
+            stopOnlineMatchPolling();
+          } else {
+            startOnlineTurnBarLoop();
+            startOnlineMatchPolling(meEmail, fee, 400);
+          }
+
+          const locked = m.turn !== "me";
+          if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
+          for (const input of app.inputs) {
+            input.disabled = locked;
+            input.placeholder = locked ? "M" : "";
+            if (locked) input.value = "";
+          }
+
+          if (Array.isArray(m.myHistory)) {
+            const my = m.myHistory
+              .filter((x) => x && typeof x === "object" && typeof x.guess === "string" && Array.isArray(x.result))
+              .map((x) => ({ guess: x.guess, result: x.result }));
+            app.history = my;
+            app.attempts = my.length;
+            if (el.attemptsNum) el.attemptsNum.textContent = String(app.attempts);
+            renderHistory();
+          }
+
+          if (m.lastMasked && m.lastMasked.by && m.lastMasked.at && m.lastMasked.value) {
+            const who = players.find((p) => p && p.email === m.lastMasked.by) || players.find((p) => p && p.id === m.lastMasked.by);
+            const name = who && who.firstName ? who.firstName : "لاعب";
+            if (el.onlineOppLast) el.onlineOppLast.innerHTML = `${escapeHtml(name)} لعب: <span class="maskM">${escapeHtml(m.lastMasked.value || "")}</span>`;
+          }
+
+          if (m.turn === "ended") {
+            stopOnlineMatchPolling();
+            stopOnlineHiddenForfeitTimer();
+            app.session.over = true;
+            closeOnlineWithdrawModal();
+            if (el.onlineSetupForfeitBtn) el.onlineSetupForfeitBtn.style.display = "none";
+            if (el.backToMapBtn) el.backToMapBtn.disabled = true;
+            if (!onlineState.endCoinsSyncDone) {
+              onlineState.endCoinsSyncDone = true;
+              setTimeout(() => {
+                try {
+                  onlineFetchMatchStateOnce(onlineState.meEmail || "", onlineState.fee || 0);
+                } catch {}
+              }, 260);
+            }
+            onlineRenderGroupEndScreen(fee, players, typeof m.solution === "string" ? m.solution : "");
+            if (el.nextBtn) {
+              el.nextBtn.disabled = false;
+              el.nextBtn.textContent = t("onlineBackBtn");
+            }
+            if (el.mapBtn2) el.mapBtn2.style.display = "none";
+            if (el.shareBtn) el.shareBtn.style.display = "none";
+            if (el.winBox) el.winBox.classList.add("show");
+            stopOnlineAutoReturn();
+          }
+          return;
+        }
         const meCard = el.onlineMeAvatar && el.onlineMeAvatar.closest ? el.onlineMeAvatar.closest(".onlinePlayerCard") : null;
         const oppCard = el.onlineOppAvatar && el.onlineOppAvatar.closest ? el.onlineOppAvatar.closest(".onlinePlayerCard") : null;
+        if (el.onlineGroupHud) el.onlineGroupHud.style.display = "none";
+        const matchRow = el.onlineMeAvatar && el.onlineMeAvatar.closest ? el.onlineMeAvatar.closest(".onlineMatchRow") : null;
+        if (matchRow) matchRow.style.display = "";
         if (m.opponent && typeof m.opponent === "object") {
           const prevKey = onlineState.oppFlashKey;
           const nextKey = String(m.opponent.id || "");
@@ -9379,6 +9665,7 @@
           if (!r.ok || !r.data || !r.data.match) return;
           if (onlineState.matchId !== id) return;
           if (!app.stage || app.stage.kind !== "online" || app.stage.matchId !== id) return;
+          if (typeof r.data.match.groupSize === "number") onlineState.groupSize = r.data.match.groupSize === 4 ? 4 : 2;
           if (typeof r.data.match.serverNowMs === "number" && Number.isFinite(r.data.match.serverNowMs)) {
             const mid = Math.floor((t0 + t1) / 2);
             onlineState.serverOffsetMs = Math.floor(r.data.match.serverNowMs) - mid;
@@ -9414,13 +9701,24 @@
           return;
         }
 
+        const groupSize = onlineState.groupSize === 4 ? 4 : 2;
+        if (groupSize === 4) onlineState.selectKind = "normal";
         const kind = onlineState.selectKind === "custom" ? "custom" : onlineState.selectKind === "props" ? "props" : "normal";
         const tab = (k, label) => `<button class="onlineTab ${k === kind ? "on" : ""}" type="button" data-online-kind="${escapeHtml(k)}">${escapeHtml(label)}</button>`;
-        const tabsHtml = `<div class="onlineTabs">
-          ${tab("normal", t("onlineModeNormal"))}
-          ${tab("custom", t("onlineModeCustom"))}
-          ${tab("props", t("onlineModeProps"))}
+        const groupTab = (size, label) =>
+          `<button class="onlineTab ${size === groupSize ? "on" : ""}" type="button" data-online-group="${size}">${escapeHtml(label)}</button>`;
+        const groupTabsHtml = `<div class="onlineTabs">
+          ${groupTab(2, "2 لاعبين")}
+          ${groupTab(4, "4 لاعبين")}
         </div>`;
+        const tabsHtml =
+          groupSize === 4
+            ? `<div class="onlineTabs">${tab("normal", t("onlineModeNormal"))}</div>`
+            : `<div class="onlineTabs">
+                ${tab("normal", t("onlineModeNormal"))}
+                ${tab("custom", t("onlineModeCustom"))}
+                ${tab("props", t("onlineModeProps"))}
+              </div>`;
 
         const card = (mode) => {
           const cfg = onlineCfg(mode);
@@ -9435,6 +9733,7 @@
         };
 
         el.onlineContent.innerHTML = `<div class="onlineWrap">
+          ${groupTabsHtml}
           ${tabsHtml}
           <div class="tiny">${escapeHtml(kind === "custom" ? t("onlineSelectHintCustom") : kind === "props" ? t("onlineSelectHintProps") : t("onlineSelectHintNormal"))}</div>
           <div class="onlinePacks">
@@ -9467,33 +9766,80 @@
         onlineState.codeLen = cfg.codeLen;
         onlineState.searchingStartedAt = Date.now();
         startOnlineCoinsSync();
+        const groupSize = onlineState.groupSize === 4 ? 4 : 2;
         const diff = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
         const kindLabel = kind === "custom" ? t("onlineModeCustom") : kind === "props" ? t("onlineModeProps") : t("onlineModeNormal");
 
-        el.onlineContent.innerHTML = `<div class="onlineWrap">
-          <div class="tiny">${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(cfg.codeLen))} ارقام</div>
-          <div id="onlineFoundCountdown" class="onlineFoundCountdown" style="display:none"></div>
-          <div class="onlineMatchRow">
-            <div class="onlinePlayerCard">
-              <div id="onlineSearchMeAvatar" class="onlineAvatar">P</div>
-              <div class="onlineMeta">
-                <div class="onlineName">${escapeHtml((me && me.firstName) || "لاعب")}</div>
-                <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
-              </div>
-            </div>
-            <div class="onlineVs">VS</div>
-            <div class="onlinePlayerCard">
-              <div id="onlineSearchOppAvatar" class="onlineAvatar">?</div>
-              <div class="onlineMeta">
-                <div id="onlineSearchOppName" class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}<span id="onlineSearchDots"></span></div>
-              </div>
-            </div>
-          </div>
-          <div class="onlineBar"><span id="onlineSearchBar"></span></div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
-            <button id="onlineCancelBtn" class="btn" type="button">إلغاء</button>
-          </div>
-        </div>`;
+        el.onlineContent.innerHTML =
+          groupSize === 4
+            ? `<div class="onlineWrap">
+                <div class="tiny">${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(cfg.codeLen))} ارقام</div>
+                <div id="onlineFoundCountdown" class="onlineFoundCountdown" style="display:none"></div>
+                <div class="onlineGroupHud">
+                  <div class="onlineGroupSeat top">
+                    <div class="onlineAvatar">?</div>
+                    <div class="onlineMeta">
+                      <div class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}</div>
+                      <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupSeat right">
+                    <div class="onlineAvatar">?</div>
+                    <div class="onlineMeta">
+                      <div class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}</div>
+                      <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupSeat left">
+                    <div class="onlineAvatar">?</div>
+                    <div class="onlineMeta">
+                      <div class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}</div>
+                      <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupSeat bottom">
+                    <div id="onlineSearchMeAvatar" class="onlineAvatar">P</div>
+                    <div class="onlineMeta">
+                      <div class="onlineName">${escapeHtml((me && me.firstName) || "لاعب")}</div>
+                      <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
+                    </div>
+                  </div>
+                  <div class="onlineGroupCenter">
+                    <div class="onlineGroupBox"></div>
+                    <div class="onlineGroupBox"></div>
+                    <div class="onlineGroupBox"></div>
+                    <div class="onlineGroupBox"></div>
+                  </div>
+                </div>
+                <div class="onlineBar"><span id="onlineSearchBar"></span></div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
+                  <button id="onlineCancelBtn" class="btn" type="button">إلغاء</button>
+                </div>
+              </div>`
+            : `<div class="onlineWrap">
+                <div class="tiny">${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(cfg.codeLen))} ارقام</div>
+                <div id="onlineFoundCountdown" class="onlineFoundCountdown" style="display:none"></div>
+                <div class="onlineMatchRow">
+                  <div class="onlinePlayerCard">
+                    <div id="onlineSearchMeAvatar" class="onlineAvatar">P</div>
+                    <div class="onlineMeta">
+                      <div class="onlineName">${escapeHtml((me && me.firstName) || "لاعب")}</div>
+                      <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
+                    </div>
+                  </div>
+                  <div class="onlineVs">VS</div>
+                  <div class="onlinePlayerCard">
+                    <div id="onlineSearchOppAvatar" class="onlineAvatar">?</div>
+                    <div class="onlineMeta">
+                      <div id="onlineSearchOppName" class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}<span id="onlineSearchDots"></span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="onlineBar"><span id="onlineSearchBar"></span></div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
+                  <button id="onlineCancelBtn" class="btn" type="button">إلغاء</button>
+                </div>
+              </div>`;
 
         const meAv = document.getElementById("onlineSearchMeAvatar");
         const oppAv = document.getElementById("onlineSearchOppAvatar");
@@ -9860,11 +10206,13 @@
             try {
               const mePromise = ensureMeLoaded();
               onlineState.selectKind = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
+              const groupSize = onlineState.groupSize === 4 ? 4 : 2;
+              if (groupSize === 4) onlineState.selectKind = "normal";
               renderOnlineSearching(mode, friendsState.me || null, onlineState.selectKind);
               const r = await friendsJson("/api/online/queue/join", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mode, kind: onlineState.selectKind }),
+                body: JSON.stringify({ mode, kind: onlineState.selectKind, groupSize }),
               });
               const me = await mePromise;
               if (!r.ok) {
@@ -9884,6 +10232,7 @@
               }
               if (!r.data) return;
               if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
+              if (typeof r.data.groupSize === "number") onlineState.groupSize = r.data.groupSize === 4 ? 4 : 2;
               if (r.data.status === "matched" && r.data.matchId) {
                 stopOnlineQueuePolling();
                 await onlinePreEnterMatch(
@@ -9893,7 +10242,8 @@
                   r.data.codeLen,
                   me,
                   r.data.opponent || null,
-                  r.data.kind || onlineState.selectKind
+                  r.data.kind || onlineState.selectKind,
+                  r.data.groupSize === 4 ? 4 : onlineState.groupSize
                 );
                 return;
               }
@@ -9906,9 +10256,19 @@
                   try {
                     const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
                     if (!s.ok || !s.data) return;
+                    if (typeof s.data.groupSize === "number") onlineState.groupSize = s.data.groupSize === 4 ? 4 : 2;
                     if (s.data.status === "matched" && s.data.matchId) {
                       stopOnlineQueuePolling();
-                      await onlinePreEnterMatch(s.data.matchId, s.data.mode, s.data.fee, s.data.codeLen, me, null, s.data.kind || onlineState.selectKind);
+                      await onlinePreEnterMatch(
+                        s.data.matchId,
+                        s.data.mode,
+                        s.data.fee,
+                        s.data.codeLen,
+                        me,
+                        null,
+                        s.data.kind || onlineState.selectKind,
+                        s.data.groupSize === 4 ? 4 : onlineState.groupSize
+                      );
                     }
                     if (s.data.status === "cancelled") {
                       stopOnlineQueuePolling();
@@ -9931,11 +10291,12 @@
         );
       }
 
-      async function startOnlineMatch(matchId, mode, fee, codeLen, me, opponentFromJoin, kind) {
+      async function startOnlineMatch(matchId, mode, fee, codeLen, me, opponentFromJoin, kind, groupSize) {
         onlineState.matchId = matchId;
         onlineState.mode = mode;
         onlineState.fee = fee;
         onlineState.codeLen = codeLen;
+        onlineState.groupSize = groupSize === 4 ? 4 : onlineState.groupSize === 4 ? 4 : 2;
         onlineState.lastMaskedAt = 0;
         onlineState.forfeitSent = false;
         onlineState.stateFetchBusy = false;
@@ -9951,6 +10312,7 @@
         onlineState.customFocused = false;
         onlineState.oppFlashKey = "";
         onlineState.endAnimKey = "";
+        onlineState.groupPlayers = [];
         onlineState.propsPendingPickUntil = 0;
         onlineState.propsPendingPickIndex = -1;
         onlineState.propsMyCard = "";
@@ -10031,6 +10393,10 @@
               el.msg.textContent = "ليس دورك.";
               return;
             }
+            if (code === "already_finished") {
+              el.msg.textContent = "خلصت دورك.";
+              return;
+            }
             el.msg.textContent = "تعذر إرسال المحاولة.";
             return;
           }
@@ -10047,6 +10413,11 @@
               slot.classList.remove("ok", "bad", "warn");
               if (result[i] !== "mask") slot.classList.add(result[i]);
             }
+          }
+          if (typeof r.data.rank === "number") {
+            const rank = r.data.rank;
+            const label = rank === 1 ? "فزت أول" : rank === 2 ? "فزت ثاني" : rank === 3 ? "فزت ثالث" : "خسرت";
+            enqueueToast({ title: "النتيجة", body: label, autoMs: 2200 });
           }
           if (r.data && r.data.doubleOrNothing) {
             enqueueToast({ title: "Double or nothing", body: "استمر اللعب! الجولة مستمرة.", autoMs: 2400 });
@@ -10139,6 +10510,13 @@
       el.startBtn.addEventListener("click", () => goMap());
       if (el.onlineContent) {
         el.onlineContent.addEventListener("click", (e) => {
+          const groupBtn = e && e.target && e.target.closest ? e.target.closest("button[data-online-group]") : null;
+          if (groupBtn) {
+            const g = String(groupBtn.dataset.onlineGroup || "").trim();
+            onlineState.groupSize = g === "4" ? 4 : 2;
+            renderOnlineSelect();
+            return;
+          }
           const tabBtn = e && e.target && e.target.closest ? e.target.closest("button[data-online-kind]") : null;
           if (tabBtn && !tabBtn.dataset.onlineMode) {
             const k = String(tabBtn.dataset.onlineKind || "").trim();

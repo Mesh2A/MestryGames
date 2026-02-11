@@ -11,9 +11,10 @@ const SEARCH_TIMEOUT_MS = 45_000;
 
 function parseQueueMode(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
-  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
-  if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const };
-  return { mode: m, kind: "normal" as const };
+  if (m.endsWith("_g4")) return { mode: m.slice(0, -"_g4".length), kind: "normal" as const, groupSize: 4 as const };
+  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const, groupSize: 2 as const };
+  if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const, groupSize: 2 as const };
+  return { mode: m, kind: "normal" as const, groupSize: 2 as const };
 }
 
 function randomId(prefix: string) {
@@ -75,6 +76,7 @@ export async function GET(req: NextRequest) {
             matchId: row.matchId,
             mode: parsed.mode,
             kind: parsed.kind,
+            groupSize: parsed.groupSize,
             fee: row.fee,
             codeLen: row.codeLen,
           };
@@ -100,6 +102,7 @@ export async function GET(req: NextRequest) {
           matchId: null,
           mode: parsed.mode,
           kind: parsed.kind,
+          groupSize: parsed.groupSize,
           fee: row.fee,
           codeLen: row.codeLen,
           refunded: true as const,
@@ -130,58 +133,81 @@ export async function GET(req: NextRequest) {
         if (!locked || locked.email !== email) return { ok: false as const };
         if (locked.status !== "waiting") {
           const parsed = parseQueueMode(locked.mode);
-          return { ok: true as const, status: locked.status, matchId: locked.matchId, mode: parsed.mode, kind: parsed.kind, fee: locked.fee, codeLen: locked.codeLen };
+          return {
+            ok: true as const,
+            status: locked.status,
+            matchId: locked.matchId,
+            mode: parsed.mode,
+            kind: parsed.kind,
+            groupSize: parsed.groupSize,
+            fee: locked.fee,
+            codeLen: locked.codeLen,
+          };
         }
 
+        const parsed = parseQueueMode(locked.mode);
         const opponent = await tx.$queryRaw<{ id: string; email: string; fee: number; codeLen: number }[]>`
           SELECT "id", "email", "fee", "codeLen"
           FROM "OnlineQueue"
           WHERE "mode" = ${locked.mode} AND "status" = 'waiting' AND "email" <> ${email}
           ORDER BY "createdAt" ASC
-          LIMIT 1
+          LIMIT ${parsed.groupSize === 4 ? 3 : 1}
           FOR UPDATE SKIP LOCKED
         `;
-        if (!opponent.length) return { ok: false as const };
+        if (opponent.length < (parsed.groupSize === 4 ? 3 : 1)) return { ok: false as const };
 
         const opp = opponent[0];
+        const opp2 = parsed.groupSize === 4 ? opponent[1] : null;
+        const opp3 = parsed.groupSize === 4 ? opponent[2] : null;
         const matchId = randomId("m");
-        const parsed = parseQueueMode(locked.mode);
         const codeLen = Math.max(3, Math.min(6, Math.floor(locked.codeLen || 0)));
         const answer = parsed.kind === "custom" ? "" : generateAnswer(codeLen);
-        const aStarts = (randomBytes(1)[0] & 1) === 1;
-        const aEmail = aStarts ? email : opp.email;
-        const bEmail = aStarts ? opp.email : email;
-        const turnEmail = aStarts ? email : opp.email;
-        const turnStartedAt = parsed.kind === "custom" ? nowMs() : 0;
+        const seats = parsed.groupSize === 4 ? [opp.email, opp2?.email || "", opp3?.email || "", email] : [opp.email, email];
+        const aEmail = seats[0];
+        const bEmail = seats[1];
+        const cEmail = parsed.groupSize === 4 ? seats[2] : null;
+        const dEmail = parsed.groupSize === 4 ? seats[3] : null;
+        const turnEmail = aEmail;
+        const turnStartedAt = parsed.groupSize === 4 ? nowMs() : parsed.kind === "custom" ? nowMs() : 0;
 
         const initialState =
-          parsed.kind === "custom"
-            ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
-            : parsed.kind === "props"
-              ? {
-                  kind: "props",
-                  phase: "cards",
-                  deck: generatePropsDeck(),
-                  pick: { a: null, b: null },
-                  used: { a: false, b: false },
-                  effects: { skipBy: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
-                  round: 1,
-                  a: [],
-                  b: [],
-                  lastMasked: null,
-                }
-              : { kind: "normal", phase: "waiting", a: [], b: [], lastMasked: null };
+          parsed.groupSize === 4
+            ? { kind: "group4", phase: "play", a: [], b: [], c: [], d: [], winners: [], forfeits: [], lastMasked: null }
+            : parsed.kind === "custom"
+              ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
+              : parsed.kind === "props"
+                ? {
+                    kind: "props",
+                    phase: "cards",
+                    deck: generatePropsDeck(),
+                    pick: { a: null, b: null },
+                    used: { a: false, b: false },
+                    effects: { skipBy: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
+                    round: 1,
+                    a: [],
+                    b: [],
+                    lastMasked: null,
+                  }
+                : { kind: "normal", phase: "waiting", a: [], b: [], lastMasked: null };
 
         await tx.$executeRaw`
-          INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")
-          VALUES (${matchId}, ${parsed.mode}, ${locked.fee}, ${codeLen}, ${aEmail}, ${bEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify(initialState)}::jsonb, NOW(), NOW())
+          INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "cEmail", "dEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")
+          VALUES (${matchId}, ${parsed.mode}, ${locked.fee}, ${codeLen}, ${aEmail}, ${bEmail}, ${cEmail}, ${dEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify(initialState)}::jsonb, NOW(), NOW())
         `;
 
-        await tx.$executeRaw`
-          UPDATE "OnlineQueue"
-          SET "status" = 'matched', "matchId" = ${matchId}, "updatedAt" = NOW()
-          WHERE "id" IN (${locked.id}, ${opp.id})
-        `;
+        if (parsed.groupSize === 4 && opp2 && opp3) {
+          await tx.$executeRaw`
+            UPDATE "OnlineQueue"
+            SET "status" = 'matched', "matchId" = ${matchId}, "updatedAt" = NOW()
+            WHERE "id" = ${locked.id} OR "id" = ${opp.id} OR "id" = ${opp2.id} OR "id" = ${opp3.id}
+          `;
+        } else {
+          await tx.$executeRaw`
+            UPDATE "OnlineQueue"
+            SET "status" = 'matched', "matchId" = ${matchId}, "updatedAt" = NOW()
+            WHERE "id" IN (${locked.id}, ${opp.id})
+          `;
+        }
 
         return {
           ok: true as const,
@@ -189,6 +215,7 @@ export async function GET(req: NextRequest) {
           matchId,
           mode: parsed.mode,
           kind: parsed.kind,
+          groupSize: parsed.groupSize,
           fee: locked.fee,
           codeLen,
         };
@@ -207,7 +234,16 @@ export async function GET(req: NextRequest) {
           if (!locked || locked.email !== email) return { ok: false as const };
           if (locked.status !== "waiting") {
             const parsed = parseQueueMode(locked.mode);
-            return { ok: true as const, status: locked.status, matchId: locked.matchId, mode: parsed.mode, kind: parsed.kind, fee: locked.fee, codeLen: locked.codeLen };
+            return {
+              ok: true as const,
+              status: locked.status,
+              matchId: locked.matchId,
+              mode: parsed.mode,
+              kind: parsed.kind,
+              groupSize: parsed.groupSize,
+              fee: locked.fee,
+              codeLen: locked.codeLen,
+            };
           }
 
           await tx.$executeRaw`UPDATE "OnlineQueue" SET "status" = 'cancelled', "updatedAt" = NOW() WHERE "id" = ${id}`;
@@ -228,6 +264,7 @@ export async function GET(req: NextRequest) {
             matchId: null,
             mode: parsed.mode,
             kind: parsed.kind,
+            groupSize: parsed.groupSize,
             fee: locked.fee,
             codeLen: locked.codeLen,
             refunded: true as const,
@@ -242,7 +279,7 @@ export async function GET(req: NextRequest) {
 
     const parsed = parseQueueMode(row.mode);
     return NextResponse.json(
-      { status: row.status, matchId: row.matchId, mode: parsed.mode, kind: parsed.kind, fee: row.fee, codeLen: row.codeLen },
+      { status: row.status, matchId: row.matchId, mode: parsed.mode, kind: parsed.kind, groupSize: parsed.groupSize, fee: row.fee, codeLen: row.codeLen },
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );
   } catch {

@@ -15,12 +15,14 @@ function normalizePresenceState(state: unknown) {
   const presence = safeObj(base.presence);
   const a = safeObj(presence.a);
   const b = safeObj(presence.b);
+  const c = safeObj(presence.c);
+  const d = safeObj(presence.d);
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0);
   const normSide = (side: Record<string, unknown>) => ({
     lastSeenAt: num(side.lastSeenAt),
     disconnectedAt: num(side.disconnectedAt),
   });
-  return { base, presence: { a: normSide(a), b: normSide(b) } };
+  return { base, presence: { a: normSide(a), b: normSide(b), c: normSide(c), d: normSide(d) } };
 }
 
 export async function POST(req: NextRequest) {
@@ -51,8 +53,8 @@ export async function POST(req: NextRequest) {
   try {
     const out = await prisma.$transaction(async (tx) => {
       await ensureGameProfile(email);
-      const rows = await tx.$queryRaw<{ id: string; aEmail: string; bEmail: string; endedAt: Date | null; state: unknown }[]>`
-        SELECT "id","aEmail","bEmail","endedAt","state"
+      const rows = await tx.$queryRaw<{ id: string; aEmail: string; bEmail: string; cEmail: string | null; dEmail: string | null; endedAt: Date | null; state: unknown }[]>`
+        SELECT "id","aEmail","bEmail","cEmail","dEmail","endedAt","state"
         FROM "OnlineMatch"
         WHERE "id" = ${matchId}
         LIMIT 1
@@ -60,16 +62,20 @@ export async function POST(req: NextRequest) {
       `;
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
-      if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
+      if (m.aEmail !== email && m.bEmail !== email && m.cEmail !== email && m.dEmail !== email) return { ok: false as const, error: "forbidden" as const };
       if (m.endedAt) return { ok: true as const, ended: true as const };
 
       const now = Date.now();
-      const role = m.aEmail === email ? ("a" as const) : ("b" as const);
+      const role = m.aEmail === email ? ("a" as const) : m.bEmail === email ? ("b" as const) : m.cEmail === email ? ("c" as const) : ("d" as const);
       const { base, presence } = normalizePresenceState(m.state);
       const nextPresence =
         role === "a"
           ? { ...presence, a: { ...presence.a, disconnectedAt: now } }
-          : { ...presence, b: { ...presence.b, disconnectedAt: now } };
+          : role === "b"
+            ? { ...presence, b: { ...presence.b, disconnectedAt: now } }
+            : role === "c"
+              ? { ...presence, c: { ...presence.c, disconnectedAt: now } }
+              : { ...presence, d: { ...presence.d, disconnectedAt: now } };
       const nextState = { ...base, presence: nextPresence };
       await tx.$executeRaw`
         UPDATE "OnlineMatch"

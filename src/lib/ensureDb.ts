@@ -47,6 +47,8 @@ export async function ensureDbReady() {
               "codeLen" INTEGER NOT NULL,
               "aEmail" TEXT NOT NULL,
               "bEmail" TEXT NOT NULL,
+              "cEmail" TEXT,
+              "dEmail" TEXT,
               "answer" TEXT NOT NULL,
               "turnEmail" TEXT NOT NULL,
               "turnStartedAt" BIGINT NOT NULL,
@@ -65,6 +67,8 @@ export async function ensureDbReady() {
             CREATE INDEX IF NOT EXISTS "OnlineMatch_bEmail_createdAt_idx"
             ON "OnlineMatch"("bEmail", "createdAt")
           `);
+          await prisma.$executeRawUnsafe('ALTER TABLE "OnlineMatch" ADD COLUMN IF NOT EXISTS "cEmail" TEXT');
+          await prisma.$executeRawUnsafe('ALTER TABLE "OnlineMatch" ADD COLUMN IF NOT EXISTS "dEmail" TEXT');
           await prisma.$executeRawUnsafe(`
             CREATE TABLE IF NOT EXISTS "OnlineRoom" (
               "code" TEXT PRIMARY KEY,

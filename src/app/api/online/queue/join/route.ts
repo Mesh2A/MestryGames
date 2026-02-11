@@ -30,7 +30,8 @@ function normalizeKind(kind: string) {
   return "normal";
 }
 
-function queueModeKey(baseMode: "easy" | "medium" | "hard", kind: "normal" | "custom" | "props") {
+function queueModeKey(baseMode: "easy" | "medium" | "hard", kind: "normal" | "custom" | "props", groupSize: number) {
+  if (groupSize === 4) return `${baseMode}_g4`;
   if (kind === "custom") return `${baseMode}_custom`;
   if (kind === "props") return `${baseMode}_props`;
   return baseMode;
@@ -38,9 +39,10 @@ function queueModeKey(baseMode: "easy" | "medium" | "hard", kind: "normal" | "cu
 
 function parseQueueModeKey(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
-  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const };
-  if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const };
-  return { mode: m, kind: "normal" as const };
+  if (m.endsWith("_g4")) return { mode: m.slice(0, -"_g4".length), kind: "normal" as const, groupSize: 4 as const };
+  if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const, groupSize: 2 as const };
+  if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const, groupSize: 2 as const };
+  return { mode: m, kind: "normal" as const, groupSize: 2 as const };
 }
 
 function configForMode(mode: "easy" | "medium" | "hard") {
@@ -114,12 +116,15 @@ export async function POST(req: NextRequest) {
 
   const modeRaw = body && typeof body === "object" && "mode" in body ? (body as { mode?: unknown }).mode : "";
   const kindRaw = body && typeof body === "object" && "kind" in body ? (body as { kind?: unknown }).kind : "";
+  const groupRaw = body && typeof body === "object" && "groupSize" in body ? (body as { groupSize?: unknown }).groupSize : 2;
   const mode = normalizeMode(typeof modeRaw === "string" ? modeRaw : "");
   if (!mode) return NextResponse.json({ error: "bad_mode" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   const kind = normalizeKind(typeof kindRaw === "string" ? kindRaw : "") as "normal" | "custom" | "props";
+  const groupSize = groupRaw === 4 || groupRaw === "4" ? 4 : 2;
+  const effectiveKind = groupSize === 4 ? ("normal" as const) : kind;
 
   const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard");
-  const modeKey = queueModeKey(mode as "easy" | "medium" | "hard", kind);
+  const modeKey = queueModeKey(mode as "easy" | "medium" | "hard", effectiveKind, groupSize);
 
   try {
     const out = await prisma.$transaction(async (tx) => {
@@ -128,7 +133,7 @@ export async function POST(req: NextRequest) {
       const activeMatch = await tx.$queryRaw<{ id: string }[]>`
         SELECT "id"
         FROM "OnlineMatch"
-        WHERE ("aEmail" = ${email} OR "bEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
+        WHERE ("aEmail" = ${email} OR "bEmail" = ${email} OR "cEmail" = ${email} OR "dEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
         ORDER BY "createdAt" DESC
         LIMIT 1
       `;
@@ -152,7 +157,16 @@ export async function POST(req: NextRequest) {
         const stateObj = profileRow?.state && typeof profileRow.state === "object" ? (profileRow.state as Record<string, unknown>) : {};
         const coins = readCoinsFromState(stateObj);
         const parsed = parseQueueModeKey(row.mode);
-        return { status: "waiting" as const, queueId: row.id, fee: row.fee, codeLen: row.codeLen, mode: parsed.mode, kind: parsed.kind, coins };
+        return {
+          status: "waiting" as const,
+          queueId: row.id,
+          fee: row.fee,
+          codeLen: row.codeLen,
+          mode: parsed.mode,
+          kind: parsed.kind,
+          groupSize: parsed.groupSize,
+          coins,
+        };
       }
 
       const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
@@ -171,38 +185,52 @@ export async function POST(req: NextRequest) {
         FROM "OnlineQueue"
         WHERE "mode" = ${modeKey} AND "status" = 'waiting' AND "email" <> ${email}
         ORDER BY "createdAt" ASC
-        LIMIT 1
+        LIMIT ${groupSize === 4 ? 3 : 1}
         FOR UPDATE SKIP LOCKED
       `;
 
-      if (!opponent.length) {
+      if (opponent.length < (groupSize === 4 ? 3 : 1)) {
         const queueId = randomId("q");
         await tx.$executeRaw`
           INSERT INTO "OnlineQueue" ("id", "email", "mode", "fee", "codeLen", "status", "createdAt", "updatedAt")
           VALUES (${queueId}, ${email}, ${modeKey}, ${fee}, ${codeLen}, 'waiting', NOW(), NOW())
         `;
-        return { status: "waiting" as const, queueId, fee, codeLen, mode, kind, coins: nextCoins };
+        return { status: "waiting" as const, queueId, fee, codeLen, mode, kind: effectiveKind, groupSize, coins: nextCoins };
       }
 
       const opp = opponent[0];
+      const opp2 = groupSize === 4 ? opponent[1] : null;
+      const opp3 = groupSize === 4 ? opponent[2] : null;
       const matchId = randomId("m");
-      const answer = kind === "custom" ? "" : generateAnswer(codeLen);
-      const aStarts = (randomBytes(1)[0] & 1) === 1;
-      const aEmail = aStarts ? email : opp.email;
-      const bEmail = aStarts ? opp.email : email;
-      const turnEmail = aStarts ? email : opp.email;
-      const turnStartedAt = kind === "custom" ? nowMs() : 0;
+      const answer = effectiveKind === "custom" ? "" : generateAnswer(codeLen);
+      const seats = groupSize === 4 ? [opp.email, opp2?.email || "", opp3?.email || "", email] : [opp.email, email];
+      const aEmail = seats[0];
+      const bEmail = seats[1];
+      const cEmail = groupSize === 4 ? seats[2] : null;
+      const dEmail = groupSize === 4 ? seats[3] : null;
+      const turnEmail = aEmail;
+      const turnStartedAt = groupSize === 4 ? nowMs() : effectiveKind === "custom" ? nowMs() : 0;
 
-      await tx.$executeRaw`
-        UPDATE "OnlineQueue"
-        SET "status" = 'matched', "matchId" = ${matchId}, "updatedAt" = NOW()
-        WHERE "id" = ${opp.id}
-      `;
+      if (groupSize === 4 && opp2 && opp3) {
+        await tx.$executeRaw`
+          UPDATE "OnlineQueue"
+          SET "status" = 'matched', "matchId" = ${matchId}, "updatedAt" = NOW()
+          WHERE "id" = ${opp.id} OR "id" = ${opp2.id} OR "id" = ${opp3.id}
+        `;
+      } else {
+        await tx.$executeRaw`
+          UPDATE "OnlineQueue"
+          SET "status" = 'matched', "matchId" = ${matchId}, "updatedAt" = NOW()
+          WHERE "id" = ${opp.id}
+        `;
+      }
 
       const initialState =
-        kind === "custom"
+        groupSize === 4
+          ? { kind: "group4", phase: "play", a: [], b: [], c: [], d: [], winners: [], forfeits: [], lastMasked: null }
+          : effectiveKind === "custom"
           ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
-          : kind === "props"
+          : effectiveKind === "props"
             ? {
                 kind: "props",
                 phase: "cards",
@@ -218,8 +246,8 @@ export async function POST(req: NextRequest) {
             : { kind: "normal", phase: "waiting", a: [], b: [], lastMasked: null };
 
       await tx.$executeRaw`
-        INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")
-        VALUES (${matchId}, ${mode}, ${fee}, ${codeLen}, ${aEmail}, ${bEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify(initialState)}::jsonb, NOW(), NOW())
+        INSERT INTO "OnlineMatch" ("id", "mode", "fee", "codeLen", "aEmail", "bEmail", "cEmail", "dEmail", "answer", "turnEmail", "turnStartedAt", "state", "createdAt", "updatedAt")
+        VALUES (${matchId}, ${mode}, ${fee}, ${codeLen}, ${aEmail}, ${bEmail}, ${cEmail}, ${dEmail}, ${answer}, ${turnEmail}, ${turnStartedAt}, ${JSON.stringify(initialState)}::jsonb, NOW(), NOW())
       `;
 
       const myQueueId = randomId("q");
@@ -235,7 +263,8 @@ export async function POST(req: NextRequest) {
         fee,
         codeLen,
         mode,
-        kind,
+        kind: effectiveKind,
+        groupSize,
         coins: nextCoins,
         opponent: oppProfile
           ? {
