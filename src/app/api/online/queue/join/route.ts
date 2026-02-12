@@ -31,6 +31,7 @@ function normalizeKind(kind: string) {
 }
 
 function queueModeKey(baseMode: "easy" | "medium" | "hard", kind: "normal" | "custom" | "props", groupSize: number) {
+  if (groupSize === 4 && kind === "props") return `${baseMode}_g4_props`;
   if (groupSize === 4) return `${baseMode}_g4`;
   if (kind === "custom") return `${baseMode}_custom`;
   if (kind === "props") return `${baseMode}_props`;
@@ -39,16 +40,23 @@ function queueModeKey(baseMode: "easy" | "medium" | "hard", kind: "normal" | "cu
 
 function parseQueueModeKey(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
+  if (m.endsWith("_g4_props")) return { mode: m.slice(0, -"_g4_props".length), kind: "props" as const, groupSize: 4 as const };
   if (m.endsWith("_g4")) return { mode: m.slice(0, -"_g4".length), kind: "normal" as const, groupSize: 4 as const };
   if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const, groupSize: 2 as const };
   if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const, groupSize: 2 as const };
   return { mode: m, kind: "normal" as const, groupSize: 2 as const };
 }
 
-function configForMode(mode: "easy" | "medium" | "hard") {
-  if (mode === "easy") return { fee: 29, codeLen: 3 };
-  if (mode === "medium") return { fee: 45, codeLen: 4 };
-  return { fee: 89, codeLen: 5 };
+function configForMode(mode: "easy" | "medium" | "hard", kind: "normal" | "custom" | "props", groupSize: number) {
+  const base = mode === "easy" ? { fee: 29, codeLen: 3 } : mode === "medium" ? { fee: 45, codeLen: 4 } : { fee: 89, codeLen: 5 };
+  const k = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
+  const g = groupSize === 4 ? 4 : 2;
+  let fee = base.fee;
+  if (g !== 4) {
+    if (k === "custom") fee += 6;
+    else if (k === "props") fee += 12;
+  }
+  return { fee, codeLen: base.codeLen };
 }
 
 function readDisplayNameFromState(state: unknown) {
@@ -121,9 +129,9 @@ export async function POST(req: NextRequest) {
   if (!mode) return NextResponse.json({ error: "bad_mode" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   const kind = normalizeKind(typeof kindRaw === "string" ? kindRaw : "") as "normal" | "custom" | "props";
   const groupSize = groupRaw === 4 || groupRaw === "4" ? 4 : 2;
-  const effectiveKind = groupSize === 4 ? ("normal" as const) : kind;
+  const effectiveKind = groupSize === 4 ? (kind === "props" ? ("props" as const) : ("normal" as const)) : kind;
 
-  const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard");
+  const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard", effectiveKind, groupSize);
   const modeKey = queueModeKey(mode as "easy" | "medium" | "hard", effectiveKind, groupSize);
 
   try {
@@ -209,7 +217,8 @@ export async function POST(req: NextRequest) {
       const cEmail = groupSize === 4 ? seats[2] : null;
       const dEmail = groupSize === 4 ? seats[3] : null;
       const turnEmail = aEmail;
-      const turnStartedAt = groupSize === 4 ? nowMs() : effectiveKind === "custom" ? nowMs() : 0;
+      const turnStartedAt =
+        effectiveKind === "custom" ? nowMs() : effectiveKind === "props" && groupSize === 4 ? 0 : groupSize === 4 ? nowMs() : 0;
 
       if (groupSize === 4 && opp2 && opp3) {
         await tx.$executeRaw`
@@ -227,7 +236,25 @@ export async function POST(req: NextRequest) {
 
       const initialState =
         groupSize === 4
-          ? { kind: "group4", phase: "play", a: [], b: [], c: [], d: [], winners: [], forfeits: [], lastMasked: null }
+          ? effectiveKind === "props"
+            ? {
+                kind: "group4",
+                propsMode: true,
+                phase: "cards",
+                deck: generatePropsDeck(),
+                pick: { a: null, b: null, c: null, d: null },
+                used: { a: false, b: false, c: false, d: false },
+                effects: { skipTarget: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
+                round: 1,
+                a: [],
+                b: [],
+                c: [],
+                d: [],
+                winners: [],
+                forfeits: [],
+                lastMasked: null,
+              }
+            : { kind: "group4", phase: "play", a: [], b: [], c: [], d: [], winners: [], forfeits: [], lastMasked: null }
           : effectiveKind === "custom"
           ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
           : effectiveKind === "props"
@@ -237,7 +264,7 @@ export async function POST(req: NextRequest) {
                 deck: generatePropsDeck(),
                 pick: { a: null, b: null },
                 used: { a: false, b: false },
-                effects: { skipBy: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
+                effects: { skipTarget: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
                 round: 1,
                 a: [],
                 b: [],

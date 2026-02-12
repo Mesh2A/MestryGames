@@ -11,6 +11,7 @@ const SEARCH_TIMEOUT_MS = 45_000;
 
 function parseQueueMode(mode: string) {
   const m = String(mode || "").trim().toLowerCase();
+  if (m.endsWith("_g4_props")) return { mode: m.slice(0, -"_g4_props".length), kind: "props" as const, groupSize: 4 as const };
   if (m.endsWith("_g4")) return { mode: m.slice(0, -"_g4".length), kind: "normal" as const, groupSize: 4 as const };
   if (m.endsWith("_custom")) return { mode: m.slice(0, -"_custom".length), kind: "custom" as const, groupSize: 2 as const };
   if (m.endsWith("_props")) return { mode: m.slice(0, -"_props".length), kind: "props" as const, groupSize: 2 as const };
@@ -168,11 +169,29 @@ export async function GET(req: NextRequest) {
         const cEmail = parsed.groupSize === 4 ? seats[2] : null;
         const dEmail = parsed.groupSize === 4 ? seats[3] : null;
         const turnEmail = aEmail;
-        const turnStartedAt = parsed.groupSize === 4 ? nowMs() : parsed.kind === "custom" ? nowMs() : 0;
+        const turnStartedAt = parsed.kind === "custom" ? nowMs() : parsed.kind === "props" && parsed.groupSize === 4 ? 0 : parsed.groupSize === 4 ? nowMs() : 0;
 
         const initialState =
           parsed.groupSize === 4
-            ? { kind: "group4", phase: "play", a: [], b: [], c: [], d: [], winners: [], forfeits: [], lastMasked: null }
+            ? parsed.kind === "props"
+              ? {
+                  kind: "group4",
+                  propsMode: true,
+                  phase: "cards",
+                  deck: generatePropsDeck(),
+                  pick: { a: null, b: null, c: null, d: null },
+                  used: { a: false, b: false, c: false, d: false },
+                  effects: { skipTarget: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
+                  round: 1,
+                  a: [],
+                  b: [],
+                  c: [],
+                  d: [],
+                  winners: [],
+                  forfeits: [],
+                  lastMasked: null,
+                }
+              : { kind: "group4", phase: "play", a: [], b: [], c: [], d: [], winners: [], forfeits: [], lastMasked: null }
             : parsed.kind === "custom"
               ? { kind: "custom", phase: "setup", secrets: { a: null, b: null }, ready: { a: false, b: false }, a: [], b: [], lastMasked: null }
               : parsed.kind === "props"
@@ -182,7 +201,7 @@ export async function GET(req: NextRequest) {
                     deck: generatePropsDeck(),
                     pick: { a: null, b: null },
                     used: { a: false, b: false },
-                    effects: { skipBy: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
+                    effects: { skipTarget: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
                     round: 1,
                     a: [],
                     b: [],

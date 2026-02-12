@@ -14,10 +14,12 @@ function normalizeMode(mode: string) {
   return "";
 }
 
-function configForMode(mode: "easy" | "medium" | "hard") {
-  if (mode === "easy") return { fee: 29, codeLen: 3 };
-  if (mode === "medium") return { fee: 45, codeLen: 4 };
-  return { fee: 89, codeLen: 5 };
+function configForMode(mode: "easy" | "medium" | "hard", kind: "normal" | "custom" | "props") {
+  const base = mode === "easy" ? { fee: 29, codeLen: 3 } : mode === "medium" ? { fee: 45, codeLen: 4 } : { fee: 89, codeLen: 5 };
+  let fee = base.fee;
+  if (kind === "custom") fee += 6;
+  else if (kind === "props") fee += 12;
+  return { fee, codeLen: base.codeLen };
 }
 
 function normalizeKind(kind: string) {
@@ -72,7 +74,7 @@ export async function POST(req: NextRequest) {
   const kindRaw = body && typeof body === "object" && "kind" in body ? (body as { kind?: unknown }).kind : "";
   const kind = normalizeKind(typeof kindRaw === "string" ? kindRaw : "") as "normal" | "custom" | "props";
 
-  const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard");
+  const { fee, codeLen } = configForMode(mode as "easy" | "medium" | "hard", kind);
 
   try {
     const out = await prisma.$transaction(async (tx) => {

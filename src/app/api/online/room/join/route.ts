@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
                 deck: generatePropsDeck(),
                 pick: { a: null, b: null },
                 used: { a: false, b: false },
-                effects: { skipBy: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
+                effects: { skipTarget: null, reverseFor: null, hideColorsFor: null, doubleAgainst: null },
                 round: 1,
                 a: [],
                 b: [],

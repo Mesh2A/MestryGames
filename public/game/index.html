@@ -2358,7 +2358,7 @@
         display: inline-flex;
         gap: 10px;
         flex-wrap: wrap;
-        justify-content: flex-end;
+        justify-content: center;
         padding: 6px;
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2465,7 +2465,7 @@
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
-        justify-content: flex-end;
+        justify-content: center;
         margin-top: 12px;
       }
       @media (max-width: 680px) {
@@ -3151,14 +3151,14 @@
         box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
       }
       .propsPickCard {
-        width: min(560px, calc(100vw - 24px));
+        width: min(720px, calc(100vw - 24px));
       }
       .propsCardsGrid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
         gap: 12px;
         margin: 12px auto 0;
-        max-width: 540px;
+        max-width: 680px;
       }
       .propsCardBtn {
         border: 0;
@@ -3179,13 +3179,14 @@
         box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
         position: relative;
         transform-style: preserve-3d;
-        transition: transform 220ms ease, border-color 160ms ease;
+        transition: transform 320ms ease, border-color 160ms ease;
       }
       .propsCardBtn:hover .propsCard {
         border-color: rgba(239, 68, 68, 0.4);
       }
       .propsCard.flipped {
         transform: rotateY(180deg);
+        animation: propsFlip 520ms ease;
       }
       .propsFace {
         position: absolute;
@@ -3224,7 +3225,7 @@
         transform: rotateY(180deg);
         text-align: center;
         font-weight: 900;
-        font-size: 12.5px;
+        font-size: 14px;
         line-height: 1.5;
         color: rgba(255, 255, 255, 0.92);
       }
@@ -3239,8 +3240,8 @@
         max-width: 100%;
       }
       .propsLogo {
-        width: 26px;
-        height: 26px;
+        width: 32px;
+        height: 32px;
         border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: rgba(255, 255, 255, 0.08);
@@ -3265,7 +3266,7 @@
       }
       .propsHudCard {
         flex: 1;
-        min-height: 56px;
+        min-height: 70px;
         border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.14);
         background-image: url("cards/cards.png");
@@ -3277,7 +3278,7 @@
         justify-content: center;
         padding: 10px;
         font-weight: 900;
-        font-size: 13px;
+        font-size: 14px;
         text-align: center;
         position: relative;
         overflow: hidden;
@@ -3294,6 +3295,50 @@
       .propsHudCard > * {
         position: relative;
         z-index: 1;
+      }
+      .propsTargetList {
+        display: grid;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .propsTargetBtn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+      }
+      .propsTargetBtn:hover {
+        transform: translateY(-2px);
+        border-color: rgba(239, 68, 68, 0.35);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
+      }
+      .propsTargetMeta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .propsTargetName {
+        font-weight: 900;
+        font-size: 13px;
+      }
+      @keyframes propsFlip {
+        0% {
+          transform: rotateY(0deg) scale(0.98);
+        }
+        60% {
+          transform: rotateY(190deg) scale(1.02);
+        }
+        100% {
+          transform: rotateY(180deg) scale(1);
+        }
       }
       .setupCheck {
         width: 18px;
@@ -5042,6 +5087,17 @@
       </div>
     </div>
 
+    <div id="onlinePropsTargetBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
+      <div class="formMiniCard" role="dialog" aria-modal="true">
+        <div class="formMiniHead">
+          <div class="confirmMiniQ">اختر الخصم</div>
+          <button id="onlinePropsTargetCloseBtn" class="formMiniClose" type="button" aria-label="Close">✕</button>
+        </div>
+        <div id="onlinePropsTargetHint" class="tiny" style="margin-top:8px; opacity:.9">اختر لاعب لتطبيق البطاقة.</div>
+        <div id="onlinePropsTargetList" class="propsTargetList"></div>
+      </div>
+    </div>
+
     <div id="onlineWithdrawBackdrop" class="confirmMiniBackdrop" aria-hidden="true">
       <div class="confirmMiniCard" role="dialog" aria-modal="true">
         <div class="confirmMiniQ">هل تريد الانسحاب؟</div>
@@ -5968,6 +6024,10 @@
         onlinePropsHint: document.getElementById("onlinePropsHint"),
         onlinePropsCards: document.getElementById("onlinePropsCards"),
         onlinePropsStatus: document.getElementById("onlinePropsStatus"),
+        onlinePropsTargetBackdrop: document.getElementById("onlinePropsTargetBackdrop"),
+        onlinePropsTargetCloseBtn: document.getElementById("onlinePropsTargetCloseBtn"),
+        onlinePropsTargetHint: document.getElementById("onlinePropsTargetHint"),
+        onlinePropsTargetList: document.getElementById("onlinePropsTargetList"),
         settingsContent: document.getElementById("settingsContent"),
         missionsContent: document.getElementById("missionsContent"),
         profileDropBackdrop: document.getElementById("profileDropBackdrop"),
@@ -9089,6 +9149,7 @@
         matchId: "",
         roomCode: "",
         selectKind: "normal",
+        matchKind: "",
         meEmail: "",
         meName: "",
         mePhoto: "",
@@ -9132,16 +9193,23 @@
         propsPendingPickIndex: -1,
         propsMyCard: "",
         propsMyUsed: false,
+        propsTargetRole: "",
         actionInFlight: {},
         actionCooldownUntil: {},
       };
 
       const ONLINE_TURN_MS = 30_000;
 
-      function onlineCfg(mode) {
-        if (mode === "easy") return { fee: 29, codeLen: 3 };
-        if (mode === "medium") return { fee: 45, codeLen: 4 };
-        return { fee: 89, codeLen: 5 };
+      function onlineCfg(mode, kind, groupSize) {
+        const base = mode === "easy" ? { fee: 29, codeLen: 3 } : mode === "medium" ? { fee: 45, codeLen: 4 } : { fee: 89, codeLen: 5 };
+        const k = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
+        const g = groupSize === 4 ? 4 : 2;
+        let fee = base.fee;
+        if (g !== 4) {
+          if (k === "custom") fee += 6;
+          else if (k === "props") fee += 12;
+        }
+        return { fee, codeLen: base.codeLen };
       }
 
       function onlineCanRunAction(key) {
@@ -9609,11 +9677,11 @@
 
       function onlineApplyMatchState(m, meEmail, fee) {
         if (!m) return;
-        if (m.kind === "group4") {
+        onlineState.matchKind = typeof m.kind === "string" ? m.kind : "";
+        if (m.groupSize === 4) {
           if (el.onlineGroupHud) el.onlineGroupHud.style.display = "";
           const matchRow = el.onlineMeAvatar && el.onlineMeAvatar.closest ? el.onlineMeAvatar.closest(".onlineMatchRow") : null;
           if (matchRow) matchRow.style.display = "none";
-          if (el.onlinePropsHud) el.onlinePropsHud.style.display = "none";
           if (typeof m.myCoins === "number") setCoinsTotal(m.myCoins, 0, true);
           const players = Array.isArray(m.players) ? m.players : [];
           onlineState.groupPlayers = players;
@@ -9657,20 +9725,26 @@
           }
 
           const turnName = players.find((p) => p && p.role === m.turnRole)?.firstName || "لاعب";
-          if (el.onlineTurnText) el.onlineTurnText.textContent = m.turn === "ended" ? t("onlineTurnEnded") : `دور ${turnName}`;
+          const isProps = m.kind === "props";
+          const isCards = isProps && m.phase === "cards";
+          if (el.onlineTurnText) {
+            el.onlineTurnText.textContent = isCards ? t("onlineTurnCards") : m.turn === "ended" ? t("onlineTurnEnded") : `دور ${turnName}`;
+          }
 
           const timeLeftMs = typeof m.timeLeftMs === "number" ? Math.max(0, Math.floor(m.timeLeftMs)) : 0;
-          onlineState.turnEndAt = m.turn === "ended" ? 0 : Date.now() + timeLeftMs;
+          onlineState.turnEndAt = m.turn === "ended" || isCards ? 0 : Date.now() + timeLeftMs;
           const pct = onlineState.turnEndAt ? Math.min(100, Math.max(0, Math.floor((timeLeftMs / ONLINE_TURN_MS) * 100))) : 0;
           if (el.onlineTurnBar) el.onlineTurnBar.style.width = `${pct}%`;
           if (m.turn === "ended") {
             stopOnlineMatchPolling();
+          } else if (isCards) {
+            startOnlineMatchPolling(meEmail, fee, 300);
           } else {
             startOnlineTurnBarLoop();
             startOnlineMatchPolling(meEmail, fee, 400);
           }
 
-          const locked = m.turn !== "me";
+          const locked = m.turn !== "me" || isCards;
           if (m.turn === "me" && onlineState.lastTurn !== "me") playTurnSound();
           onlineState.lastTurn = m.turn || "";
           if (el.checkBtn) el.checkBtn.disabled = locked || onlineState.busy;
@@ -9680,6 +9754,32 @@
             if (locked) input.value = "";
           }
           setSlotsLocked(locked);
+
+          if (isProps && isCards) {
+            const deck = Array.isArray(m.deck) ? m.deck : [];
+            const picks = m.picks && typeof m.picks === "object" ? m.picks : null;
+            openOnlinePropsModal(deck, typeof m.myPick === "number" ? m.myPick : null, null, picks, m.myRole);
+          } else {
+            closeOnlinePropsModal();
+          }
+
+          if (el.onlinePropsHud) {
+            const myCard = typeof m.myCard === "string" ? String(m.myCard || "") : "";
+            const myUsed = !!m.myUsed;
+            onlineState.propsMyCard = myCard;
+            onlineState.propsMyUsed = myUsed;
+            onlineState.propsTargetRole = typeof m.myRole === "string" ? m.myRole : "";
+            if (isProps && myCard) {
+              el.onlinePropsHud.style.display = "";
+              if (el.onlinePropsCard) el.onlinePropsCard.textContent = propsCardLabel(myCard);
+              if (el.onlinePropsUseBtn) {
+                el.onlinePropsUseBtn.style.display = myUsed ? "none" : "";
+                el.onlinePropsUseBtn.disabled = myUsed || onlineState.busy || m.turn !== "me" || m.phase !== "play";
+              }
+            } else {
+              el.onlinePropsHud.style.display = "none";
+            }
+          }
 
           if (Array.isArray(m.myHistory)) {
             const my = m.myHistory
@@ -9847,7 +9947,13 @@
         }
 
         if (m.kind === "props" && m.phase === "cards") {
-          openOnlinePropsModal(Array.isArray(m.deck) ? m.deck : [], typeof m.myPick === "number" ? m.myPick : null, typeof m.oppPick === "number" ? m.oppPick : null);
+          openOnlinePropsModal(
+            Array.isArray(m.deck) ? m.deck : [],
+            typeof m.myPick === "number" ? m.myPick : null,
+            typeof m.oppPick === "number" ? m.oppPick : null,
+            null,
+            null
+          );
         } else {
           closeOnlinePropsModal();
         }
@@ -9974,7 +10080,7 @@
         }
 
         const groupSize = onlineState.groupSize === 4 ? 4 : 2;
-        if (groupSize === 4) onlineState.selectKind = "normal";
+        if (groupSize === 4 && onlineState.selectKind === "custom") onlineState.selectKind = "normal";
         const kind = onlineState.selectKind === "custom" ? "custom" : onlineState.selectKind === "props" ? "props" : "normal";
         const tab = (k, label) => `<button class="onlineTab ${k === kind ? "on" : ""}" type="button" data-online-kind="${escapeHtml(k)}">${escapeHtml(label)}</button>`;
         const groupTab = (size, label) =>
@@ -9985,7 +10091,10 @@
         </div>`;
         const tabsHtml =
           groupSize === 4
-            ? `<div class="onlineTabs">${tab("normal", t("onlineModeNormal"))}</div>`
+            ? `<div class="onlineTabs">
+                ${tab("normal", t("onlineModeNormal"))}
+                ${tab("props", t("onlineModeProps"))}
+              </div>`
             : `<div class="onlineTabs">
                 ${tab("normal", t("onlineModeNormal"))}
                 ${tab("custom", t("onlineModeCustom"))}
@@ -9993,7 +10102,7 @@
               </div>`;
 
         const card = (mode) => {
-          const cfg = onlineCfg(mode);
+          const cfg = onlineCfg(mode, kind, groupSize);
           const title = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
           const sub = mode === "easy" ? t("onlineDiffEasySub") : mode === "medium" ? t("onlineDiffMediumSub") : t("onlineDiffHardSub");
           return `<button class="onlinePack" type="button" data-online-mode="${escapeHtml(mode)}" data-online-kind="${escapeHtml(kind)}" aria-label="${escapeHtml(title)}">
@@ -10032,7 +10141,7 @@
 
       function renderOnlineSearching(mode, me, kind) {
         if (!el.onlineContent) return;
-        const cfg = onlineCfg(mode);
+        const cfg = onlineCfg(mode, kind, groupSize);
         onlineState.mode = mode;
         onlineState.fee = cfg.fee;
         onlineState.codeLen = cfg.codeLen;
@@ -10185,7 +10294,7 @@
         startOnlineCoinsSync();
 
         const card = (mode, title, sub) => {
-          const cfg = onlineCfg(mode);
+          const cfg = onlineCfg(mode, kind, 2);
           return `<button class="onlinePack" type="button" data-room-create-mode="${escapeHtml(mode)}" aria-label="${escapeHtml(title)}">
             <div class="t">${escapeHtml(title)}</div>
             <div class="sub">${escapeHtml(sub)}</div>
@@ -10248,8 +10357,8 @@
 
             const roomCode = normalizeRoomCode(r.data.code);
             const modeResolved = r.data && typeof r.data.mode === "string" ? String(r.data.mode).trim() : mode;
-            const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(modeResolved).fee;
-            const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(modeResolved).codeLen;
+            const fee = typeof r.data.fee === "number" ? r.data.fee : onlineCfg(modeResolved, kindResolved, 2).fee;
+            const codeLen = typeof r.data.codeLen === "number" ? r.data.codeLen : onlineCfg(modeResolved, kindResolved, 2).codeLen;
             const kindResolved =
               r.data && typeof r.data.kind === "string"
                 ? String(r.data.kind).trim() === "custom"
@@ -10479,7 +10588,7 @@
               const mePromise = ensureMeLoaded();
               onlineState.selectKind = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
               const groupSize = onlineState.groupSize === 4 ? 4 : 2;
-              if (groupSize === 4) onlineState.selectKind = "normal";
+              if (groupSize === 4 && onlineState.selectKind === "custom") onlineState.selectKind = "normal";
               renderOnlineSearching(mode, friendsState.me || null, onlineState.selectKind);
               const r = await friendsJson("/api/online/queue/join", {
                 method: "POST",
@@ -12516,6 +12625,10 @@
           closeOnlineSetupModal();
           return;
         }
+        if (e.key === "Escape" && el.onlinePropsTargetBackdrop && el.onlinePropsTargetBackdrop.classList.contains("show")) {
+          closeOnlinePropsTargetModal();
+          return;
+        }
         if (e.key === "Escape" && el.onlinePropsBackdrop && el.onlinePropsBackdrop.classList.contains("show")) {
           closeOnlinePropsModal();
           return;
@@ -12819,13 +12932,23 @@
         return "—";
       }
 
-      function renderOnlinePropsCards(deck, myPick, oppPick) {
+      function renderOnlinePropsCards(deck, myPick, oppPick, picks, myRole) {
         if (!el.onlinePropsCards) return;
         const now = Date.now();
         const pending = onlineState.matchId && now < (onlineState.propsPendingPickUntil || 0);
-        const revealOpp = oppPick !== null && oppPick !== undefined && oppPick !== "" && myPick !== null && myPick !== undefined && myPick !== "";
-        const myPickN = typeof myPick === "number" ? myPick : myPick === null ? null : null;
+        const picksObj = picks && typeof picks === "object" ? picks : null;
+        const myPickN =
+          typeof myPick === "number"
+            ? myPick
+            : picksObj && myRole && typeof picksObj[myRole] === "number"
+              ? picksObj[myRole]
+              : myPick === null
+                ? null
+                : null;
         const oppPickN = typeof oppPick === "number" ? oppPick : oppPick === null ? null : null;
+        const pickVals = picksObj ? Object.values(picksObj) : [];
+        const allPicked = picksObj ? pickVals.length > 0 && pickVals.every((v) => typeof v === "number") : oppPickN !== null && myPickN !== null;
+        const revealOpp = allPicked;
 
         el.onlinePropsCards.innerHTML = "";
         for (let i = 0; i < 5; i++) {
@@ -12834,7 +12957,10 @@
           btn.type = "button";
           btn.disabled = pending || myPickN !== null;
           btn.dataset.index = String(i);
-          const flipped = myPickN === i || (revealOpp && oppPickN === i);
+          const flipped =
+            myPickN === i ||
+            (revealOpp && oppPickN === i) ||
+            (picksObj && revealOpp && pickVals.some((v) => v === i));
           const label = propsCardLabel(deck && deck[i] ? deck[i] : "");
           btn.innerHTML = `
             <div class="propsCard ${flipped ? "flipped" : ""}">
@@ -12849,13 +12975,17 @@
         }
       }
 
-      function openOnlinePropsModal(deck, myPick, oppPick) {
+      function openOnlinePropsModal(deck, myPick, oppPick, picks, myRole) {
         if (!el.onlinePropsBackdrop) return;
-        renderOnlinePropsCards(deck, myPick, oppPick);
+        renderOnlinePropsCards(deck, myPick, oppPick, picks, myRole);
         if (el.onlinePropsStatus) {
           const mePicked = typeof myPick === "number";
           const oppPicked = typeof oppPick === "number";
-          el.onlinePropsStatus.textContent = mePicked ? (oppPicked ? "تم اختيار البطاقات." : "بانتظار الخصم...") : "اختر بطاقة واحدة فقط.";
+          const picksObj = picks && typeof picks === "object" ? picks : null;
+          const pickVals = picksObj ? Object.values(picksObj) : [];
+          const allPicked = picksObj ? pickVals.length > 0 && pickVals.every((v) => typeof v === "number") : oppPicked;
+          const waitMsg = picksObj ? "بانتظار اللاعبين..." : "بانتظار الخصم...";
+          el.onlinePropsStatus.textContent = mePicked ? (allPicked ? "تم اختيار البطاقات." : waitMsg) : "اختر بطاقة واحدة فقط.";
         }
         el.onlinePropsBackdrop.classList.add("show");
         el.onlinePropsBackdrop.setAttribute("aria-hidden", "false");
@@ -12867,6 +12997,43 @@
         el.onlinePropsBackdrop.setAttribute("aria-hidden", "true");
         if (el.onlinePropsCards) el.onlinePropsCards.innerHTML = "";
         if (el.onlinePropsStatus) el.onlinePropsStatus.textContent = "";
+      }
+
+      function openOnlinePropsTargetModal(players) {
+        if (!el.onlinePropsTargetBackdrop || !el.onlinePropsTargetList) return;
+        const list = Array.isArray(players) ? players : [];
+        el.onlinePropsTargetList.innerHTML = "";
+        for (const p of list) {
+          if (!p || p.role === onlineState.propsTargetRole) continue;
+          if (p.status === "lost") continue;
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "propsTargetBtn";
+          btn.dataset.role = String(p.role || "");
+          btn.innerHTML = `
+            <div class="propsTargetMeta">
+              <div class="onlineAvatar" data-props-avatar="${escapeHtml(String(p.role || ""))}">?</div>
+              <div class="propsTargetName">${escapeHtml(String(p.firstName || "لاعب"))}</div>
+            </div>
+            <div class="tiny">${escapeHtml(String(p.role || "").toUpperCase())}</div>
+          `;
+          btn.addEventListener("click", () => {
+            closeOnlinePropsTargetModal();
+            submitOnlinePropsUse(p.role || "");
+          });
+          el.onlinePropsTargetList.appendChild(btn);
+          const av = btn.querySelector("[data-props-avatar]");
+          if (av) setAvatarSquare(av, p.photo || "", String((p.firstName || "P")).slice(0, 1).toUpperCase());
+        }
+        el.onlinePropsTargetBackdrop.classList.add("show");
+        el.onlinePropsTargetBackdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closeOnlinePropsTargetModal() {
+        if (!el.onlinePropsTargetBackdrop) return;
+        el.onlinePropsTargetBackdrop.classList.remove("show");
+        el.onlinePropsTargetBackdrop.setAttribute("aria-hidden", "true");
+        if (el.onlinePropsTargetList) el.onlinePropsTargetList.innerHTML = "";
       }
 
       async function submitOnlinePropsPick(index) {
@@ -12896,7 +13063,7 @@
         }
       }
 
-      async function submitOnlinePropsUse() {
+      async function submitOnlinePropsUse(targetRole) {
         if (!cloud.enabled) return;
         if (!app.stage || app.stage.kind !== "online") return;
         if (app.session && app.session.over) return;
@@ -12904,10 +13071,11 @@
         if (!id) return;
         if (el.onlinePropsUseBtn) el.onlinePropsUseBtn.disabled = true;
         try {
+          const target = typeof targetRole === "string" ? targetRole : "";
           const r = await friendsJson("/api/online/match/props", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id, action: "use" }),
+            body: JSON.stringify({ id, action: "use", target }),
           });
           if (!r.ok) {
             enqueueToast({ title: t("onlineBtn"), body: "تعذر استخدام البطاقة.", autoMs: 2200 });
@@ -13129,9 +13297,14 @@
 
       if (el.onlineSetupCloseBtn) el.onlineSetupCloseBtn.addEventListener("click", () => closeOnlineSetupModal());
       if (el.onlinePropsCloseBtn) el.onlinePropsCloseBtn.addEventListener("click", () => closeOnlinePropsModal());
+      if (el.onlinePropsTargetCloseBtn) el.onlinePropsTargetCloseBtn.addEventListener("click", () => closeOnlinePropsTargetModal());
       if (el.onlinePropsBackdrop)
         el.onlinePropsBackdrop.addEventListener("click", (e) => {
           if (e.target === el.onlinePropsBackdrop) closeOnlinePropsModal();
+        });
+      if (el.onlinePropsTargetBackdrop)
+        el.onlinePropsTargetBackdrop.addEventListener("click", (e) => {
+          if (e.target === el.onlinePropsTargetBackdrop) closeOnlinePropsTargetModal();
         });
       if (el.onlineSetupForfeitBtn)
         el.onlineSetupForfeitBtn.addEventListener("click", () => {
@@ -13212,7 +13385,21 @@
           if (app.session && app.session.over) return;
           if (app.stage && app.stage.kind === "online") onlineExitMatch();
         });
-      if (el.onlinePropsUseBtn) el.onlinePropsUseBtn.addEventListener("click", () => submitOnlinePropsUse());
+      if (el.onlinePropsUseBtn)
+        el.onlinePropsUseBtn.addEventListener("click", () => {
+          if (onlineState.groupSize === 4 && onlineState.matchKind === "props") {
+            const targets = (onlineState.groupPlayers || []).filter(
+              (p) => p && p.role !== onlineState.propsTargetRole && p.status !== "lost" && p.status !== "won"
+            );
+            if (!targets.length) {
+              enqueueToast({ title: "البطاقة", body: "لا يوجد خصم متاح.", autoMs: 1800 });
+              return;
+            }
+            openOnlinePropsTargetModal(targets);
+            return;
+          }
+          submitOnlinePropsUse();
+        });
 
       if (friendsUI.addBtn && friendsUI.addInput) {
         friendsUI.addBtn.addEventListener("click", async () => {

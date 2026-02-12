@@ -85,10 +85,11 @@ function safeState(raw: unknown) {
   const forfeitedBy = typeof s.forfeitedBy === "string" ? s.forfeitedBy : null;
   const kind =
     s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : s.kind === "group4" ? ("group4" as const) : ("normal" as const);
+  const propsMode = s.propsMode === true;
   const phase =
     kind === "custom" && s.phase === "setup"
       ? ("setup" as const)
-      : kind === "props" && s.phase === "cards"
+      : (kind === "props" || propsMode) && s.phase === "cards"
         ? ("cards" as const)
         : kind === "normal" && s.phase === "waiting"
           ? ("waiting" as const)
@@ -109,12 +110,19 @@ function safeState(raw: unknown) {
   const effects = s.effects && typeof s.effects === "object" ? (s.effects as Record<string, unknown>) : {};
   const pickA = typeof pick.a === "number" && Number.isFinite(pick.a) ? Math.max(0, Math.min(4, Math.floor(pick.a))) : null;
   const pickB = typeof pick.b === "number" && Number.isFinite(pick.b) ? Math.max(0, Math.min(4, Math.floor(pick.b))) : null;
+  const pickC = typeof pick.c === "number" && Number.isFinite(pick.c) ? Math.max(0, Math.min(4, Math.floor(pick.c))) : null;
+  const pickD = typeof pick.d === "number" && Number.isFinite(pick.d) ? Math.max(0, Math.min(4, Math.floor(pick.d))) : null;
   const usedA = used.a === true;
   const usedB = used.b === true;
+  const usedC = used.c === true;
+  const usedD = used.d === true;
+  const roleVals = ["a", "b", "c", "d"];
+  const skipTarget = roleVals.includes(String(effects.skipTarget)) ? (effects.skipTarget as "a" | "b" | "c" | "d") : null;
   const skipBy = effects.skipBy === "a" || effects.skipBy === "b" ? (effects.skipBy as "a" | "b") : null;
-  const reverseFor = effects.reverseFor === "a" || effects.reverseFor === "b" ? (effects.reverseFor as "a" | "b") : null;
-  const hideColorsFor = effects.hideColorsFor === "a" || effects.hideColorsFor === "b" ? (effects.hideColorsFor as "a" | "b") : null;
-  const doubleAgainst = effects.doubleAgainst === "a" || effects.doubleAgainst === "b" ? (effects.doubleAgainst as "a" | "b") : null;
+  const reverseFor = roleVals.includes(String(effects.reverseFor)) ? (effects.reverseFor as "a" | "b" | "c" | "d") : null;
+  const hideColorsFor = roleVals.includes(String(effects.hideColorsFor)) ? (effects.hideColorsFor as "a" | "b" | "c" | "d") : null;
+  const doubleAgainst = roleVals.includes(String(effects.doubleAgainst)) ? (effects.doubleAgainst as "a" | "b" | "c" | "d") : null;
+  const resolvedSkipTarget = skipTarget ? skipTarget : skipBy && kind !== "group4" ? (skipBy === "a" ? "b" : "a") : null;
   return {
     a,
     b,
@@ -124,6 +132,7 @@ function safeState(raw: unknown) {
     endedReason,
     forfeitedBy,
     kind,
+    propsMode,
     phase,
     winners,
     forfeits,
@@ -136,9 +145,13 @@ function safeState(raw: unknown) {
     deck,
     pickA,
     pickB,
+    pickC,
+    pickD,
     usedA,
     usedB,
-    skipBy,
+    usedC,
+    usedD,
+    skipTarget: resolvedSkipTarget,
     reverseFor,
     hideColorsFor,
     doubleAgainst,
@@ -262,13 +275,24 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
     }
 
-    const state0 = safeState(m.state);
+    const match = m;
+    const state0 = safeState(match.state);
     const now = Date.now();
-    const turnStartedAt0 = Number(m.turnStartedAt || 0);
-    const needExpire = state0.phase === "play" && !m.endedAt && turnStartedAt0 > 0 && now - turnStartedAt0 >= TURN_MS;
-    const needCustomStart = state0.kind === "custom" && state0.phase === "setup" && state0.readyA && state0.readyB && !m.endedAt;
-    const needPropsStart = state0.kind === "props" && state0.phase === "cards" && state0.pickA !== null && state0.pickB !== null && !m.endedAt;
-    const needNormalStart = state0.kind === "normal" && state0.phase === "waiting" && !m.endedAt;
+    const turnStartedAt0 = Number(match.turnStartedAt || 0);
+    const needExpire = state0.phase === "play" && !match.endedAt && turnStartedAt0 > 0 && now - turnStartedAt0 >= TURN_MS;
+    const needCustomStart = state0.kind === "custom" && state0.phase === "setup" && state0.readyA && state0.readyB && !match.endedAt;
+    const propsRoles = ["a", "b", "c", "d"].filter((r) =>
+      r === "a" ? !!match.aEmail : r === "b" ? !!match.bEmail : r === "c" ? !!match.cEmail : !!match.dEmail
+    );
+    const propsReady =
+      (state0.kind === "props" || state0.propsMode) &&
+      state0.phase === "cards" &&
+      propsRoles.every((r) => {
+        const val = r === "a" ? state0.pickA : r === "b" ? state0.pickB : r === "c" ? state0.pickC : state0.pickD;
+        return typeof val === "number";
+      });
+    const needPropsStart = propsReady && !match.endedAt;
+    const needNormalStart = state0.kind === "normal" && state0.phase === "waiting" && !match.endedAt;
 
     if (needExpire || needCustomStart || needPropsStart || needNormalStart) {
       const updated = await prisma.$transaction(async (tx) => {
@@ -320,10 +344,22 @@ export async function GET(req: NextRequest) {
           nextStateForReturn = nextState;
           stateAfter = safeState(nextStateForReturn);
         }
-        if (stateAfter.kind === "props" && stateAfter.phase === "cards" && stateAfter.pickA !== null && stateAfter.pickB !== null && !locked.endedAt) {
+        if ((stateAfter.kind === "props" || stateAfter.propsMode) && stateAfter.phase === "cards" && !locked.endedAt) {
+          const roles = ["a", "b", "c", "d"].filter((r) =>
+            r === "a" ? !!locked.aEmail : r === "b" ? !!locked.bEmail : r === "c" ? !!locked.cEmail : !!locked.dEmail
+          );
+          const ready = roles.every((r) => {
+            const val = r === "a" ? stateAfter.pickA : r === "b" ? stateAfter.pickB : r === "c" ? stateAfter.pickC : stateAfter.pickD;
+            return typeof val === "number";
+          });
+          if (!ready) {
+            return locked;
+          }
           const now3 = Date.now();
-          const aStarts = (now3 & 1) === 1;
-          const turnEmail2 = aStarts ? locked.aEmail : locked.bEmail;
+          const pickRole = roles.length ? roles[now3 % roles.length] : "a";
+          const turnEmail2 =
+            (pickRole === "a" ? locked.aEmail : pickRole === "b" ? locked.bEmail : pickRole === "c" ? locked.cEmail : locked.dEmail) ||
+            locked.aEmail;
           const nextState = { ...(locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {}), phase: "play" };
           await tx.$executeRaw`
             UPDATE "OnlineMatch"
@@ -562,6 +598,13 @@ export async function GET(req: NextRequest) {
           status: won ? "won" : lost ? "lost" : "playing",
         };
       });
+      const isProps = state.propsMode === true;
+      const picks = isProps
+        ? { a: state.pickA, b: state.pickB, c: state.pickC, d: state.pickD }
+        : null;
+      const myPick = isProps ? (myRole === "a" ? state.pickA : myRole === "b" ? state.pickB : myRole === "c" ? state.pickC : state.pickD) : null;
+      const myCard = isProps && typeof myPick === "number" ? state.deck[myPick] || null : null;
+      const myUsed = isProps ? (myRole === "a" ? state.usedA : myRole === "b" ? state.usedB : myRole === "c" ? state.usedC : state.usedD) : null;
       return NextResponse.json(
         {
           ok: true as const,
@@ -570,18 +613,23 @@ export async function GET(req: NextRequest) {
             mode: m.mode,
             fee: m.fee,
             codeLen: m.codeLen,
-            kind: state.kind,
+            kind: isProps ? "props" : state.kind,
             phase: state.phase,
             groupSize: 4,
             players,
+            deck: isProps ? state.deck : null,
+            picks,
+            myPick,
+            myCard,
+            myUsed,
             myRole,
             myId: myProfile?.publicId || null,
             myCoins,
             myLevel,
-            turn: m.endedAt ? "ended" : m.turnEmail === email ? "me" : "other",
+            turn: m.endedAt ? "ended" : isProps && state.phase === "cards" ? "setup" : m.turnEmail === email ? "me" : "other",
             turnRole: roles.find((r) => r.email === m.turnEmail)?.role || null,
             turnEmail: m.turnEmail,
-            timeLeftMs,
+            timeLeftMs: state.phase === "cards" ? 0 : timeLeftMs,
             serverNowMs,
             turnStartedAtMs,
             endedAt: m.endedAt ? m.endedAt.toISOString() : null,

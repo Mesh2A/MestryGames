@@ -88,8 +88,9 @@ function safeState(raw: unknown) {
   const lastMasked = s.lastMasked && typeof s.lastMasked === "object" ? (s.lastMasked as Record<string, unknown>) : null;
   const kind =
     s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : s.kind === "group4" ? ("group4" as const) : ("normal" as const);
+  const propsMode = s.propsMode === true;
   const phase =
-    kind === "custom" && s.phase === "setup" ? ("setup" as const) : kind === "props" && s.phase === "cards" ? ("cards" as const) : ("play" as const);
+    kind === "custom" && s.phase === "setup" ? ("setup" as const) : (kind === "props" || propsMode) && s.phase === "cards" ? ("cards" as const) : ("play" as const);
   const winners = Array.isArray(s.winners) ? s.winners.filter((x) => typeof x === "string") : [];
   const forfeits = Array.isArray(s.forfeits) ? s.forfeits.filter((x) => typeof x === "string") : [];
   const secrets = s.secrets && typeof s.secrets === "object" ? (s.secrets as Record<string, unknown>) : {};
@@ -104,13 +105,48 @@ function safeState(raw: unknown) {
   const effects = s.effects && typeof s.effects === "object" ? (s.effects as Record<string, unknown>) : {};
   const pickA = typeof pick.a === "number" && Number.isFinite(pick.a) ? Math.max(0, Math.min(4, Math.floor(pick.a))) : null;
   const pickB = typeof pick.b === "number" && Number.isFinite(pick.b) ? Math.max(0, Math.min(4, Math.floor(pick.b))) : null;
+  const pickC = typeof pick.c === "number" && Number.isFinite(pick.c) ? Math.max(0, Math.min(4, Math.floor(pick.c))) : null;
+  const pickD = typeof pick.d === "number" && Number.isFinite(pick.d) ? Math.max(0, Math.min(4, Math.floor(pick.d))) : null;
   const usedA = used.a === true;
   const usedB = used.b === true;
+  const usedC = used.c === true;
+  const usedD = used.d === true;
+  const roleVals = ["a", "b", "c", "d"];
+  const skipTarget = roleVals.includes(String(effects.skipTarget)) ? (effects.skipTarget as "a" | "b" | "c" | "d") : null;
   const skipBy = effects.skipBy === "a" || effects.skipBy === "b" ? (effects.skipBy as "a" | "b") : null;
-  const reverseFor = effects.reverseFor === "a" || effects.reverseFor === "b" ? (effects.reverseFor as "a" | "b") : null;
-  const hideColorsFor = effects.hideColorsFor === "a" || effects.hideColorsFor === "b" ? (effects.hideColorsFor as "a" | "b") : null;
-  const doubleAgainst = effects.doubleAgainst === "a" || effects.doubleAgainst === "b" ? (effects.doubleAgainst as "a" | "b") : null;
-  return { a, b, c, d, lastMasked, kind, phase, winners, forfeits, secretA, secretB, readyA, readyB, deck, pickA, pickB, usedA, usedB, skipBy, reverseFor, hideColorsFor, doubleAgainst };
+  const reverseFor = roleVals.includes(String(effects.reverseFor)) ? (effects.reverseFor as "a" | "b" | "c" | "d") : null;
+  const hideColorsFor = roleVals.includes(String(effects.hideColorsFor)) ? (effects.hideColorsFor as "a" | "b" | "c" | "d") : null;
+  const doubleAgainst = roleVals.includes(String(effects.doubleAgainst)) ? (effects.doubleAgainst as "a" | "b" | "c" | "d") : null;
+  const resolvedSkipTarget = skipTarget ? skipTarget : skipBy && kind !== "group4" ? (skipBy === "a" ? "b" : "a") : null;
+  return {
+    a,
+    b,
+    c,
+    d,
+    lastMasked,
+    kind,
+    propsMode,
+    phase,
+    winners,
+    forfeits,
+    secretA,
+    secretB,
+    readyA,
+    readyB,
+    deck,
+    pickA,
+    pickB,
+    pickC,
+    pickD,
+    usedA,
+    usedB,
+    usedC,
+    usedD,
+    skipTarget: resolvedSkipTarget,
+    reverseFor,
+    hideColorsFor,
+    doubleAgainst,
+  };
 }
 
 function nextGroup4Turn(emails: (string | null)[], current: string, state: ReturnType<typeof safeState>) {
@@ -219,14 +255,53 @@ export async function POST(req: NextRequest) {
         if (state0.winners.includes(email) || state0.forfeits.includes(email)) return { ok: false as const, error: "already_finished" as const };
         const targetAnswer = m.answer;
         if (!targetAnswer || !isDigitsN(targetAnswer, len)) return { ok: false as const, error: "not_ready" as const };
-        const rawResult = evaluateGuess(guess, targetAnswer);
+        if (state0.propsMode && state0.phase !== "play") return { ok: false as const, error: "not_ready" as const };
+        const effectiveGuess = state0.propsMode && state0.reverseFor === role ? guess.split("").reverse().join("") : guess;
+        const rawResult = evaluateGuess(effectiveGuess, targetAnswer);
         const solved = rawResult.every((x) => x === "ok");
-        const result = rawResult;
+        const hideColors = state0.propsMode && state0.hideColorsFor === role;
+        const result = hideColors ? Array(len).fill("mask") : rawResult;
         const entry = { guess, result, at: now };
         const nextA = role === "a" ? (state0.a as unknown[]).concat([entry]).slice(-160) : (state0.a as unknown[]).slice(-160);
         const nextB = role === "b" ? (state0.b as unknown[]).concat([entry]).slice(-160) : (state0.b as unknown[]).slice(-160);
         const nextC = role === "c" ? (state0.c as unknown[]).concat([entry]).slice(-160) : (state0.c as unknown[]).slice(-160);
         const nextD = role === "d" ? (state0.d as unknown[]).concat([entry]).slice(-160) : (state0.d as unknown[]).slice(-160);
+
+        const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
+        const nextState: Record<string, unknown> = {
+          ...prevState,
+          a: nextA,
+          b: nextB,
+          c: nextC,
+          d: nextD,
+          winners: state0.winners,
+          forfeits: state0.forfeits,
+          lastMasked: { by: email, len, at: now },
+        };
+
+        if (state0.propsMode && solved && state0.doubleAgainst === role) {
+          const newAnswer = generateAnswer(len);
+          const eff = prevState.effects && typeof prevState.effects === "object" ? (prevState.effects as Record<string, unknown>) : {};
+          nextState.effects = { ...eff, doubleAgainst: null };
+          nextState.a = [];
+          nextState.b = [];
+          nextState.c = [];
+          nextState.d = [];
+          nextState.lastMasked = null;
+          nextState.round =
+            typeof (prevState as Record<string, unknown>).round === "number" ? Math.floor((prevState as Record<string, unknown>).round as number) + 1 : 2;
+
+          const nextTurn = nextGroup4Turn([m.aEmail, m.bEmail, m.cEmail, m.dEmail], m.turnEmail, state0);
+          await tx.$executeRaw`
+            UPDATE "OnlineMatch"
+            SET "answer" = ${newAnswer}, "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+            WHERE "id" = ${matchId}
+          `;
+          const myProfile = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+          const myState = myProfile?.state && typeof myProfile.state === "object" ? (myProfile.state as Record<string, unknown>) : {};
+          const myCoins = readCoinsFromState(myState);
+          return { ok: true as const, solved: false as const, result, nextTurn: "other" as const, coins: myCoins, doubleOrNothing: true as const };
+        }
 
         const winners = state0.winners.slice();
         let rank: number | null = null;
@@ -269,21 +344,28 @@ export async function POST(req: NextRequest) {
           await tx.gameProfile.update({ where: { email }, data: { state: updated } });
         }
 
-        const prevState = m.state && typeof m.state === "object" ? (m.state as Record<string, unknown>) : {};
-        const nextState: Record<string, unknown> = {
-          ...prevState,
-          a: nextA,
-          b: nextB,
-          c: nextC,
-          d: nextD,
-          winners,
-          forfeits: state0.forfeits,
-          lastMasked: { by: email, len, at: now },
-        };
+        nextState.winners = winners;
+
+        if (state0.propsMode) {
+          const eff = prevState.effects && typeof prevState.effects === "object" ? (prevState.effects as Record<string, unknown>) : {};
+          const nextEff: Record<string, unknown> = { ...eff };
+          if (nextEff.reverseFor === role) nextEff.reverseFor = null;
+          if (nextEff.hideColorsFor === role) nextEff.hideColorsFor = null;
+          nextState.effects = nextEff;
+        }
 
         const finished = new Set<string>([...winners, ...state0.forfeits]);
         const isEnd = finished.size >= 4;
-        const nextTurn = isEnd ? m.turnEmail : nextGroup4Turn([m.aEmail, m.bEmail, m.cEmail, m.dEmail], m.turnEmail, { ...state0, winners });
+        let nextTurn = isEnd ? m.turnEmail : nextGroup4Turn([m.aEmail, m.bEmail, m.cEmail, m.dEmail], m.turnEmail, { ...state0, winners });
+        if (!isEnd && state0.propsMode && state0.skipTarget) {
+          const skipEmail =
+            state0.skipTarget === "a" ? m.aEmail : state0.skipTarget === "b" ? m.bEmail : state0.skipTarget === "c" ? m.cEmail : m.dEmail;
+          if (skipEmail && nextTurn === skipEmail) {
+            nextTurn = nextGroup4Turn([m.aEmail, m.bEmail, m.cEmail, m.dEmail], skipEmail, { ...state0, winners });
+            const eff = nextState.effects && typeof nextState.effects === "object" ? (nextState.effects as Record<string, unknown>) : {};
+            nextState.effects = { ...eff, skipTarget: null };
+          }
+        }
 
         if (isEnd) nextState.endedReason = "group_finished";
 
@@ -328,7 +410,6 @@ export async function POST(req: NextRequest) {
         const nextEff: Record<string, unknown> = { ...eff };
         if (nextEff.reverseFor === role) nextEff.reverseFor = null;
         if (nextEff.hideColorsFor === role) nextEff.hideColorsFor = null;
-        if (nextEff.skipBy === role) nextEff.skipBy = null;
         nextState.effects = nextEff;
       };
       consumeEffects();
@@ -406,8 +487,12 @@ export async function POST(req: NextRequest) {
         return { ok: true as const, solved: true as const, result, pot, coins: wNextCoins };
       }
 
-      const skip = state0.kind === "props" && state0.skipBy === role;
+      const skipTarget = state0.kind === "props" ? state0.skipTarget : null;
+      const skip = skipTarget === (role === "a" ? "b" : "a");
       const nextTurn = skip ? email : m.aEmail === email ? m.bEmail : m.aEmail;
+      if (skip && nextState.effects && typeof nextState.effects === "object") {
+        nextState.effects = { ...(nextState.effects as Record<string, unknown>), skipTarget: null };
+      }
       await tx.$executeRaw`
         UPDATE "OnlineMatch"
         SET "turnEmail" = ${nextTurn}, "turnStartedAt" = ${now}, "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()

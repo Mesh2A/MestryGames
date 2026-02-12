@@ -11,16 +11,21 @@ const TURN_MS = 30_000;
 
 function safeState(raw: unknown) {
   const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const kind = s.kind === "props" ? ("props" as const) : s.kind === "custom" ? ("custom" as const) : ("normal" as const);
+  const propsMode = s.kind === "props" || s.propsMode === true;
+  const kind = propsMode ? ("props" as const) : s.kind === "custom" ? ("custom" as const) : ("normal" as const);
   const phase = kind === "props" && s.phase === "cards" ? ("cards" as const) : kind === "custom" && s.phase === "setup" ? ("setup" as const) : ("play" as const);
   const deck = Array.isArray(s.deck) ? s.deck.filter((x) => typeof x === "string").slice(0, 5) : [];
   const pick = s.pick && typeof s.pick === "object" ? (s.pick as Record<string, unknown>) : {};
   const used = s.used && typeof s.used === "object" ? (s.used as Record<string, unknown>) : {};
   const pickA = typeof pick.a === "number" && Number.isFinite(pick.a) ? Math.max(0, Math.min(4, Math.floor(pick.a))) : null;
   const pickB = typeof pick.b === "number" && Number.isFinite(pick.b) ? Math.max(0, Math.min(4, Math.floor(pick.b))) : null;
+  const pickC = typeof pick.c === "number" && Number.isFinite(pick.c) ? Math.max(0, Math.min(4, Math.floor(pick.c))) : null;
+  const pickD = typeof pick.d === "number" && Number.isFinite(pick.d) ? Math.max(0, Math.min(4, Math.floor(pick.d))) : null;
   const usedA = used.a === true;
   const usedB = used.b === true;
-  return { kind, phase, deck, pickA, pickB, usedA, usedB };
+  const usedC = used.c === true;
+  const usedD = used.d === true;
+  return { kind, phase, deck, pickA, pickB, pickC, pickD, usedA, usedB, usedC, usedD };
 }
 
 export async function POST(req: NextRequest) {
@@ -66,19 +71,21 @@ export async function POST(req: NextRequest) {
           codeLen: number;
           aEmail: string;
           bEmail: string;
+          cEmail: string | null;
+          dEmail: string | null;
           turnEmail: string;
           turnStartedAt: bigint;
           winnerEmail: string | null;
           endedAt: Date | null;
           state: unknown;
         }[]
-      >`SELECT "id","fee","codeLen","aEmail","bEmail","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
+      >`SELECT "id","fee","codeLen","aEmail","bEmail","cEmail","dEmail","turnEmail","turnStartedAt","winnerEmail","endedAt","state" FROM "OnlineMatch" WHERE "id" = ${matchId} LIMIT 1 FOR UPDATE`;
       const m = rows && rows[0] ? rows[0] : null;
       if (!m) return { ok: false as const, error: "not_found" as const };
-      if (m.aEmail !== email && m.bEmail !== email) return { ok: false as const, error: "forbidden" as const };
+      if (m.aEmail !== email && m.bEmail !== email && m.cEmail !== email && m.dEmail !== email) return { ok: false as const, error: "forbidden" as const };
       if (m.endedAt || m.winnerEmail) return { ok: false as const, error: "ended" as const };
 
-      const role = m.aEmail === email ? "a" : "b";
+      const role = m.aEmail === email ? "a" : m.bEmail === email ? "b" : m.cEmail === email ? "c" : "d";
       const state0 = safeState(m.state);
       if (state0.kind !== "props") return { ok: false as const, error: "bad_kind" as const };
       if (!state0.deck.length) return { ok: false as const, error: "no_deck" as const };
@@ -94,10 +101,18 @@ export async function POST(req: NextRequest) {
         nextState.pick = { ...pick, [role]: index };
 
         const after = safeState(nextState);
-        if (after.pickA !== null && after.pickB !== null) {
+        const roles = ["a", "b", "c", "d"].filter((r) =>
+          r === "a" ? !!m.aEmail : r === "b" ? !!m.bEmail : r === "c" ? !!m.cEmail : !!m.dEmail
+        );
+        const pickedAll =
+          roles.length > 0 &&
+          roles.every((r) => {
+            const val = r === "a" ? after.pickA : r === "b" ? after.pickB : r === "c" ? after.pickC : after.pickD;
+            return typeof val === "number";
+          });
+        if (pickedAll) {
           const now2 = Date.now();
-          const aStarts = (now2 & 1) === 1;
-          const turnEmail2 = aStarts ? m.aEmail : m.bEmail;
+          const turnEmail2 = roles.length ? (roles[now2 % roles.length] === "a" ? m.aEmail : roles[now2 % roles.length] === "b" ? m.bEmail : roles[now2 % roles.length] === "c" ? m.cEmail : m.dEmail) : m.aEmail;
           nextState.phase = "play";
           await tx.$executeRaw`
             UPDATE "OnlineMatch"
@@ -125,18 +140,34 @@ export async function POST(req: NextRequest) {
         if (used[role] === true) return { ok: false as const, error: "already_used" as const };
         const pickA = state0.pickA;
         const pickB = state0.pickB;
-        const idx = role === "a" ? pickA : pickB;
+        const pickC = state0.pickC;
+        const pickD = state0.pickD;
+        const idx = role === "a" ? pickA : role === "b" ? pickB : role === "c" ? pickC : pickD;
         if (idx === null) return { ok: false as const, error: "not_picked" as const };
         const card = state0.deck[idx] || "";
         if (!card) return { ok: false as const, error: "bad_card" as const };
 
         const effects = prevState.effects && typeof prevState.effects === "object" ? (prevState.effects as Record<string, unknown>) : {};
-        const opp = role === "a" ? "b" : "a";
+        const targetRaw = body && typeof body === "object" && "target" in body ? (body as { target?: unknown }).target : "";
+        const target = String(typeof targetRaw === "string" ? targetRaw : "").trim();
+        const isGroup = !!m.cEmail || !!m.dEmail;
+        const targetRole =
+          target === "a" || target === "b" || target === "c" || target === "d"
+            ? target
+            : isGroup
+              ? ""
+              : role === "a"
+                ? "b"
+                : "a";
+        if (targetRole !== "a" && targetRole !== "b" && targetRole !== "c" && targetRole !== "d") return { ok: false as const, error: "bad_target" as const };
+        const targetEmail =
+          targetRole === "a" ? m.aEmail : targetRole === "b" ? m.bEmail : targetRole === "c" ? m.cEmail : m.dEmail;
+        if (!targetEmail || targetRole === role) return { ok: false as const, error: "bad_target" as const };
         const nextEffects: Record<string, unknown> = { ...effects };
-        if (card === "skip_turn") nextEffects.skipBy = role;
-        else if (card === "reverse_digits") nextEffects.reverseFor = opp;
-        else if (card === "hide_colors") nextEffects.hideColorsFor = opp;
-        else if (card === "double_or_nothing") nextEffects.doubleAgainst = opp;
+        if (card === "skip_turn") nextEffects.skipTarget = targetRole;
+        else if (card === "reverse_digits") nextEffects.reverseFor = targetRole;
+        else if (card === "hide_colors") nextEffects.hideColorsFor = targetRole;
+        else if (card === "double_or_nothing") nextEffects.doubleAgainst = targetRole;
         nextState.effects = nextEffects;
         nextState.used = { ...used, [role]: true };
 
