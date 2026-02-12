@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { firstNameFromEmail } from "@/lib/profile";
+import { firstNameFromEmail, getProfileLevel } from "@/lib/profile";
 import { readCoinsFromState } from "@/lib/gameProfile";
 
 export type LobbyPlayer = {
@@ -7,6 +7,7 @@ export type LobbyPlayer = {
   name: string;
   avatarUrl: string;
   coins: number;
+  level: number;
 };
 
 export function parseQueueModeKey(mode: string) {
@@ -52,11 +53,13 @@ export async function loadLobbyPlayers(modeKey: string, limit: number): Promise<
     const row = map.get(email);
     const state = row?.state;
     const displayName = readDisplayNameFromState(state);
+    const level = getProfileLevel(state).level;
     return {
       userId: row?.publicId || email,
       name: displayName || firstNameFromEmail(email),
       avatarUrl: readPhotoFromState(state),
       coins: readCoinsFromState(state),
+      level,
     };
   });
 }
@@ -74,11 +77,13 @@ export async function loadPlayersByEmails(emails: string[]): Promise<LobbyPlayer
     const row = map.get(email);
     const state = row?.state;
     const displayName = readDisplayNameFromState(state);
+    const level = getProfileLevel(state).level;
     return {
       userId: row?.publicId || email,
       name: displayName || firstNameFromEmail(email),
       avatarUrl: readPhotoFromState(state),
       coins: readCoinsFromState(state),
+      level,
     };
   });
 }
