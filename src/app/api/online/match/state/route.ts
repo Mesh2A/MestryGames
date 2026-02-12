@@ -9,6 +9,7 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
 const TURN_MS = 30_000;
+const STALE_START_MS = 180_000;
 const DISCONNECT_GRACE_MS = 60_000;
 const OFFLINE_MARK_MS = 12_000;
 const PRESENCE_MIN_WRITE_MS = 2500;
@@ -220,11 +221,12 @@ export async function GET(req: NextRequest) {
       turnStartedAt: bigint;
       winnerEmail: string | null;
       endedAt: Date | null;
+      updatedAt: Date;
       state: unknown;
     };
 
       const baseRows = await prisma.$queryRaw<MatchRow[]>`
-        SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+        SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
       FROM "OnlineMatch"
       WHERE "id" = ${matchId}
       LIMIT 1
@@ -234,10 +236,61 @@ export async function GET(req: NextRequest) {
     if (m.aEmail !== email && m.bEmail !== email && m.cEmail !== email && m.dEmail !== email)
       return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
 
+    const isStalePreStart = (row: MatchRow) => {
+      if (row.endedAt) return false;
+      const s = safeState(row.state);
+      if (s.phase === "play") return false;
+      return s.phase === "setup" || s.phase === "cards" || s.phase === "waiting";
+    };
+    const isStale = !m.endedAt && m.updatedAt && Date.now() - m.updatedAt.getTime() > STALE_START_MS && isStalePreStart(m);
+
+    if (isStale) {
+      m = await prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<MatchRow[]>`
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
+          FROM "OnlineMatch"
+          WHERE "id" = ${matchId}
+          LIMIT 1
+          FOR UPDATE
+        `;
+        const locked = rows && rows[0] ? rows[0] : null;
+        if (!locked) return null;
+        if (locked.endedAt) return locked;
+        if (!isStalePreStart(locked) || Date.now() - locked.updatedAt.getTime() <= STALE_START_MS) return locked;
+
+        const prev = locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {};
+        const nextState = { ...prev, endedReason: "stale", forfeitedBy: null, endedAt: Date.now() };
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "winnerEmail" = NULL, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+
+        const refund = async (who: string | null) => {
+          if (!who) return;
+          const profile = await tx.gameProfile.findUnique({ where: { email: who }, select: { state: true } });
+          const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+          const coins = readCoinsFromState(stateObj);
+          const peak = readCoinsPeakFromState(stateObj);
+          const fee = Math.max(0, Math.floor(locked.fee));
+          const nextCoins = coins + fee;
+          const next = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
+          await tx.gameProfile.update({ where: { email: who }, data: { state: next } });
+        };
+        await refund(locked.aEmail);
+        await refund(locked.bEmail);
+        await refund(locked.cEmail);
+        await refund(locked.dEmail);
+        return { ...locked, endedAt: new Date(), winnerEmail: null, state: nextState };
+      });
+      if (!m)
+        return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
+
     if (!onlineEnabled && !m.endedAt) {
       m = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
@@ -297,7 +350,7 @@ export async function GET(req: NextRequest) {
     if (needExpire || needCustomStart || needPropsStart || needNormalStart) {
       const updated = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
@@ -401,7 +454,7 @@ export async function GET(req: NextRequest) {
     if (!m.endedAt && !m.winnerEmail && state0.kind !== "group4") {
       const updated = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1

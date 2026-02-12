@@ -17,6 +17,15 @@ function nowMs() {
   return Date.now();
 }
 
+const STALE_START_MS = 180_000;
+
+function isStalePreStartState(state: unknown) {
+  const s = state && typeof state === "object" ? (state as Record<string, unknown>) : {};
+  const phase = typeof s.phase === "string" ? s.phase : "";
+  if (phase === "play") return false;
+  return phase === "setup" || phase === "cards" || phase === "waiting";
+}
+
 function normalizeCode(code: string) {
   return String(code || "")
     .trim()
@@ -112,14 +121,43 @@ export async function POST(req: NextRequest) {
     const out = await prisma.$transaction(async (tx) => {
       await ensureGameProfile(email);
 
-      const activeMatch = await tx.$queryRaw<{ id: string }[]>`
-        SELECT "id"
+      const activeMatch = await tx.$queryRaw<
+        { id: string; fee: number; aEmail: string; bEmail: string; cEmail: string | null; dEmail: string | null; state: unknown; updatedAt: Date }[]
+      >`
+        SELECT "id","fee","aEmail","bEmail","cEmail","dEmail","state","updatedAt"
         FROM "OnlineMatch"
         WHERE ("aEmail" = ${email} OR "bEmail" = ${email} OR "cEmail" = ${email} OR "dEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
         ORDER BY "createdAt" DESC
         LIMIT 1
       `;
-      if (activeMatch && activeMatch[0]) return { status: "error" as const, error: "already_in_match" as const, matchId: activeMatch[0].id };
+      if (activeMatch && activeMatch[0]) {
+        const row = activeMatch[0];
+        const stale =
+          row.updatedAt && Date.now() - row.updatedAt.getTime() > STALE_START_MS && isStalePreStartState(row.state);
+        if (!stale) return { status: "error" as const, error: "already_in_match" as const, matchId: row.id };
+        const prev = row.state && typeof row.state === "object" ? (row.state as Record<string, unknown>) : {};
+        const nextState = { ...prev, endedReason: "stale", forfeitedBy: null, endedAt: Date.now() };
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "winnerEmail" = NULL, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${row.id}
+        `;
+        const refund = async (who: string | null) => {
+          if (!who) return;
+          const profile = await tx.gameProfile.findUnique({ where: { email: who }, select: { state: true } });
+          const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+          const coins = readCoinsFromState(stateObj);
+          const peak = readCoinsPeakFromState(stateObj);
+          const fee = Math.max(0, Math.floor(row.fee));
+          const nextCoins = coins + fee;
+          const next = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
+          await tx.gameProfile.update({ where: { email: who }, data: { state: next } });
+        };
+        await refund(row.aEmail);
+        await refund(row.bEmail);
+        await refund(row.cEmail);
+        await refund(row.dEmail);
+      }
 
       const activeQueue = await tx.$queryRaw<{ id: string }[]>`
         SELECT "id"
