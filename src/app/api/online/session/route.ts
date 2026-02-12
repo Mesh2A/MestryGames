@@ -81,11 +81,13 @@ export async function GET(req: NextRequest) {
       LIMIT 1
     `;
 
-    const status = activeMatchId ? "in_match" : roomRows && roomRows[0] ? "in_room" : queueRows && queueRows[0] ? "in_queue" : "idle";
+    const queueId = queueRows && queueRows[0] ? String(queueRows[0].id || "") : "";
+    const roomCode = roomRows && roomRows[0] ? String(roomRows[0].code || "") : "";
+    const status = activeMatchId ? "in_match" : roomCode ? "in_room" : queueId ? "in_queue" : "idle";
     if (status === "in_match") logOnlineEvent({ eventType: "join", userId: email, matchId: activeMatchId, connectionId: conn.connectionId, status });
 
     return NextResponse.json(
-      { ok: true, userId, activeMatchId, status, connectionId: conn.connectionId, serverTime: Date.now() },
+      { ok: true, userId, activeMatchId, status, queueId, roomCode, connectionId: conn.connectionId, serverTime: Date.now() },
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );
   } catch {

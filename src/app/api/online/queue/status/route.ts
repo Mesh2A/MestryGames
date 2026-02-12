@@ -4,6 +4,9 @@ import { readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
 import { requireActiveConnection } from "@/lib/onlineConnection";
 import { prisma } from "@/lib/prisma";
+import { logOnlineEvent } from "@/lib/onlineLog";
+import { broadcastLobby } from "@/lib/onlineLobby";
+import { loadLobbyPlayers, loadPlayersByEmails } from "@/lib/onlineLobbyData";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
@@ -126,7 +129,13 @@ export async function GET(req: NextRequest) {
       LIMIT 1
     `;
     const row = rows && rows[0] ? rows[0] : null;
-    if (!row || row.email !== email) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    if (!row || row.email !== email) {
+      logOnlineEvent({ eventType: "queue_cancelled", userId: email, matchId: null, connectionId: conn.connectionId, status: "missing" });
+      return NextResponse.json(
+        { status: "cancelled", matchId: null, mode: "", kind: "normal", groupSize: 2, fee: 0, codeLen: 0, refunded: false, reason: "missing" },
+        { status: 200, headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
     if (row.status === "waiting") {
       const matched = await prisma.$transaction(async (tx) => {
@@ -240,10 +249,27 @@ export async function GET(req: NextRequest) {
           groupSize: parsed.groupSize,
           fee: locked.fee,
           codeLen,
+          emails: seats,
+          modeKey: locked.mode,
         };
       });
 
       if (matched && matched.ok) {
+        const neededPlayers = matched.groupSize === 4 ? 4 : 2;
+        const modeKey = matched.modeKey || row.mode;
+        const players = await loadPlayersByEmails(matched.emails || []);
+        broadcastLobby(modeKey, "match:found", {
+          queueId: modeKey,
+          matchId: matched.matchId,
+          neededPlayers,
+          players,
+          mode: matched.mode,
+          kind: matched.kind,
+          groupSize: matched.groupSize,
+          fee: matched.fee,
+          codeLen: matched.codeLen,
+          status: "matched",
+        });
         return NextResponse.json(matched, { status: 200, headers: { "Cache-Control": "no-store" } });
       }
       const createdAtMs = row.createdAt ? row.createdAt.getTime() : 0;
@@ -295,11 +321,29 @@ export async function GET(req: NextRequest) {
           };
         });
         if (!out.ok) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+        logOnlineEvent({ eventType: "queue_cancelled", userId: email, matchId: null, connectionId: conn.connectionId, status: "timeout" });
+        const parsedAfter = parseQueueMode(row.mode);
+        const neededPlayers = parsedAfter.groupSize === 4 ? 4 : 2;
+        const players = await loadLobbyPlayers(row.mode, neededPlayers);
+        broadcastLobby(row.mode, "queue:update", {
+          queueId: row.mode,
+          players,
+          neededPlayers,
+          status: players.length >= neededPlayers ? "ready" : "waiting",
+        });
         return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
       }
     }
 
     const parsed = parseQueueMode(row.mode);
+    if (row.status === "waiting") {
+      const neededPlayers = parsed.groupSize === 4 ? 4 : 2;
+      const players = await loadLobbyPlayers(row.mode, neededPlayers);
+      return NextResponse.json(
+        { status: row.status, matchId: row.matchId, mode: parsed.mode, kind: parsed.kind, groupSize: parsed.groupSize, fee: row.fee, codeLen: row.codeLen, players, neededPlayers },
+        { status: 200, headers: { "Cache-Control": "no-store" } }
+      );
+    }
     return NextResponse.json(
       { status: row.status, matchId: row.matchId, mode: parsed.mode, kind: parsed.kind, groupSize: parsed.groupSize, fee: row.fee, codeLen: row.codeLen },
       { status: 200, headers: { "Cache-Control": "no-store" } }

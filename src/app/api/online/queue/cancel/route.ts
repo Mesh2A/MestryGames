@@ -2,6 +2,8 @@ import { authOptions } from "@/lib/auth";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { readCoinsFromState } from "@/lib/gameProfile";
 import { requireActiveConnection } from "@/lib/onlineConnection";
+import { broadcastLobby } from "@/lib/onlineLobby";
+import { loadLobbyPlayers, parseQueueModeKey } from "@/lib/onlineLobbyData";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -31,8 +33,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const out = await prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<{ id: string; email: string; status: string; fee: number }[]>`
-        SELECT "id", "email", "status", "fee"
+      const rows = await tx.$queryRaw<{ id: string; email: string; status: string; fee: number; mode: string }[]>`
+        SELECT "id", "email", "status", "fee", "mode"
         FROM "OnlineQueue"
         WHERE "id" = ${id}
         LIMIT 1
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
       `;
       const row = rows && rows[0] ? rows[0] : null;
       if (!row || row.email !== email) return { ok: false as const, error: "not_found" as const };
-      if (row.status !== "waiting") return { ok: true as const, refunded: false as const };
+      if (row.status !== "waiting") return { ok: true as const, refunded: false as const, mode: row.mode };
 
       await tx.$executeRaw`
         UPDATE "OnlineQueue"
@@ -56,10 +58,21 @@ export async function POST(req: NextRequest) {
       const nextCoins = coins + Math.max(0, Math.floor(row.fee));
       const nextState = { ...state, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins) };
       await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
-      return { ok: true as const, refunded: true as const, coins: nextCoins };
+      return { ok: true as const, refunded: true as const, coins: nextCoins, mode: row.mode };
     });
 
     if (!out.ok) return NextResponse.json(out, { status: 404, headers: { "Cache-Control": "no-store" } });
+    if (out.mode) {
+      const parsed = parseQueueModeKey(out.mode);
+      const neededPlayers = parsed.groupSize === 4 ? 4 : 2;
+      const players = await loadLobbyPlayers(out.mode, neededPlayers);
+      broadcastLobby(out.mode, "queue:update", {
+        queueId: out.mode,
+        players,
+        neededPlayers,
+        status: players.length >= neededPlayers ? "ready" : "waiting",
+      });
+    }
     return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });

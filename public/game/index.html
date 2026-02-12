@@ -8414,6 +8414,7 @@
         const queueId = closingOnline ? onlineState.queueId : "";
         if (closingOnline) {
           stopOnlineQueuePolling();
+          stopLobbyStream();
           stopOnlineCoinsSync();
           stopOnlineAutoReturn();
           stopOnlinePreEnter();
@@ -9180,6 +9181,9 @@
         pollRoomId: null,
         pollRoomBusy: false,
         spinId: null,
+        lobbyStream: null,
+        lobbyPlayers: [],
+        lobbyNeeded: 0,
         coinsSyncId: null,
         coinsSyncBusy: false,
         hiddenForfeitId: null,
@@ -9210,6 +9214,8 @@
         userId: "",
         activeMatchId: "",
         status: "idle",
+        queueId: "",
+        roomCode: "",
         connectionId: "",
         serverTime: 0,
         lastSyncAt: 0,
@@ -9275,6 +9281,8 @@
           onlineSession.userId = typeof data.userId === "string" ? data.userId : onlineSession.userId;
           onlineSession.activeMatchId = typeof data.activeMatchId === "string" ? data.activeMatchId : "";
           onlineSession.status = typeof data.status === "string" ? data.status : "idle";
+          onlineSession.queueId = typeof data.queueId === "string" ? data.queueId : "";
+          onlineSession.roomCode = typeof data.roomCode === "string" ? data.roomCode : "";
           onlineSession.connectionId = typeof data.connectionId === "string" ? data.connectionId : "";
           onlineSession.serverTime = typeof data.serverTime === "number" ? data.serverTime : Date.now();
           if (versionState && versionState.buildId) onlineSession.buildId = versionState.buildId;
@@ -9297,7 +9305,12 @@
             onlineState.matchId = "";
             onlineState.queueId = "";
             onlineState.roomCode = "";
-            onlineReturnToModeSelect();
+            onlineReturnToModeSelect("session_mismatch");
+          }
+          if (!onlineSession.activeMatchId && onlineSession.status === "in_queue" && onlineSession.queueId) {
+            if (!onlineState.queueId || onlineState.queueId !== onlineSession.queueId) {
+              attachServerQueue(onlineSession.queueId, "session");
+            }
           }
           return onlineSession;
         } catch {
@@ -9518,6 +9531,171 @@
           const m = s.data.match;
           const group = typeof m.groupSize === "number" ? m.groupSize : onlineState.groupSize;
           await onlinePreEnterMatch(id, m.mode, m.fee, m.codeLen, me, m.opponent || null, m.kind, group);
+          return true;
+        }
+        return false;
+      }
+
+      function stopLobbyStream() {
+        if (onlineState.lobbyStream && typeof onlineState.lobbyStream.close === "function") {
+          try {
+            onlineState.lobbyStream.close();
+          } catch {}
+        }
+        onlineState.lobbyStream = null;
+      }
+
+      function renderLobbyPlayers(players, neededPlayers, fee, me) {
+        const list = Array.isArray(players) ? players : [];
+        const meId = onlineSession.userId || onlineState.meEmail || "";
+        if (onlineState.groupSize === 4) {
+          const seats = document.querySelectorAll(".onlineGroupSeat[data-role]");
+          const others = list.filter((p) => p && p.userId !== meId);
+          for (const seat of seats) {
+            const role = seat.dataset.role || "";
+            const avatar = seat.querySelector(".onlineAvatar");
+            const nameEl = seat.querySelector(".onlineName");
+            const feeEl = seat.querySelector(".onlineTiny");
+            let item = null;
+            if (seat.classList.contains("bottom")) {
+              item = me
+                ? { name: me.firstName || "", avatarUrl: me.photo || "", coins: typeof me.coins === "number" ? me.coins : fee }
+                : null;
+            } else {
+              item = others.shift() || null;
+            }
+            const name = item && item.name ? item.name : t("onlineSearchingForOpp");
+            const photo = item && item.avatarUrl ? item.avatarUrl : "";
+            const coinsVal = item && typeof item.coins === "number" ? item.coins : fee;
+            if (nameEl) nameEl.textContent = name;
+            if (feeEl) feeEl.textContent = `${coinsVal}🪙`;
+            onlineSetSearchAvatar(avatar, photo, String(name || "؟").slice(0, 1).toUpperCase());
+          }
+          return;
+        }
+        const opp = list.find((p) => p && p.userId !== meId) || null;
+        const oppName = opp && opp.name ? opp.name : t("onlineSearchingForOpp");
+        const oppPhoto = opp && opp.avatarUrl ? opp.avatarUrl : "";
+        const oppCoins = opp && typeof opp.coins === "number" ? opp.coins : fee;
+        const nameEl = document.getElementById("onlineSearchOppName");
+        const oppAv = document.getElementById("onlineSearchOppAvatar");
+        const feeEl = document.getElementById("onlineOppSub");
+        if (nameEl) nameEl.innerHTML = `${escapeHtml(oppName)}<span id="onlineSearchDots"></span>`;
+        if (oppAv) onlineSetSearchAvatar(oppAv, oppPhoto, String(oppName || "O").slice(0, 1).toUpperCase());
+        if (feeEl) feeEl.textContent = `${oppCoins}🪙`;
+      }
+
+      function updateLobbyState(data, me) {
+        if (!data || typeof data !== "object") return;
+        const players = Array.isArray(data.players) ? data.players : [];
+        const neededPlayers = typeof data.neededPlayers === "number" ? data.neededPlayers : 0;
+        onlineState.lobbyPlayers = players;
+        onlineState.lobbyNeeded = neededPlayers;
+        renderLobbyPlayers(players, neededPlayers, onlineState.fee, me);
+      }
+
+      function startLobbyStream(queueId) {
+        if (!queueId) return;
+        if (typeof EventSource === "undefined") return;
+        stopLobbyStream();
+        const connId = onlineSession.connectionId || "";
+        const url = `/api/online/queue/stream?id=${encodeURIComponent(queueId)}${connId ? `&conn=${encodeURIComponent(connId)}` : ""}`;
+        const es = new EventSource(url);
+        onlineState.lobbyStream = es;
+        es.addEventListener("queue:update", async (ev) => {
+          try {
+            const data = JSON.parse(ev.data || "{}");
+            const me = await ensureMeLoaded();
+            updateLobbyState(data, me);
+          } catch {}
+        });
+        es.addEventListener("match:found", async (ev) => {
+          try {
+            const data = JSON.parse(ev.data || "{}");
+            if (!data || !data.matchId) return;
+            stopLobbyStream();
+            const me = await ensureMeLoaded();
+            const group = typeof data.groupSize === "number" ? data.groupSize : onlineState.groupSize;
+            const opp = Array.isArray(data.players) ? data.players.find((p) => p && p.userId !== onlineSession.userId) : null;
+            await onlinePreEnterMatch(data.matchId, data.mode, data.fee, data.codeLen, me, opp || null, data.kind || onlineState.selectKind, group);
+          } catch {}
+        });
+      }
+
+      async function handleQueueStatus(data, me, source) {
+        if (!data || typeof data !== "object") return "error";
+        if (typeof data.groupSize === "number") onlineState.groupSize = data.groupSize === 4 ? 4 : 2;
+        if (data.status === "matched" && data.matchId) {
+          stopOnlineQueuePolling();
+          stopLobbyStream();
+          onlineClientLog("queueMatched", { source, matchId: data.matchId });
+          await onlinePreEnterMatch(
+            data.matchId,
+            data.mode,
+            data.fee,
+            data.codeLen,
+            me,
+            data.opponent || null,
+            data.kind || onlineState.selectKind,
+            data.groupSize === 4 ? 4 : onlineState.groupSize
+          );
+          return "matched";
+        }
+        if (data.status === "cancelled") {
+          stopOnlineQueuePolling();
+          stopLobbyStream();
+          if (data.refunded && typeof data.coins === "number") setCoinsTotal(data.coins, 0, true);
+          onlineClientLog("queueCancelled", { source, reason: data.reason || "" });
+          onlineReturnToModeSelect("queue_cancelled");
+          return "cancelled";
+        }
+        if (data.status === "waiting" && data.players) updateLobbyState(data, me);
+        return "waiting";
+      }
+
+      function startQueuePolling(queueId, me) {
+        stopOnlineQueuePolling();
+        const id = String(queueId || "").trim();
+        if (!id) return;
+        const tick = async () => {
+          if (onlineState.pollQueueBusy) return;
+          onlineState.pollQueueBusy = true;
+          try {
+            const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(id)}`, { method: "GET" });
+            if (!s.ok || !s.data) return;
+            await handleQueueStatus(s.data, me, "poll");
+          } catch {
+          } finally {
+            onlineState.pollQueueBusy = false;
+          }
+        };
+        tick();
+        onlineState.pollQueueId = setInterval(tick, document.hidden ? 1000 : 300);
+      }
+
+      async function attachServerQueue(queueId, reason) {
+        const id = String(queueId || "").trim();
+        if (!id) return false;
+        const me = await ensureMeLoaded();
+        const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(id)}`, { method: "GET" });
+        if (!s.ok || !s.data) return false;
+        if (s.data.status === "waiting") {
+          onlineState.queueId = id;
+          if (typeof s.data.groupSize === "number") onlineState.groupSize = s.data.groupSize === 4 ? 4 : 2;
+          onlineState.selectKind = s.data.kind || onlineState.selectKind;
+          renderOnlineSearching(s.data.mode, me, onlineState.selectKind);
+          onlineClientLog("queueAttach", { reason, queueId: id });
+          if (s.data.players) updateLobbyState(s.data, me);
+          startLobbyStream(id);
+          startQueuePolling(id, me);
+          return true;
+        }
+        if (s.data.status === "matched" && s.data.matchId) {
+          await handleQueueStatus(s.data, me, "attach");
+          return true;
+        }
+        if (s.data.status === "cancelled") {
+          await handleQueueStatus(s.data, me, "attach");
           return true;
         }
         return false;
@@ -10310,6 +10488,8 @@
         onlineState.fee = cfg.fee;
         onlineState.codeLen = cfg.codeLen;
         onlineState.searchingStartedAt = Date.now();
+        onlineState.lobbyPlayers = [];
+        onlineState.lobbyNeeded = groupSize;
         startOnlineCoinsSync();
         const diff = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
         const kindLabel = kind === "custom" ? t("onlineModeCustom") : kind === "props" ? t("onlineModeProps") : t("onlineModeNormal");
@@ -10407,10 +10587,12 @@
               async () => {
                 cancelBtn.disabled = true;
                 if (!onlineState.queueId) {
+                  stopLobbyStream();
                   renderOnlineSelect();
                   return;
                 }
                 stopOnlineQueuePolling();
+                stopLobbyStream();
                 const r = await friendsJson("/api/online/queue/cancel", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -10762,6 +10944,7 @@
               onlineState.selectKind = kind === "custom" ? "custom" : kind === "props" ? "props" : "normal";
               const groupSize = onlineState.groupSize === 4 ? 4 : 2;
               if (groupSize === 4 && onlineState.selectKind === "custom") onlineState.selectKind = "normal";
+              onlineClientLog("queueStart", { mode, kind: onlineState.selectKind, groupSize });
               renderOnlineSearching(mode, friendsState.me || null, onlineState.selectKind);
               const r = await friendsJson("/api/online/queue/join", {
                 method: "POST",
@@ -10819,55 +11002,17 @@
               if (!r.data) return;
               if (typeof r.data.coins === "number") setCoinsTotal(r.data.coins, 0, true);
               if (typeof r.data.groupSize === "number") onlineState.groupSize = r.data.groupSize === 4 ? 4 : 2;
+              onlineClientLog("queueAck", { status: r.data.status, queueId: r.data.queueId || "", matchId: r.data.matchId || "" });
               if (r.data.status === "matched" && r.data.matchId) {
-                stopOnlineQueuePolling();
-                await onlinePreEnterMatch(
-                  r.data.matchId,
-                  r.data.mode,
-                  r.data.fee,
-                  r.data.codeLen,
-                  me,
-                  r.data.opponent || null,
-                  r.data.kind || onlineState.selectKind,
-                  r.data.groupSize === 4 ? 4 : onlineState.groupSize
-                );
+                await handleQueueStatus(r.data, me, "join");
                 return;
               }
               if (r.data.status === "waiting" && r.data.queueId) {
                 onlineState.queueId = r.data.queueId;
-                stopOnlineQueuePolling();
-                const tick = async () => {
-                  if (onlineState.pollQueueBusy) return;
-                  onlineState.pollQueueBusy = true;
-                  try {
-                    const s = await friendsJson(`/api/online/queue/status?id=${encodeURIComponent(onlineState.queueId)}`, { method: "GET" });
-                    if (!s.ok || !s.data) return;
-                    if (typeof s.data.groupSize === "number") onlineState.groupSize = s.data.groupSize === 4 ? 4 : 2;
-                    if (s.data.status === "matched" && s.data.matchId) {
-                      stopOnlineQueuePolling();
-                      await onlinePreEnterMatch(
-                        s.data.matchId,
-                        s.data.mode,
-                        s.data.fee,
-                        s.data.codeLen,
-                        me,
-                        null,
-                        s.data.kind || onlineState.selectKind,
-                        s.data.groupSize === 4 ? 4 : onlineState.groupSize
-                      );
-                    }
-                    if (s.data.status === "cancelled") {
-                      stopOnlineQueuePolling();
-                      if (s.data.refunded && typeof s.data.coins === "number") setCoinsTotal(s.data.coins, 0, true);
-                      renderOnlineSelect();
-                    }
-                  } catch {
-                  } finally {
-                    onlineState.pollQueueBusy = false;
-                  }
-                };
-                tick();
-                onlineState.pollQueueId = setInterval(tick, document.hidden ? 1000 : 300);
+                await handleQueueStatus({ ...r.data, status: "waiting" }, me, "join");
+                startLobbyStream(onlineState.queueId);
+                startQueuePolling(onlineState.queueId, me);
+                return;
               }
             } finally {
               onlineState.busy = false;
@@ -10878,6 +11023,7 @@
       }
 
       async function startOnlineMatch(matchId, mode, fee, codeLen, me, opponentFromJoin, kind, groupSize) {
+        stopLobbyStream();
         onlineState.matchId = matchId;
         onlineState.mode = mode;
         onlineState.fee = fee;
@@ -11017,16 +11163,20 @@
         }
       }
 
-      function onlineReturnToModeSelect() {
+      function onlineReturnToModeSelect(reason) {
+        onlineClientLog("onlineReset", { reason: reason || "" });
         stopOnlineAutoReturn();
         stopOnlinePreEnter();
         stopOnlineMatchPolling();
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
         stopOnlineHiddenForfeitTimer();
+        stopLobbyStream();
         onlineState.matchId = "";
         onlineState.queueId = "";
         onlineState.roomCode = "";
+        onlineState.lobbyPlayers = [];
+        onlineState.lobbyNeeded = 0;
         closeOnlineSetupModal();
         closeOnlinePropsModal();
         closeOnlineWithdrawModal();
@@ -11448,7 +11598,7 @@
               onlineState.matchId = "";
               onlineState.queueId = "";
               onlineState.roomCode = "";
-              onlineReturnToModeSelect();
+              onlineReturnToModeSelect("connection_superseded");
             } else if (code === "connection_expired" || code === "missing_connection" || code === "connection_not_found") {
               onlineClientLog("mismatch", { code, url });
               await syncOnlineSession("mismatch");

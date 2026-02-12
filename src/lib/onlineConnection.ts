@@ -14,7 +14,9 @@ function toNum(v: unknown) {
 export function readConnectionId(req: NextRequest) {
   const raw = req.headers.get("x-conn-id");
   const id = String(raw || "").trim();
-  return id || "";
+  if (id) return id;
+  const qp = req.nextUrl?.searchParams?.get("conn") || "";
+  return String(qp || "").trim();
 }
 
 export function newConnectionId() {

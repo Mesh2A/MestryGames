@@ -5,6 +5,8 @@ import { ensureGameProfile, readCoinsFromState, readCoinsPeakFromState } from "@
 import { getOnlineEnabled } from "@/lib/onlineConfig";
 import { requireActiveConnection } from "@/lib/onlineConnection";
 import { logOnlineEvent } from "@/lib/onlineLog";
+import { broadcastLobby } from "@/lib/onlineLobby";
+import { loadLobbyPlayers, loadPlayersByEmails } from "@/lib/onlineLobbyData";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
@@ -208,8 +210,8 @@ export async function POST(req: NextRequest) {
       if (activeRoom && activeRoom[0]) return { status: "error" as const, error: "already_in_room" as const, roomCode: activeRoom[0].code };
 
       const existing = await tx.$queryRaw<
-        { id: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number }[]
-      >`SELECT "id", "status", "matchId", "mode", "fee", "codeLen" FROM "OnlineQueue" WHERE "email" = ${email} AND "status" = 'waiting' ORDER BY "createdAt" DESC LIMIT 1`;
+        { id: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number; createdAt: Date }[]
+      >`SELECT "id", "status", "matchId", "mode", "fee", "codeLen", "createdAt" FROM "OnlineQueue" WHERE "email" = ${email} AND "status" = 'waiting' ORDER BY "createdAt" DESC LIMIT 1`;
       if (existing && existing[0]) {
         const row = existing[0];
         const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
@@ -225,6 +227,12 @@ export async function POST(req: NextRequest) {
           const nextState = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
           await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
         } else {
+          await tx.$executeRaw`
+            UPDATE "OnlineQueue"
+            SET "createdAt" = NOW(), "updatedAt" = NOW()
+            WHERE "id" = ${row.id}
+          `;
+          logOnlineEvent({ eventType: "queue_waiting", userId: email, matchId: null, connectionId: conn.connectionId, status: "waiting" });
         return {
           status: "waiting" as const,
           queueId: row.id,
@@ -264,6 +272,7 @@ export async function POST(req: NextRequest) {
           INSERT INTO "OnlineQueue" ("id", "email", "mode", "fee", "codeLen", "status", "createdAt", "updatedAt")
           VALUES (${queueId}, ${email}, ${modeKey}, ${fee}, ${codeLen}, 'waiting', NOW(), NOW())
         `;
+        logOnlineEvent({ eventType: "queue_waiting", userId: email, matchId: null, connectionId: conn.connectionId, status: "waiting" });
         return { status: "waiting" as const, queueId, fee, codeLen, mode, kind: effectiveKind, groupSize, coins: nextCoins };
       }
 
@@ -354,6 +363,7 @@ export async function POST(req: NextRequest) {
         kind: effectiveKind,
         groupSize,
         coins: nextCoins,
+        playerEmails: seats,
         opponent: oppProfile
           ? {
               id: oppProfile.publicId,
@@ -370,6 +380,36 @@ export async function POST(req: NextRequest) {
     });
 
     if (out.status === "error") return NextResponse.json(out, { status: 409, headers: { "Cache-Control": "no-store" } });
+    if (out.status === "waiting") {
+      const neededPlayers = out.groupSize === 4 ? 4 : 2;
+      const players = await loadLobbyPlayers(modeKey, neededPlayers);
+      broadcastLobby(modeKey, "queue:update", {
+        queueId: modeKey,
+        players,
+        neededPlayers,
+        status: players.length >= neededPlayers ? "ready" : "waiting",
+      });
+      return NextResponse.json(
+        { ...out, players, neededPlayers },
+        { status: 200, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    if (out.status === "matched") {
+      const neededPlayers = out.groupSize === 4 ? 4 : 2;
+      const players = await loadPlayersByEmails(out.playerEmails || []);
+      broadcastLobby(modeKey, "match:found", {
+        queueId: modeKey,
+        matchId: out.matchId,
+        neededPlayers,
+        players,
+        mode: out.mode,
+        kind: out.kind,
+        groupSize: out.groupSize,
+        fee: out.fee,
+        codeLen: out.codeLen,
+        status: "matched",
+      });
+    }
     return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
