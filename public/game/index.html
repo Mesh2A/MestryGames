@@ -9310,6 +9310,7 @@
               kind = m.kind === "custom" ? "custom" : m.kind === "props" ? "props" : m.kind === "group4" ? "normal" : "normal";
             }
             if (m.kind === "group4" || m.groupSize === 4) onlineState.groupSize = 4;
+            if (onlineState.groupSize === 4 && Array.isArray(m.players)) updateOnlineGroupSearchSeats(m.players, fee, meResolved);
             const ended = !!m.endedAt || m.winner === "me" || m.winner === "them" || !!m.endedReason;
             if (ended) {
               stopOnlinePreEnter();
@@ -10139,6 +10140,28 @@
         setAvatarSquare(elm, photo, letter || "?");
       }
 
+      function updateOnlineGroupSearchSeats(players, fee, me) {
+        const seats = document.querySelectorAll(".onlineGroupSeat[data-role]");
+        const list = Array.isArray(players) ? players : [];
+        for (const seat of seats) {
+          const role = seat.dataset.role || "";
+          const avatar = seat.querySelector(".onlineAvatar");
+          const nameEl = seat.querySelector(".onlineName");
+          const feeEl = seat.querySelector(".onlineTiny");
+          const found = list.find((p) => p && p.role === role) || null;
+          const name =
+            found && typeof found.firstName === "string" && String(found.firstName || "").trim()
+              ? String(found.firstName).trim()
+              : seat.classList.contains("bottom") && me && me.firstName
+                ? String(me.firstName)
+                : "";
+          const photo = found && typeof found.photo === "string" ? found.photo : seat.classList.contains("bottom") && me && me.photo ? me.photo : "";
+          if (nameEl) nameEl.textContent = name ? name : t("onlineSearchingForOpp");
+          if (feeEl) feeEl.textContent = `${fee}🪙`;
+          onlineSetSearchAvatar(avatar, photo, String(name || "؟").slice(0, 1).toUpperCase());
+        }
+      }
+
       function renderOnlineSearching(mode, me, kind) {
         if (!el.onlineContent) return;
         const groupSize = onlineState.groupSize === 4 ? 4 : 2;
@@ -10157,39 +10180,33 @@
                 <div class="tiny">${escapeHtml(kindLabel)} • ${escapeHtml(diff)} • ${escapeHtml(String(cfg.codeLen))} ارقام</div>
                 <div id="onlineFoundCountdown" class="onlineFoundCountdown" style="display:none"></div>
                 <div class="onlineGroupHud">
-                  <div class="onlineGroupSeat top">
+                  <div class="onlineGroupSeat top" data-role="b">
                     <div class="onlineAvatar">?</div>
                     <div class="onlineMeta">
                       <div class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}</div>
                       <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
                     </div>
                   </div>
-                  <div class="onlineGroupSeat right">
+                  <div class="onlineGroupSeat right" data-role="a">
                     <div class="onlineAvatar">?</div>
                     <div class="onlineMeta">
                       <div class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}</div>
                       <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
                     </div>
                   </div>
-                  <div class="onlineGroupSeat left">
+                  <div class="onlineGroupSeat left" data-role="c">
                     <div class="onlineAvatar">?</div>
                     <div class="onlineMeta">
                       <div class="onlineName">${escapeHtml(t("onlineSearchingForOpp"))}</div>
                       <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
                     </div>
                   </div>
-                  <div class="onlineGroupSeat bottom">
+                  <div class="onlineGroupSeat bottom" data-role="d">
                     <div id="onlineSearchMeAvatar" class="onlineAvatar">P</div>
                     <div class="onlineMeta">
                       <div class="onlineName">${escapeHtml((me && me.firstName) || "لاعب")}</div>
                       <div class="onlineTiny">${escapeHtml(cfg.fee)}🪙</div>
                     </div>
-                  </div>
-                  <div class="onlineGroupCenter">
-                    <div class="onlineGroupBox"></div>
-                    <div class="onlineGroupBox"></div>
-                    <div class="onlineGroupBox"></div>
-                    <div class="onlineGroupBox"></div>
                   </div>
                 </div>
                 <div class="onlineBar"><span id="onlineSearchBar"></span></div>
@@ -10229,6 +10246,7 @@
 
         onlineSetSearchAvatar(meAv, me && me.photo ? me.photo : "", String((me && me.firstName) || "P").slice(0, 1).toUpperCase());
         onlineSetSearchAvatar(oppAv, "", "?");
+        if (groupSize === 4) updateOnlineGroupSearchSeats(null, cfg.fee, me);
 
         if (onlineState.spinId) clearInterval(onlineState.spinId);
         onlineState.spinId = setInterval(() => {
