@@ -10141,13 +10141,13 @@
 
       function renderOnlineSearching(mode, me, kind) {
         if (!el.onlineContent) return;
+        const groupSize = onlineState.groupSize === 4 ? 4 : 2;
         const cfg = onlineCfg(mode, kind, groupSize);
         onlineState.mode = mode;
         onlineState.fee = cfg.fee;
         onlineState.codeLen = cfg.codeLen;
         onlineState.searchingStartedAt = Date.now();
         startOnlineCoinsSync();
-        const groupSize = onlineState.groupSize === 4 ? 4 : 2;
         const diff = mode === "easy" ? t("onlineDiffEasy") : mode === "medium" ? t("onlineDiffMedium") : t("onlineDiffHard");
         const kindLabel = kind === "custom" ? t("onlineModeCustom") : kind === "props" ? t("onlineModeProps") : t("onlineModeNormal");
 
