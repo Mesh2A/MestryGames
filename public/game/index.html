@@ -4602,7 +4602,7 @@
                       <div id="onlineGBottomTag" class="onlineTiny onlineGroupTag"></div>
                     </div>
                   </div>
-                  <div class="onlineGroupCenter">
+                  <div id="onlineGroupCenter" class="onlineGroupCenter">
                     <div class="onlineGroupBox"></div>
                     <div class="onlineGroupBox"></div>
                     <div class="onlineGroupBox"></div>
@@ -9728,6 +9728,8 @@
           const turnName = players.find((p) => p && p.role === m.turnRole)?.firstName || "لاعب";
           const isProps = m.kind === "props";
           const isCards = isProps && m.phase === "cards";
+          const groupCenter = document.getElementById("onlineGroupCenter");
+          if (groupCenter) groupCenter.style.display = isCards ? "none" : "";
           if (el.onlineTurnText) {
             el.onlineTurnText.textContent = isCards ? t("onlineTurnCards") : m.turn === "ended" ? t("onlineTurnEnded") : `دور ${turnName}`;
           }
@@ -10623,7 +10625,39 @@
                   renderOnlineSelect();
                   return;
                 }
+                if (code === "already_in_match" && r.data && typeof r.data.matchId === "string") {
+                  const matchId = r.data.matchId;
+                  const s = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(matchId)}`, { method: "GET" });
+                  if (s.ok && s.data && s.data.match) {
+                    const m = s.data.match;
+                    const group = typeof m.groupSize === "number" ? m.groupSize : onlineState.groupSize;
+                    await onlinePreEnterMatch(matchId, m.mode, m.fee, m.codeLen, me, m.opponent || null, m.kind, group);
+                    return;
+                  }
+                  enqueueToast({ title: t("onlineBtn"), body: "لديك مباراة جارية. حاول مرة ثانية.", autoMs: 2600 });
+                  renderOnlineSelect();
+                  return;
+                }
+                if (code === "already_in_room" && r.data && typeof r.data.roomCode === "string") {
+                  const roomCode = r.data.roomCode;
+                  const s = await friendsJson(`/api/online/room/status?code=${encodeURIComponent(roomCode)}`, { method: "GET" });
+                  if (s.ok && s.data && s.data.status === "waiting") {
+                    renderRoomWaiting(roomCode, s.data.mode, s.data.fee, s.data.codeLen, s.data.kind || "normal");
+                    startRoomPolling(roomCode);
+                    return;
+                  }
+                  enqueueToast({ title: t("onlineBtn"), body: "لديك غرفة قائمة بالفعل.", autoMs: 2600 });
+                  renderOnlineSelect();
+                  return;
+                }
+                if (code === "banned") {
+                  enqueueToast({ title: t("onlineBtn"), body: "حسابك محظور مؤقتاً.", autoMs: 2600 });
+                  renderOnlineSelect();
+                  return;
+                }
                 if (code === "insufficient_coins") enqueueToast({ title: t("onlineBtn"), body: "عملاتك غير كافية.", autoMs: 2600 });
+                else if (r.status === 401) enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2600 });
+                else if (r.status === 503 || code === "storage_unavailable") enqueueToast({ title: t("onlineBtn"), body: "الخدمة غير متاحة حالياً.", autoMs: 2600 });
                 else if (r.status === 0) enqueueToast({ title: t("onlineBtn"), body: "ضعف اتصال. حاول مرة ثانية.", autoMs: 2600 });
                 else enqueueToast({ title: t("onlineBtn"), body: "تعذر بدء البحث.", autoMs: 2600 });
                 renderOnlineSelect();
