@@ -90,9 +90,9 @@ export async function POST(req: NextRequest) {
       await ensureGameProfile(email);
 
       const activeMatch = await tx.$queryRaw<
-        { id: string; fee: number; aEmail: string; bEmail: string; cEmail: string | null; dEmail: string | null; state: unknown; updatedAt: Date }[]
+        { id: string; fee: number; aEmail: string; bEmail: string; cEmail: string | null; dEmail: string | null; state: unknown; createdAt: Date; updatedAt: Date }[]
       >`
-        SELECT "id","fee","aEmail","bEmail","cEmail","dEmail","state","updatedAt"
+        SELECT "id","fee","aEmail","bEmail","cEmail","dEmail","state","createdAt","updatedAt"
         FROM "OnlineMatch"
         WHERE ("aEmail" = ${email} OR "bEmail" = ${email} OR "cEmail" = ${email} OR "dEmail" = ${email}) AND "endedAt" IS NULL AND "winnerEmail" IS NULL
         ORDER BY "createdAt" DESC
@@ -100,8 +100,8 @@ export async function POST(req: NextRequest) {
       `;
       if (activeMatch && activeMatch[0]) {
         const row = activeMatch[0];
-        const stale =
-          row.updatedAt && Date.now() - row.updatedAt.getTime() > STALE_START_MS && isStalePreStartState(row.state);
+        const lastMs = Math.max(row.updatedAt ? row.updatedAt.getTime() : 0, row.createdAt ? row.createdAt.getTime() : 0);
+        const stale = lastMs > 0 && Date.now() - lastMs > STALE_START_MS && isStalePreStartState(row.state);
         if (!stale) return { status: "error" as const, error: "already_in_match" as const, matchId: row.id };
         const prev = row.state && typeof row.state === "object" ? (row.state as Record<string, unknown>) : {};
         const nextState = { ...prev, endedReason: "stale", forfeitedBy: null, endedAt: Date.now() };

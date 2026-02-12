@@ -221,12 +221,13 @@ export async function GET(req: NextRequest) {
       turnStartedAt: bigint;
       winnerEmail: string | null;
       endedAt: Date | null;
+      createdAt: Date;
       updatedAt: Date;
       state: unknown;
     };
 
       const baseRows = await prisma.$queryRaw<MatchRow[]>`
-        SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
+        SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","createdAt","updatedAt","state"
       FROM "OnlineMatch"
       WHERE "id" = ${matchId}
       LIMIT 1
@@ -242,12 +243,13 @@ export async function GET(req: NextRequest) {
       if (s.phase === "play") return false;
       return s.phase === "setup" || s.phase === "cards" || s.phase === "waiting";
     };
-    const isStale = !m.endedAt && m.updatedAt && Date.now() - m.updatedAt.getTime() > STALE_START_MS && isStalePreStart(m);
+    const lastActivityMs = Math.max(m.updatedAt ? m.updatedAt.getTime() : 0, m.createdAt ? m.createdAt.getTime() : 0);
+    const isStale = !m.endedAt && lastActivityMs > 0 && Date.now() - lastActivityMs > STALE_START_MS && isStalePreStart(m);
 
     if (isStale) {
       m = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","createdAt","updatedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
@@ -256,7 +258,8 @@ export async function GET(req: NextRequest) {
         const locked = rows && rows[0] ? rows[0] : null;
         if (!locked) return null;
         if (locked.endedAt) return locked;
-        if (!isStalePreStart(locked) || Date.now() - locked.updatedAt.getTime() <= STALE_START_MS) return locked;
+        const lockedLastMs = Math.max(locked.updatedAt ? locked.updatedAt.getTime() : 0, locked.createdAt ? locked.createdAt.getTime() : 0);
+        if (!isStalePreStart(locked) || Date.now() - lockedLastMs <= STALE_START_MS) return locked;
 
         const prev = locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {};
         const nextState = { ...prev, endedReason: "stale", forfeitedBy: null, endedAt: Date.now() };
@@ -290,7 +293,7 @@ export async function GET(req: NextRequest) {
     if (!onlineEnabled && !m.endedAt) {
       m = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","createdAt","updatedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
@@ -350,7 +353,7 @@ export async function GET(req: NextRequest) {
     if (needExpire || needCustomStart || needPropsStart || needNormalStart) {
       const updated = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<MatchRow[]>`
-          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","updatedAt","state"
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","createdAt","updatedAt","state"
           FROM "OnlineMatch"
           WHERE "id" = ${matchId}
           LIMIT 1
