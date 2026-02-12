@@ -3,6 +3,8 @@ import { getActiveBan } from "@/lib/ban";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
+import { requireActiveConnection } from "@/lib/onlineConnection";
+import { logOnlineEvent } from "@/lib/onlineLog";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
@@ -18,12 +20,18 @@ function nowMs() {
 }
 
 const STALE_START_MS = 180_000;
+const STALE_MATCH_MS = 600_000;
 
 function isStalePreStartState(state: unknown) {
   const s = state && typeof state === "object" ? (state as Record<string, unknown>) : {};
   const phase = typeof s.phase === "string" ? s.phase : "";
   if (phase === "play") return false;
   return phase === "setup" || phase === "cards" || phase === "waiting";
+}
+
+function matchKind(state: unknown) {
+  const s = state && typeof state === "object" ? (state as Record<string, unknown>) : {};
+  return s.kind === "group4" ? ("group4" as const) : s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : ("normal" as const);
 }
 
 function normalizeMode(mode: string) {
@@ -123,6 +131,8 @@ export async function POST(req: NextRequest) {
 
   const onlineEnabled = await getOnlineEnabled();
   if (!onlineEnabled) return NextResponse.json({ error: "online_disabled" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  const conn = await requireActiveConnection(req, email);
+  if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
   let body: unknown = null;
   try {
@@ -159,7 +169,10 @@ export async function POST(req: NextRequest) {
       if (activeMatch && activeMatch[0]) {
         const row = activeMatch[0];
         const lastMs = Math.max(row.updatedAt ? row.updatedAt.getTime() : 0, row.createdAt ? row.createdAt.getTime() : 0);
-        const stale = lastMs > 0 && Date.now() - lastMs > STALE_START_MS && isStalePreStartState(row.state);
+        const kind = matchKind(row.state);
+        const stale =
+          lastMs > 0 &&
+          ((kind === "group4" && Date.now() - lastMs > STALE_MATCH_MS) || (Date.now() - lastMs > STALE_START_MS && isStalePreStartState(row.state)));
         if (!stale) return { status: "error" as const, error: "already_in_match" as const, matchId: row.id };
         const prev = row.state && typeof row.state === "object" ? (row.state as Record<string, unknown>) : {};
         const nextState = { ...prev, endedReason: "stale", forfeitedBy: null, endedAt: Date.now() };
@@ -203,6 +216,15 @@ export async function POST(req: NextRequest) {
         const stateObj = profileRow?.state && typeof profileRow.state === "object" ? (profileRow.state as Record<string, unknown>) : {};
         const coins = readCoinsFromState(stateObj);
         const parsed = parseQueueModeKey(row.mode);
+        const sameMode = parsed.mode === mode && parsed.kind === effectiveKind && parsed.groupSize === groupSize;
+        if (!sameMode) {
+          await tx.$executeRaw`UPDATE "OnlineQueue" SET "status" = 'cancelled', "updatedAt" = NOW() WHERE "id" = ${row.id}`;
+          const peak = readCoinsPeakFromState(stateObj);
+          const feeBack = Math.max(0, Math.floor(row.fee));
+          const nextCoins = coins + feeBack;
+          const nextState = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
+          await tx.gameProfile.update({ where: { email }, data: { state: nextState } });
+        } else {
         return {
           status: "waiting" as const,
           queueId: row.id,
@@ -213,6 +235,7 @@ export async function POST(req: NextRequest) {
           groupSize: parsed.groupSize,
           coins,
         };
+        }
       }
 
       const profileRow = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
@@ -322,7 +345,7 @@ export async function POST(req: NextRequest) {
       `;
 
       const oppProfile = await tx.gameProfile.findUnique({ where: { email: opp.email }, select: { email: true, publicId: true, state: true, createdAt: true } });
-      return {
+      const outMatched = {
         status: "matched" as const,
         matchId,
         fee,
@@ -342,6 +365,8 @@ export async function POST(req: NextRequest) {
             }
           : null,
       };
+      logOnlineEvent({ eventType: "join", userId: email, matchId, connectionId: conn.connectionId, status: "matched" });
+      return outMatched;
     });
 
     if (out.status === "error") return NextResponse.json(out, { status: 409, headers: { "Cache-Control": "no-store" } });

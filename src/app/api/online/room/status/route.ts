@@ -2,6 +2,7 @@ import { authOptions } from "@/lib/auth";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
+import { requireActiveConnection } from "@/lib/onlineConnection";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -31,6 +32,8 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
+  const conn = await requireActiveConnection(req, email);
+  if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
   const code = normalizeCode(String(req.nextUrl.searchParams.get("code") || ""));
   if (!code) return NextResponse.json({ error: "missing_code" }, { status: 400, headers: { "Cache-Control": "no-store" } });

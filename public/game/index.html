@@ -7665,6 +7665,7 @@
         commitRef: "",
         environment: "",
         region: "",
+        buildId: "",
       };
 
       const onlineFeature = {
@@ -7706,6 +7707,8 @@
           versionState.commitRef = d && typeof d.commitRef === "string" ? d.commitRef : "";
           versionState.environment = d && typeof d.environment === "string" ? d.environment : "";
           versionState.region = d && typeof d.region === "string" ? d.region : "";
+          versionState.buildId = d && typeof d.buildId === "string" ? d.buildId : "";
+          ensureOnlineStorageVersion(versionState.buildId);
           versionState.fetched = true;
         } catch {
         } finally {
@@ -8643,6 +8646,8 @@
 
       async function signOutFromGame() {
         try {
+          clearStoredOnlineConn();
+          onlineSession.connectionId = "";
           flushCloudNow();
           const r = await fetch("/api/auth/csrf");
           const data = await r.json().catch(() => ({}));
@@ -9198,6 +9203,125 @@
         actionCooldownUntil: {},
       };
 
+      const ONLINE_CONN_KEY = "lockgame_online_conn_v1";
+      const ONLINE_BUILD_KEY = "lockgame_build_id_v1";
+
+      const onlineSession = {
+        userId: "",
+        activeMatchId: "",
+        status: "idle",
+        connectionId: "",
+        serverTime: 0,
+        lastSyncAt: 0,
+        buildId: "",
+      };
+
+      function onlineClientLog(eventType, data) {
+        try {
+          const payload = { scope: "online", t: Date.now(), eventType, ...(data && typeof data === "object" ? data : {}) };
+          console.log(JSON.stringify(payload));
+        } catch {}
+      }
+
+      function readStoredOnlineConn() {
+        try {
+          const raw = localStorage.getItem(ONLINE_CONN_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== "object") return null;
+          return parsed;
+        } catch {
+          return null;
+        }
+      }
+
+      function writeStoredOnlineConn(next) {
+        try {
+          localStorage.setItem(ONLINE_CONN_KEY, JSON.stringify(next));
+        } catch {}
+      }
+
+      function clearStoredOnlineConn() {
+        try {
+          localStorage.removeItem(ONLINE_CONN_KEY);
+        } catch {}
+      }
+
+      function ensureOnlineStorageVersion(buildId) {
+        const id = String(buildId || "").trim();
+        if (!id) return;
+        try {
+          const prev = String(localStorage.getItem(ONLINE_BUILD_KEY) || "").trim();
+          if (prev && prev !== id) {
+            clearStoredOnlineConn();
+          }
+          localStorage.setItem(ONLINE_BUILD_KEY, id);
+        } catch {}
+      }
+
+      async function syncOnlineSession(reason) {
+        if (!cloud || !cloud.enabled) return null;
+        const now = Date.now();
+        if (now - onlineSession.lastSyncAt < 500) return onlineSession;
+        onlineSession.lastSyncAt = now;
+        const stored = readStoredOnlineConn();
+        const hintId = stored && typeof stored.connectionId === "string" ? stored.connectionId : "";
+        const headers = {};
+        if (hintId) headers["x-conn-id"] = hintId;
+        try {
+          const r = await fetch("/api/online/session", { method: "GET", cache: "no-store", credentials: "include", headers });
+          const data = await r.json().catch(() => null);
+          if (!r.ok || !data) return null;
+          onlineSession.userId = typeof data.userId === "string" ? data.userId : onlineSession.userId;
+          onlineSession.activeMatchId = typeof data.activeMatchId === "string" ? data.activeMatchId : "";
+          onlineSession.status = typeof data.status === "string" ? data.status : "idle";
+          onlineSession.connectionId = typeof data.connectionId === "string" ? data.connectionId : "";
+          onlineSession.serverTime = typeof data.serverTime === "number" ? data.serverTime : Date.now();
+          if (versionState && versionState.buildId) onlineSession.buildId = versionState.buildId;
+          if (stored && typeof stored.userId === "string" && onlineSession.userId && stored.userId !== onlineSession.userId) {
+            clearStoredOnlineConn();
+          }
+          writeStoredOnlineConn({
+            userId: onlineSession.userId,
+            activeMatchId: onlineSession.activeMatchId,
+            connectionId: onlineSession.connectionId,
+            buildId: onlineSession.buildId,
+            at: Date.now(),
+          });
+          onlineClientLog("serverState", { reason, status: onlineSession.status, activeMatchId: onlineSession.activeMatchId });
+          const localMatchId = onlineState.matchId || (app.stage && app.stage.kind === "online" ? app.stage.matchId : "");
+          const mismatch = localMatchId && onlineSession.activeMatchId && localMatchId !== onlineSession.activeMatchId;
+          const staleLocal = localMatchId && !onlineSession.activeMatchId;
+          if (mismatch || staleLocal) {
+            onlineClientLog("mismatch", { localMatchId, serverMatchId: onlineSession.activeMatchId || "" });
+            onlineState.matchId = "";
+            onlineState.queueId = "";
+            onlineState.roomCode = "";
+            onlineReturnToModeSelect();
+          }
+          return onlineSession;
+        } catch {
+          return null;
+        }
+      }
+
+      async function onlineSessionDisconnectBestEffort() {
+        if (!onlineSession.connectionId) {
+          const stored = readStoredOnlineConn();
+          if (stored && typeof stored.connectionId === "string") onlineSession.connectionId = stored.connectionId;
+        }
+        if (!onlineSession.connectionId) return;
+        try {
+          await fetch("/api/online/session/disconnect", {
+            method: "POST",
+            cache: "no-store",
+            credentials: "include",
+            headers: { "x-conn-id": onlineSession.connectionId },
+          });
+          onlineClientLog("disconnect", { reason: "visibility" });
+        } catch {}
+      }
+
       const ONLINE_TURN_MS = 30_000;
 
       function onlineCfg(mode, kind, groupSize) {
@@ -9383,6 +9507,20 @@
           }
         }
         if (barEl) barEl.style.width = `100%`;
+      }
+
+      async function attachServerMatch(matchId) {
+        const id = String(matchId || "").trim();
+        if (!id) return false;
+        const me = await ensureMeLoaded();
+        const s = await friendsJson(`/api/online/match/state?id=${encodeURIComponent(id)}`, { method: "GET" });
+        if (s.ok && s.data && s.data.match) {
+          const m = s.data.match;
+          const group = typeof m.groupSize === "number" ? m.groupSize : onlineState.groupSize;
+          await onlinePreEnterMatch(id, m.mode, m.fee, m.codeLen, me, m.opponent || null, m.kind, group);
+          return true;
+        }
+        return false;
       }
 
       function stopOnlineCoinsSync() {
@@ -10351,6 +10489,11 @@
         await onlineRunAction(
           "create_room",
           async () => {
+            const sess = await syncOnlineSession("create_room");
+            if (sess && sess.status === "in_match" && sess.activeMatchId) {
+              const attached = await attachServerMatch(sess.activeMatchId);
+              if (attached) return;
+            }
             fetchOnlineEnabledOnce(false).catch(() => {});
             if (onlineFeature.fetched && !onlineFeature.enabled) {
               enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
@@ -10548,6 +10691,11 @@
             enqueueToast({ title: t("onlineBtn"), body: "اكتب كود صحيح.", autoMs: 2000 });
             return;
           }
+          const sess = await syncOnlineSession("room_join");
+          if (sess && sess.status === "in_match" && sess.activeMatchId) {
+            const attached = await attachServerMatch(sess.activeMatchId);
+            if (attached) return;
+          }
           fetchOnlineEnabledOnce(false).catch(() => {});
           if (onlineFeature.fetched && !onlineFeature.enabled) {
             enqueueToast({ title: t("onlineBtn"), body: "الأونلاين متوقف حالياً.", autoMs: 2400 });
@@ -10595,6 +10743,11 @@
             if (!cloud.enabled) {
               enqueueToast({ title: t("onlineBtn"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
               return;
+            }
+            const sess = await syncOnlineSession("queue_join");
+            if (sess && sess.status === "in_match" && sess.activeMatchId) {
+              const attached = await attachServerMatch(sess.activeMatchId);
+              if (attached) return;
             }
             fetchOnlineEnabledOnce(false).catch(() => {});
             if (onlineFeature.fetched && !onlineFeature.enabled) {
@@ -10871,6 +11024,9 @@
         stopOnlineQueuePolling();
         stopOnlineRoomPolling();
         stopOnlineHiddenForfeitTimer();
+        onlineState.matchId = "";
+        onlineState.queueId = "";
+        onlineState.roomCode = "";
         closeOnlineSetupModal();
         closeOnlinePropsModal();
         closeOnlineWithdrawModal();
@@ -10915,15 +11071,22 @@
         const id = app.stage.matchId;
         if (!id) return;
         try {
+          if (!onlineSession.connectionId) {
+            const stored = readStoredOnlineConn();
+            if (stored && typeof stored.connectionId === "string") onlineSession.connectionId = stored.connectionId;
+          }
+          const headers = { "Content-Type": "application/json" };
+          if (onlineSession.connectionId) headers["x-conn-id"] = onlineSession.connectionId;
           fetch("/api/online/match/disconnect", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({ id }),
             keepalive: true,
             credentials: "include",
             cache: "no-store",
           });
         } catch {}
+        onlineSessionDisconnectBestEffort();
       }
 
       function onlineConnectBestEffort() {
@@ -10932,14 +11095,21 @@
         const id = app.stage.matchId;
         if (!id) return;
         try {
+          if (!onlineSession.connectionId) {
+            const stored = readStoredOnlineConn();
+            if (stored && typeof stored.connectionId === "string") onlineSession.connectionId = stored.connectionId;
+          }
+          const headers = { "Content-Type": "application/json" };
+          if (onlineSession.connectionId) headers["x-conn-id"] = onlineSession.connectionId;
           fetch("/api/online/match/connect", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({ id }),
             credentials: "include",
             cache: "no-store",
           }).catch(() => {});
         } catch {}
+        syncOnlineSession("reconnect");
       }
 
       el.startBtn.addEventListener("click", () => goMap());
@@ -11013,9 +11183,15 @@
       el.clearBtn.addEventListener("click", () => clearSlots());
       el.retryBtn.addEventListener("click", () => openStage({ ...app.stage }));
       el.shareBtn.addEventListener("click", () => shareResult());
-      window.addEventListener("pagehide", () => onlineDisconnectBestEffort());
+      window.addEventListener("pagehide", () => {
+        onlineDisconnectBestEffort();
+        onlineSessionDisconnectBestEffort();
+      });
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden) onlineDisconnectBestEffort();
+        if (document.hidden) {
+          onlineDisconnectBestEffort();
+          onlineSessionDisconnectBestEffort();
+        }
         else onlineConnectBestEffort();
       });
 
@@ -11254,8 +11430,30 @@
       async function friendsJson(url, init) {
         try {
           const cfg = init && typeof init === "object" ? init : {};
-          const r = await fetch(url, { cache: "no-store", credentials: "include", ...cfg });
+          const isOnline = String(url || "").startsWith("/api/online/");
+          const headers = cfg.headers && typeof cfg.headers === "object" ? { ...cfg.headers } : {};
+          if (isOnline) {
+            if (!onlineSession.connectionId) {
+              const stored = readStoredOnlineConn();
+              if (stored && typeof stored.connectionId === "string") onlineSession.connectionId = stored.connectionId;
+            }
+            if (onlineSession.connectionId) headers["x-conn-id"] = onlineSession.connectionId;
+          }
+          const r = await fetch(url, { cache: "no-store", credentials: "include", ...cfg, headers });
           const data = await r.json().catch(() => null);
+          if (isOnline && data && typeof data.error === "string") {
+            const code = data.error;
+            if (code === "connection_superseded") {
+              onlineClientLog("mismatch", { code, url });
+              onlineState.matchId = "";
+              onlineState.queueId = "";
+              onlineState.roomCode = "";
+              onlineReturnToModeSelect();
+            } else if (code === "connection_expired" || code === "missing_connection" || code === "connection_not_found") {
+              onlineClientLog("mismatch", { code, url });
+              await syncOnlineSession("mismatch");
+            }
+          }
           return { ok: r.ok, status: r.status, data };
         } catch {
           return { ok: false, status: 0, data: null };
@@ -13630,6 +13828,7 @@
         enableMapControls();
         consumeCheckoutReturn();
         const initialScreen = app.state.lastScreen === "map" || app.state.lastScreen === "level" ? app.state.lastScreen : "home";
+        onlineClientLog("appLoad", { initialScreen });
         if (initialScreen === "level" && app.state.lastStage && typeof app.state.lastStage === "object") {
           const kind = app.state.lastStage.kind === "daily" ? "daily" : "level";
           const idRaw = typeof app.state.lastStage.id === "number" && Number.isFinite(app.state.lastStage.id) ? app.state.lastStage.id : 1;
@@ -13659,6 +13858,7 @@
         }, 2000);
 
         const u = await fetchSessionUser();
+        onlineClientLog("tokenRead", { hasUser: !!u });
         if (u) {
           cloud.enabled = true;
           cloud.email = u.email;
@@ -13675,6 +13875,9 @@
             updateCoinsUI();
             updateSettingsUI();
           }
+          await syncOnlineSession("appLoad");
+        } else {
+          clearStoredOnlineConn();
         }
 
         if (u && u.name && !String(app.state.displayName || "").trim()) {

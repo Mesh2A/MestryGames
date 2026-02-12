@@ -3,6 +3,8 @@ import { getActiveBan } from "@/lib/ban";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
+import { requireActiveConnection } from "@/lib/onlineConnection";
+import { logOnlineEvent } from "@/lib/onlineLog";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
@@ -18,12 +20,18 @@ function nowMs() {
 }
 
 const STALE_START_MS = 180_000;
+const STALE_MATCH_MS = 600_000;
 
 function isStalePreStartState(state: unknown) {
   const s = state && typeof state === "object" ? (state as Record<string, unknown>) : {};
   const phase = typeof s.phase === "string" ? s.phase : "";
   if (phase === "play") return false;
   return phase === "setup" || phase === "cards" || phase === "waiting";
+}
+
+function matchKind(state: unknown) {
+  const s = state && typeof state === "object" ? (state as Record<string, unknown>) : {};
+  return s.kind === "group4" ? ("group4" as const) : s.kind === "custom" ? ("custom" as const) : s.kind === "props" ? ("props" as const) : ("normal" as const);
 }
 
 function normalizeCode(code: string) {
@@ -103,6 +111,8 @@ export async function POST(req: NextRequest) {
 
   const onlineEnabled = await getOnlineEnabled();
   if (!onlineEnabled) return NextResponse.json({ error: "online_disabled" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  const conn = await requireActiveConnection(req, email);
+  if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
   let body: unknown = null;
   try {
@@ -133,7 +143,10 @@ export async function POST(req: NextRequest) {
       if (activeMatch && activeMatch[0]) {
         const row = activeMatch[0];
         const lastMs = Math.max(row.updatedAt ? row.updatedAt.getTime() : 0, row.createdAt ? row.createdAt.getTime() : 0);
-        const stale = lastMs > 0 && Date.now() - lastMs > STALE_START_MS && isStalePreStartState(row.state);
+        const kind = matchKind(row.state);
+        const stale =
+          lastMs > 0 &&
+          ((kind === "group4" && Date.now() - lastMs > STALE_MATCH_MS) || (Date.now() - lastMs > STALE_START_MS && isStalePreStartState(row.state)));
         if (!stale) return { status: "error" as const, error: "already_in_match" as const, matchId: row.id };
         const prev = row.state && typeof row.state === "object" ? (row.state as Record<string, unknown>) : {};
         const nextState = { ...prev, endedReason: "stale", forfeitedBy: null, endedAt: Date.now() };
@@ -262,6 +275,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (out.status === "error") return NextResponse.json(out, { status: 409, headers: { "Cache-Control": "no-store" } });
+    logOnlineEvent({ eventType: "join", userId: email, matchId: out.matchId, connectionId: conn.connectionId, status: "matched" });
     return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });

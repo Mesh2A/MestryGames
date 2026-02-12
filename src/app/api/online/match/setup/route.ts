@@ -3,6 +3,7 @@ import { getActiveBan } from "@/lib/ban";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
+import { requireActiveConnection } from "@/lib/onlineConnection";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -42,6 +43,8 @@ export async function POST(req: NextRequest) {
 
   const onlineEnabled = await getOnlineEnabled();
   if (!onlineEnabled) return NextResponse.json({ error: "online_disabled" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  const conn = await requireActiveConnection(req, email);
+  if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
   let body: unknown = null;
   try {

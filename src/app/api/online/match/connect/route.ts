@@ -2,6 +2,7 @@ import { authOptions } from "@/lib/auth";
 import { getActiveBan } from "@/lib/ban";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile } from "@/lib/gameProfile";
+import { requireActiveConnection } from "@/lib/onlineConnection";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -38,6 +39,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
+  const conn = await requireActiveConnection(req, email);
+  if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
   let body: unknown = null;
   try {

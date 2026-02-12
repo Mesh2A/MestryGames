@@ -84,6 +84,29 @@ export async function ensureDbReady() {
             )
           `);
           await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "OnlineConnection" (
+              "userId" TEXT PRIMARY KEY,
+              "connectionId" TEXT NOT NULL,
+              "status" TEXT NOT NULL,
+              "lastSeenAt" BIGINT NOT NULL DEFAULT 0,
+              "disconnectedAt" BIGINT NOT NULL DEFAULT 0,
+              "supersededAt" BIGINT NOT NULL DEFAULT 0,
+              "cleanupAt" BIGINT NOT NULL DEFAULT 0,
+              "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `);
+          await prisma.$executeRawUnsafe(`ALTER TABLE "OnlineConnection" ADD COLUMN IF NOT EXISTS "connectionId" TEXT NOT NULL DEFAULT ''`);
+          await prisma.$executeRawUnsafe(`ALTER TABLE "OnlineConnection" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'active'`);
+          await prisma.$executeRawUnsafe(`ALTER TABLE "OnlineConnection" ADD COLUMN IF NOT EXISTS "lastSeenAt" BIGINT NOT NULL DEFAULT 0`);
+          await prisma.$executeRawUnsafe(`ALTER TABLE "OnlineConnection" ADD COLUMN IF NOT EXISTS "disconnectedAt" BIGINT NOT NULL DEFAULT 0`);
+          await prisma.$executeRawUnsafe(`ALTER TABLE "OnlineConnection" ADD COLUMN IF NOT EXISTS "supersededAt" BIGINT NOT NULL DEFAULT 0`);
+          await prisma.$executeRawUnsafe(`ALTER TABLE "OnlineConnection" ADD COLUMN IF NOT EXISTS "cleanupAt" BIGINT NOT NULL DEFAULT 0`);
+          await prisma.$executeRawUnsafe(`
+            CREATE INDEX IF NOT EXISTS "OnlineConnection_status_updatedAt_idx"
+            ON "OnlineConnection"("status", "updatedAt")
+          `);
+          await prisma.$executeRawUnsafe(`
             CREATE UNIQUE INDEX IF NOT EXISTS "OnlineRoom_waiting_hostEmail_key"
             ON "OnlineRoom"("hostEmail")
             WHERE "status" = 'waiting'

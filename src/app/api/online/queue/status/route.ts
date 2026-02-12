@@ -2,6 +2,7 @@ import { authOptions } from "@/lib/auth";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
+import { requireActiveConnection } from "@/lib/onlineConnection";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -113,6 +114,8 @@ export async function GET(req: NextRequest) {
       if (!out.ok) return NextResponse.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
       return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
     }
+    const conn = await requireActiveConnection(req, email);
+    if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
     const rows = await prisma.$queryRaw<
       { id: string; email: string; status: string; matchId: string | null; mode: string; fee: number; codeLen: number; createdAt: Date }[]

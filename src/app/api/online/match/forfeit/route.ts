@@ -2,7 +2,9 @@ import { authOptions } from "@/lib/auth";
 import { getActiveBan } from "@/lib/ban";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile, readCoinsEarnedTotalFromState, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
+import { requireActiveConnection } from "@/lib/onlineConnection";
 import { prisma } from "@/lib/prisma";
+import { logOnlineEvent } from "@/lib/onlineLog";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -60,6 +62,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
+  const conn = await requireActiveConnection(req, email);
+  if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
   let body: unknown = null;
   try {
@@ -220,6 +224,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!out.ok) return NextResponse.json(out, { status: out.error === "forbidden" ? 403 : 404, headers: { "Cache-Control": "no-store" } });
+    if (isExplicitWithdraw) logOnlineEvent({ eventType: "leave", userId: email, matchId, connectionId: conn.connectionId, status: "withdraw" });
     return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500, headers: { "Cache-Control": "no-store" } });

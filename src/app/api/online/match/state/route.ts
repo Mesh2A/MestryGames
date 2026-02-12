@@ -3,6 +3,7 @@ import { getActiveBan } from "@/lib/ban";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { ensureGameProfile, readCoinsFromState, readCoinsPeakFromState } from "@/lib/gameProfile";
 import { getOnlineEnabled } from "@/lib/onlineConfig";
+import { requireActiveConnection } from "@/lib/onlineConnection";
 import { prisma } from "@/lib/prisma";
 import { firstNameFromEmail, getProfileLevel, getProfileStats } from "@/lib/profile";
 import { getServerSession } from "next-auth/next";
@@ -10,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const TURN_MS = 30_000;
 const STALE_START_MS = 180_000;
+const STALE_GROUP_MS = 600_000;
 const DISCONNECT_GRACE_MS = 60_000;
 const OFFLINE_MARK_MS = 12_000;
 const PRESENCE_MIN_WRITE_MS = 2500;
@@ -198,6 +200,8 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "storage_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
+  const conn = await requireActiveConnection(req, email);
+  if (!conn.ok) return NextResponse.json({ error: conn.error }, { status: 409, headers: { "Cache-Control": "no-store" } });
 
   const matchId = String(req.nextUrl.searchParams.get("id") || "").trim();
   if (!matchId) return NextResponse.json({ error: "missing_id" }, { status: 400, headers: { "Cache-Control": "no-store" } });
@@ -334,6 +338,51 @@ export async function GET(req: NextRequest) {
     const match = m;
     const state0 = safeState(match.state);
     const now = Date.now();
+    const lastActivityMs2 = Math.max(match.updatedAt ? match.updatedAt.getTime() : 0, match.createdAt ? match.createdAt.getTime() : 0);
+    const group4Stale = state0.kind === "group4" && !match.endedAt && lastActivityMs2 > 0 && now - lastActivityMs2 > STALE_GROUP_MS;
+    if (group4Stale) {
+      const updated = await prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<MatchRow[]>`
+          SELECT "id","mode","fee","codeLen","aEmail","bEmail","cEmail","dEmail","answer","turnEmail","turnStartedAt","winnerEmail","endedAt","createdAt","updatedAt","state"
+          FROM "OnlineMatch"
+          WHERE "id" = ${matchId}
+          LIMIT 1
+          FOR UPDATE
+        `;
+        const locked = rows && rows[0] ? rows[0] : null;
+        if (!locked) return null;
+        if (locked.aEmail !== email && locked.bEmail !== email && locked.cEmail !== email && locked.dEmail !== email) return null;
+        if (locked.endedAt || locked.winnerEmail) return locked;
+        const lockedState = safeState(locked.state);
+        const lockedLastMs = Math.max(locked.updatedAt ? locked.updatedAt.getTime() : 0, locked.createdAt ? locked.createdAt.getTime() : 0);
+        if (lockedState.kind !== "group4" || !(lockedLastMs > 0 && Date.now() - lockedLastMs > STALE_GROUP_MS)) return locked;
+
+        const prev = locked.state && typeof locked.state === "object" ? (locked.state as Record<string, unknown>) : {};
+        const nextState = { ...prev, endedReason: "stale", forfeitedBy: null, endedAt: Date.now() };
+        await tx.$executeRaw`
+          UPDATE "OnlineMatch"
+          SET "winnerEmail" = NULL, "endedAt" = NOW(), "state" = ${JSON.stringify(nextState)}::jsonb, "updatedAt" = NOW()
+          WHERE "id" = ${matchId}
+        `;
+        const refund = async (who: string | null) => {
+          if (!who) return;
+          const profile = await tx.gameProfile.findUnique({ where: { email: who }, select: { state: true } });
+          const stateObj = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+          const coins = readCoinsFromState(stateObj);
+          const peak = readCoinsPeakFromState(stateObj);
+          const fee = Math.max(0, Math.floor(locked.fee));
+          const nextCoins = coins + fee;
+          const next = { ...stateObj, coins: nextCoins, coinsPeak: Math.max(peak, nextCoins), lastWriteAt: Date.now() };
+          await tx.gameProfile.update({ where: { email: who }, data: { state: next } });
+        };
+        await refund(locked.aEmail);
+        await refund(locked.bEmail);
+        await refund(locked.cEmail);
+        await refund(locked.dEmail);
+        return { ...locked, winnerEmail: null, endedAt: new Date(), state: nextState };
+      });
+      if (updated) m = updated;
+    }
     const turnStartedAt0 = Number(match.turnStartedAt || 0);
     const needExpire = state0.phase === "play" && !match.endedAt && turnStartedAt0 > 0 && now - turnStartedAt0 >= TURN_MS;
     const needCustomStart = state0.kind === "custom" && state0.phase === "setup" && state0.readyA && state0.readyB && !match.endedAt;
