@@ -13964,6 +13964,11 @@
         applyLockShape();
         updateCoinsUI();
         updateSettingsUI();
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.getRegistrations().then((regs) => {
+            regs.forEach((r) => r.unregister());
+          });
+        }
         document.addEventListener(
           "click",
           (e) => {
