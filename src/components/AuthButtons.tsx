@@ -40,6 +40,20 @@ export default function AuthButtons() {
     } catch {}
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const err = url.searchParams.get("error");
+    if (err === "CredentialsSignin") {
+      setError("بيانات الدخول غير صحيحة.");
+    }
+    if (err || url.searchParams.has("expired")) {
+      url.searchParams.delete("error");
+      url.searchParams.delete("expired");
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }, []);
+
   const providerList = useMemo(() => {
     const list = providers ? Object.values(providers) : [];
     return list.filter((p) => p.id === "google" || p.id === "apple");
@@ -94,6 +108,14 @@ export default function AuthButtons() {
             setError(null);
             setBusy(true);
             try {
+              if (typeof window !== "undefined") {
+                const url = new URL(window.location.href);
+                if (url.searchParams.has("expired") || url.searchParams.has("error")) {
+                  url.searchParams.delete("expired");
+                  url.searchParams.delete("error");
+                  window.history.replaceState({}, document.title, url.toString());
+                }
+              }
               const raw = String(identifier || "").trim();
               const normalizedIdentifier = raw.replace(/\s+/g, "").toLowerCase();
               if (remember) {
@@ -188,6 +210,14 @@ export default function AuthButtons() {
                 setRegError(null);
                 setRegBusy(true);
                 try {
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    if (url.searchParams.has("expired") || url.searchParams.has("error")) {
+                      url.searchParams.delete("expired");
+                      url.searchParams.delete("error");
+                      window.history.replaceState({}, document.title, url.toString());
+                    }
+                  }
                   const r = await fetch("/api/auth/register", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
