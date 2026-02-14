@@ -47,7 +47,11 @@ export async function ensureGameProfile(email: string) {
       try {
         if (!existing) {
           return await tx.gameProfile.create({
-            data: { email, publicId, state: {} },
+            data: {
+              email,
+              publicId,
+              state: { coins: 300, coinsPeak: 300, coinsEarnedTotal: 300, lastWriteAt: Date.now() },
+            },
           });
         }
 

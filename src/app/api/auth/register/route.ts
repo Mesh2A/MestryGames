@@ -24,7 +24,13 @@ async function createCredentialsProfileTx(tx: Prisma.TransactionClient, args: { 
           username: args.username,
           passwordHash: args.passwordHash,
           publicId,
-          state: { displayName: args.username },
+          state: {
+            displayName: args.username,
+            coins: 300,
+            coinsPeak: 300,
+            coinsEarnedTotal: 300,
+            lastWriteAt: Date.now(),
+          },
         },
       });
     } catch (e) {

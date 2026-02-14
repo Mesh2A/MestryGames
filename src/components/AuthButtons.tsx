@@ -56,7 +56,7 @@ export default function AuthButtons() {
 
   const providerList = useMemo(() => {
     const list = providers ? Object.values(providers) : [];
-    return list.filter((p) => p.id === "google" || p.id === "apple");
+    return list.filter((p) => p.id === "google" || p.id === "apple" || p.id === "discord");
   }, [providers]);
 
   useEffect(() => {
@@ -181,12 +181,12 @@ export default function AuthButtons() {
                 key={p.id}
                 type="button"
                 onClick={() => signIn(p.id, { callbackUrl: "/play" })}
-                className={`${styles.btn} ${p.id === "apple" ? styles.apple : styles.google}`}
+                className={`${styles.btn} ${p.id === "apple" ? styles.apple : p.id === "discord" ? styles.discord : styles.google}`}
               >
                 <span className={styles.icon} aria-hidden="true">
-                  {p.id === "apple" ? <AppleIcon /> : <GoogleIcon />}
+                  {p.id === "apple" ? <AppleIcon /> : p.id === "discord" ? <DiscordIcon /> : <GoogleIcon />}
                 </span>
-                <span>{p.id === "apple" ? "تسجيل دخول Apple" : "تسجيل دخول Google"}</span>
+                <span>{p.id === "apple" ? "تسجيل دخول Apple" : p.id === "discord" ? "تسجيل دخول Discord" : "تسجيل دخول Google"}</span>
               </button>
             ))}
           </div>
@@ -336,6 +336,17 @@ function AppleIcon() {
       <path
         fill="currentColor"
         d="M16.52 13.34c.02 2.19 1.94 2.92 1.96 2.93-.02.05-.31 1.07-1.03 2.12-.62.9-1.27 1.8-2.29 1.82-1 .02-1.32-.6-2.47-.6-1.14 0-1.5.58-2.45.62-1 .04-1.77-1-2.4-1.89-1.3-1.86-2.29-5.27-.96-7.57.66-1.14 1.85-1.86 3.14-1.88.98-.02 1.9.65 2.47.65.57 0 1.65-.8 2.78-.68.47.02 1.8.19 2.65 1.43-.07.04-1.58.92-1.56 2.75ZM14.7 6.99c.52-.63.86-1.5.76-2.37-.75.03-1.67.5-2.21 1.13-.49.56-.91 1.46-.8 2.32.84.07 1.72-.42 2.25-1.08Z"
+      />
+    </svg>
+  );
+}
+
+function DiscordIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+      <path
+        fill="currentColor"
+        d="M19.54 6.74A17.8 17.8 0 0 0 15.17 5a12.1 12.1 0 0 0-.56 1.15 16.6 16.6 0 0 0-5.23 0A12.1 12.1 0 0 0 8.8 5a17.8 17.8 0 0 0-4.36 1.74C2.66 9.33 2.14 11.85 2.4 14.31a18.2 18.2 0 0 0 5.48 2.78c.45-.62.85-1.29 1.2-1.98-.66-.25-1.29-.56-1.89-.94l.46-.34c3.64 1.71 7.58 1.71 11.18 0l.46.34c-.6.38-1.23.7-1.89.94.34.69.75 1.36 1.2 1.98a18.1 18.1 0 0 0 5.48-2.78c.33-2.9-.56-5.39-2.36-7.57ZM9.4 13.36c-.72 0-1.3-.66-1.3-1.48 0-.82.58-1.48 1.3-1.48.72 0 1.31.66 1.31 1.48 0 .82-.58 1.48-1.31 1.48Zm5.2 0c-.72 0-1.3-.66-1.3-1.48 0-.82.58-1.48 1.3-1.48.72 0 1.31.66 1.31 1.48 0 .82-.58 1.48-1.31 1.48Z"
       />
     </svg>
   );
