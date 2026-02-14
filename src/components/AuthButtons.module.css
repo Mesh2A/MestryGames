@@ -44,9 +44,27 @@
   user-select: none;
 }
 
+.linkBtn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.linkBtn:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .error {
   font-size: 12px;
   color: rgba(255, 190, 190, 0.95);
+}
+
+.success {
+  font-size: 12px;
+  color: rgba(190, 255, 212, 0.95);
 }
 
 .hintOk,

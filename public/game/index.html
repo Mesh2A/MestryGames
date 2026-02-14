@@ -4732,6 +4732,10 @@
                     </div>
                   </div>
                   <div class="shopRow">
+                    <div class="t" id="discordUnlinkK">دسكورد</div>
+                    <button id="unlinkDiscordBtn" class="btn" type="button">إلغاء الربط</button>
+                  </div>
+                  <div class="shopRow">
                     <div class="t" id="settingsThemeK">لون الشاشة</div>
                     <button id="themeBtn" class="btn primary" type="button">لون الشاشة: طبيعي</button>
                   </div>
@@ -6050,6 +6054,8 @@
         syncSub: document.getElementById("syncSub"),
         exportBtn: document.getElementById("exportBtn"),
         importBtn: document.getElementById("importBtn"),
+        discordUnlinkK: document.getElementById("discordUnlinkK"),
+        unlinkDiscordBtn: document.getElementById("unlinkDiscordBtn"),
         settingsThemeK: document.getElementById("settingsThemeK"),
         themeBtn: document.getElementById("themeBtn"),
         settingsLangK: document.getElementById("settingsLangK"),
@@ -6353,6 +6359,12 @@
           syncSub: "غير متاح حالياً.",
           exportBtn: "نسخ كود",
           importBtn: "استيراد",
+        discordUnlinkK: "دسكورد",
+        discordUnlinkBtn: "إلغاء الربط",
+        discordUnlinkTitle: "ربط دسكورد",
+        discordUnlinkConfirm: "تأكيد إلغاء ربط دسكورد؟",
+        discordUnlinkDone: "تم إلغاء ربط دسكورد.",
+        discordUnlinkFail: "تعذر إلغاء الربط.",
           importPrompt: "الصق كود النقل هنا:",
           importBad: "الكود غير صحيح.",
           imported: "تم النقل ✅",
@@ -6587,6 +6599,12 @@
           syncSub: "Unavailable for now.",
           exportBtn: "Copy code",
           importBtn: "Import",
+        discordUnlinkK: "Discord",
+        discordUnlinkBtn: "Unlink",
+        discordUnlinkTitle: "Discord",
+        discordUnlinkConfirm: "Unlink Discord?",
+        discordUnlinkDone: "Discord unlinked.",
+        discordUnlinkFail: "Unable to unlink.",
           importPrompt: "Paste the transfer code here:",
           importBad: "Invalid code.",
           imported: "Imported ✅",
@@ -6877,6 +6895,8 @@
         if (el.syncSub) el.syncSub.textContent = t("syncSub");
         if (el.exportBtn) el.exportBtn.textContent = t("exportBtn");
         if (el.importBtn) el.importBtn.textContent = t("importBtn");
+        if (el.discordUnlinkK) el.discordUnlinkK.textContent = t("discordUnlinkK");
+        if (el.unlinkDiscordBtn) el.unlinkDiscordBtn.textContent = t("discordUnlinkBtn");
         if (el.settingsThemeK) el.settingsThemeK.textContent = t("settingsThemeK");
         if (el.settingsLangK) el.settingsLangK.textContent = t("settingsLangK");
         if (el.settingsMotionK) el.settingsMotionK.textContent = t("settingsMotionK");
@@ -7768,6 +7788,7 @@
             if (el.changeNameBtn) el.changeNameBtn.disabled = false;
           }
         }
+        if (el.unlinkDiscordBtn) el.unlinkDiscordBtn.disabled = !cloud.enabled;
 
         if (el.motionBtn) el.motionBtn.textContent = t("motionBtn", { on: !!app.state.reduceMotion });
         if (el.soundBtn) el.soundBtn.textContent = t("soundBtn", { on: !!app.state.soundOn });
@@ -8814,6 +8835,28 @@
           }, 0);
         } catch {
           enqueueToast({ title: "فشل", body: "فشل فتح نافذة تغيير الاسم.", autoMs: 2400 });
+        }
+      }
+
+      async function unlinkDiscord() {
+        if (!cloud.enabled) {
+          enqueueToast({ title: t("discordUnlinkTitle"), body: "سجّل دخولك أولاً.", autoMs: 2400 });
+          return;
+        }
+        const ok = window.confirm(t("discordUnlinkConfirm"));
+        if (!ok) return;
+        if (el.unlinkDiscordBtn) el.unlinkDiscordBtn.disabled = true;
+        try {
+          const r = await friendsJson("/api/auth/discord/unlink", { method: "POST" });
+          if (!r.ok || !r.data || !r.data.ok) {
+            enqueueToast({ title: t("discordUnlinkTitle"), body: t("discordUnlinkFail"), autoMs: 2400 });
+            return;
+          }
+          enqueueToast({ title: t("discordUnlinkTitle"), body: t("discordUnlinkDone"), autoMs: 2200 });
+        } catch {
+          enqueueToast({ title: t("discordUnlinkTitle"), body: t("discordUnlinkFail"), autoMs: 2400 });
+        } finally {
+          if (el.unlinkDiscordBtn) el.unlinkDiscordBtn.disabled = false;
         }
       }
 
@@ -13827,6 +13870,7 @@
       el.shapeBtn.addEventListener("click", () => cycleShape());
       el.modeBtn.addEventListener("click", () => cycleMode());
       if (el.changeNameBtn) el.changeNameBtn.addEventListener("click", () => openNameModal());
+      if (el.unlinkDiscordBtn) el.unlinkDiscordBtn.addEventListener("click", () => unlinkDiscord());
       if (el.nameCancelBtn) el.nameCancelBtn.addEventListener("click", () => closeHowTo());
       if (el.nameSaveBtn) el.nameSaveBtn.addEventListener("click", () => saveNameFromModal());
       if (el.nameInput) {

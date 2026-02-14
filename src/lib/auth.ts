@@ -3,10 +3,12 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import DiscordProvider from "next-auth/providers/discord";
 import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthOptions } from "next-auth";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { ensureDbReady } from "@/lib/ensureDb";
 import { notifyDiscord } from "@/lib/discord";
+import { ensureGameProfile } from "@/lib/gameProfile";
 
 function normalizeIdentifier(input: string) {
   const raw = String(input || "").trim();
@@ -94,6 +96,21 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt", maxAge: maxAgeSeconds, updateAge: 24 * 60 * 60 },
   jwt: { maxAge: maxAgeSeconds },
   callbacks: {
+    async signIn({ user, account }) {
+      const provider = typeof account?.provider === "string" ? account.provider : "";
+      if (provider !== "discord") return true;
+      const email = typeof user?.email === "string" ? user.email : "";
+      if (!email) return false;
+      try {
+        await ensureDbReady();
+        const profile = await prisma.gameProfile.findUnique({ where: { email }, select: { state: true } });
+        const state = profile?.state && typeof profile.state === "object" ? (profile.state as Record<string, unknown>) : {};
+        const blocked = "discordUnlinkedAt" in state && !!state.discordUnlinkedAt;
+        return !blocked;
+      } catch {
+        return true;
+      }
+    },
     async jwt({ token, user }) {
       if (user?.email) token.email = user.email;
       if (user?.name) token.name = user.name;
@@ -110,6 +127,19 @@ export const authOptions: NextAuthOptions = {
       const email = typeof user?.email === "string" ? user.email : "";
       const name = typeof user?.name === "string" ? user.name : "";
       const provider = typeof account?.provider === "string" ? account.provider : "";
+      if (provider === "discord" && email) {
+        try {
+          await ensureDbReady();
+          await ensureGameProfile(email);
+          await prisma.$transaction(async (tx) => {
+            const row = await tx.gameProfile.findUnique({ where: { email }, select: { state: true } });
+            const state = row?.state && typeof row.state === "object" ? (row.state as Record<string, unknown>) : {};
+            const next = { ...state, discordLinkedAt: Date.now(), lastWriteAt: Date.now() } as Record<string, unknown>;
+            if ("discordUnlinkedAt" in next) delete next.discordUnlinkedAt;
+            await tx.gameProfile.update({ where: { email }, data: { state: next as Prisma.InputJsonValue } });
+          });
+        } catch {}
+      }
       await notifyDiscord("signin", {
         title: isNewUser ? "New sign-in (first time)" : "User signed in",
         email,

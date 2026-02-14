@@ -26,6 +26,11 @@ export default function AuthButtons() {
   const [regError, setRegError] = useState<string | null>(null);
   const [regUsernameAvailable, setRegUsernameAvailable] = useState<boolean | null>(null);
   const [regEmailAvailable, setRegEmailAvailable] = useState<boolean | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotDone, setForgotDone] = useState(false);
 
   useEffect(() => {
     getProviders()
@@ -170,6 +175,18 @@ export default function AuthButtons() {
           <button type="button" className={styles.btnSecondary} onClick={() => setRegisterOpen(true)} disabled={busy}>
             إنشاء حساب
           </button>
+          <button
+            type="button"
+            className={styles.linkBtn}
+            onClick={() => {
+              setForgotError(null);
+              setForgotDone(false);
+              setForgotOpen(true);
+            }}
+            disabled={busy}
+          >
+            نسيت كلمة المرور؟
+          </button>
         </form>
 
         {providers && providerList.length ? <div className={styles.fastLabel}>سجل اسرع:</div> : null}
@@ -298,6 +315,65 @@ export default function AuthButtons() {
               {regError ? <div className={styles.error}>{regError}</div> : null}
               <button type="submit" className={styles.btnPrimary} disabled={regBusy}>
                 إنشاء
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {forgotOpen ? (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.modal}>
+            <div className={styles.modalHead}>
+              <div className={styles.modalTitle}>استعادة كلمة المرور</div>
+              <button
+                type="button"
+                className={styles.modalClose}
+                onClick={() => setForgotOpen(false)}
+                disabled={forgotBusy}
+              >
+                إغلاق
+              </button>
+            </div>
+            <form
+              className={styles.modalBody}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (forgotBusy) return;
+                setForgotError(null);
+                setForgotDone(false);
+                setForgotBusy(true);
+                try {
+                  const r = await fetch("/api/auth/forgot-password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: forgotEmail }),
+                  });
+                  await r.json().catch(() => null);
+                  if (!r.ok) {
+                    setForgotDone(true);
+                    return;
+                  }
+                  setForgotDone(true);
+                } finally {
+                  setForgotBusy(false);
+                }
+              }}
+            >
+              <label className={styles.field}>
+                <span className={styles.label}>ايميل</span>
+                <input
+                  className={styles.input}
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  autoComplete="email"
+                  inputMode="email"
+                />
+              </label>
+              {forgotError ? <div className={styles.error}>{forgotError}</div> : null}
+              {forgotDone ? <div className={styles.success}>إذا كان الإيميل صحيح سيصلك رابط الاستعادة.</div> : null}
+              <button type="submit" className={styles.btnPrimary} disabled={forgotBusy}>
+                إرسال الرابط
               </button>
             </form>
           </div>

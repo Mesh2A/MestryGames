@@ -118,3 +118,14 @@ model FriendGiftEvent {
   @@index([toEmail, createdAt])
   @@index([fromEmail, createdAt])
 }
+
+model ResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, expiresAt])
+}
