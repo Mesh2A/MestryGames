@@ -8,10 +8,42 @@
     radial-gradient(900px 520px at 50% 120%, rgba(34, 211, 238, 0.1), transparent 60%),
     #070912;
   color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  width: 820px;
+  height: 820px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 60%);
+  top: -320px;
+  left: -260px;
+  filter: blur(20px);
+  animation: glowFloat 12s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.page::after {
+  content: "";
+  position: absolute;
+  width: 920px;
+  height: 920px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.16), transparent 60%);
+  bottom: -380px;
+  right: -280px;
+  filter: blur(24px);
+  animation: glowFloat 14s ease-in-out infinite reverse;
+  pointer-events: none;
 }
 
 .main {
   width: min(360px, 100%);
+  position: relative;
+  z-index: 1;
 }
 
 .card {
@@ -26,6 +58,7 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+  animation: cardIn 700ms ease-out both, cardFloat 8s ease-in-out infinite;
 }
 
 .card::before {
@@ -60,8 +93,12 @@
 
 .brand {
   font-weight: 900;
-  font-size: 22px;
+  font-size: 24px;
   letter-spacing: 0.2px;
+  background: linear-gradient(120deg, #ffffff, rgba(56, 189, 248, 0.9), rgba(167, 139, 250, 0.9));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .desc {
@@ -74,6 +111,7 @@
   display: grid;
   align-content: end;
   gap: 10px;
+  animation: fadeUp 800ms ease 120ms both;
 }
 
 .hint {
@@ -112,4 +150,62 @@
 .meta {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes glowFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(20px, 18px, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes cardIn {
+  0% {
+    transform: translateY(14px) scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cardFloat {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeUp {
+  0% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page::before,
+  .page::after,
+  .card,
+  .actions {
+    animation: none;
+  }
+  .card::after {
+    transition: none;
+  }
 }

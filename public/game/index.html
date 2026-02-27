@@ -9490,6 +9490,14 @@
             }
             if (m.kind === "group4" || m.groupSize === 4) onlineState.groupSize = 4;
             if (onlineState.groupSize === 4 && Array.isArray(m.players)) updateOnlineGroupSearchSeats(m.players, fee, meResolved);
+            if (m.kind === "props" && m.phase === "cards") {
+              stopOnlinePreEnter();
+              try {
+                closeHowTo();
+              } catch {}
+              startOnlineMatch(id, mode, fee, codeLen, meResolved, opponent, kind, onlineState.groupSize);
+              return;
+            }
             const ended = !!m.endedAt || m.winner === "me" || m.winner === "them" || !!m.endedReason;
             if (ended) {
               stopOnlinePreEnter();

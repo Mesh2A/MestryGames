@@ -2,6 +2,7 @@
   display: grid;
   gap: 10px;
   width: 100%;
+  animation: stackIn 700ms ease both;
 }
 
 .form {
@@ -95,6 +96,21 @@
   overflow: hidden;
 }
 
+.btnPrimary::after {
+  content: "";
+  position: absolute;
+  inset: -120% -40%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.22) 45%, transparent 75%);
+  opacity: 0;
+  transform: translateX(-40%) rotate(18deg);
+  transition: opacity 200ms ease;
+}
+
+.btnPrimary:hover::after {
+  opacity: 0.7;
+  animation: shimmer 900ms ease;
+}
+
 .btnSecondary {
   height: 48px;
   border-radius: 16px;
@@ -118,6 +134,36 @@
 .btnPrimary:active,
 .btnSecondary:active {
   transform: translateY(0px) scale(0.99);
+}
+
+@keyframes stackIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-40%) rotate(18deg);
+  }
+  100% {
+    transform: translateX(120%) rotate(18deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stack {
+    animation: none;
+  }
+  .btnPrimary::after {
+    animation: none;
+    transition: none;
+  }
 }
 
 .btnPrimary:disabled,
